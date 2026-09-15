@@ -213,6 +213,7 @@ export default function RequestForm() {
       </main>
 
       {/* Терминальная полоса — единственное место, где цвет занимает площадь */}
+      {/* design-ok: bg-terminal — это и есть та самая полоса, DESIGN.md § Colors */}
       <div className="mt-2xl flex items-center bg-terminal px-lg py-md text-caps tracking-caps text-on-terminal uppercase">
         Мастерские Алматы, Астаны и Шымкента
       </div>

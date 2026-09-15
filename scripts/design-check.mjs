@@ -12,6 +12,21 @@ const SCAN = ['src']
 // Единственный файл, где сырые значения законны: он сгенерирован из DESIGN.md.
 const ALLOW = new Set(['src/design-tokens.css'])
 
+// Запрещённые утилиты Tailwind. Выведены из раздела Don'ts в DESIGN.md.
+// Нужны потому, что Tailwind v4 свои дефолты нашими токенами НЕ заменяет,
+// а дополняет: объявленный единственный радиус `none` не отменяет rounded-xl.
+// Проверка значений (RULES ниже) такие нарушения не видит — нарушитель
+// пользуется легальными утилитами, просто запрещёнными нашей системой.
+const BANNED = [
+  { re: /\brounded-(?!none\b)[a-z0-9[\]]+/g, why: 'радиус ноль у всего — DESIGN.md § Shapes' },
+  { re: /\bfont-(bold|semibold|medium|light|extralight|thin|black|extrabold)\b/g,
+    why: 'один вес 400, иерархия размером и трекингом — DESIGN.md § Typography' },
+  { re: /\b(drop-)?shadow-[a-z0-9[\]]+/g, why: 'теней нет — DESIGN.md § Elevation' },
+  { re: /\bitalic\b/g, why: 'курсива нет — DESIGN.md § Запреты' },
+  { re: /\bbg-terminal\b/g, why: 'лайм только терминальной полосой — DESIGN.md § Colors' },
+  { re: /\btext-stroke-signal\b/g, why: 'красный только линией, не текстом — DESIGN.md § Colors' },
+]
+
 const RULES = [
   { name: 'hex-цвет', re: /#[0-9a-fA-F]{3,8}\b/g },
   { name: 'oklch()', re: /\boklch\(/g },
@@ -42,16 +57,24 @@ for (const base of SCAN) {
         r.re.lastIndex = 0
         if (r.re.test(line)) findings.push({ file: rel, line: i + 1, rule: r.name, text: line.trim().slice(0, 90) })
       }
+      // Явное исключение: пометка design-ok на этой строке или на предыдущей.
+      // Пометка обязана называть причину — молчаливых исключений не бывает.
+      if (/design-ok:/.test(line) || (i > 0 && /design-ok:/.test(lines[i - 1]))) return
+      for (const b of BANNED) {
+        b.re.lastIndex = 0
+        const m = line.match(b.re)
+        if (m) findings.push({ file: rel, line: i + 1, rule: `${m[0]} — ${b.why}`, text: line.trim().slice(0, 90) })
+      }
     })
   }
 }
 
 if (findings.length === 0) {
-  console.log('design:check — чисто. Цветов и шрифтов мимо токенов не найдено.')
+  console.log('design:check — чисто. Значений и утилит мимо DESIGN.md не найдено.')
   process.exit(0)
 }
 
-console.error(`design:check — найдено ${findings.length}: значения заведены мимо DESIGN.md\n`)
+console.error(`design:check — найдено ${findings.length}: расхождения с DESIGN.md\n`)
 for (const f of findings) console.error(`  ${f.file}:${f.line}  [${f.rule}]  ${f.text}`)
 console.error('\nПочинить: завести токен в DESIGN.md → npm run design:tokens → сослаться на него.')
 process.exit(1)
