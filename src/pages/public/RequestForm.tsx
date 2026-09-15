@@ -36,10 +36,16 @@ function Mark({ on }: { on: boolean }) {
   )
 }
 
+// Состояния по DESIGN.md § Состояния: наведение — подчёркивание подписи,
+// нажатие — снижение непрозрачности. Цветом откликаться не на что, он один.
 const opt =
-  'flex cursor-pointer items-start gap-sm bg-surface p-md text-left text-body-sm tracking-body-sm ' +
-  'transition-[border-width] duration-100 has-[:focus-visible]:outline ' +
-  'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-outline has-[:focus-visible]:outline-offset-2'
+  'group flex cursor-pointer items-start gap-sm bg-surface p-md text-left text-body-sm ' +
+  'tracking-body-sm transition-opacity duration-100 active:opacity-70 ' +
+  'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
+  'has-[:focus-visible]:outline-outline has-[:focus-visible]:outline-offset-2'
+
+/** Подпись варианта: подчёркивается при наведении на карточку. */
+const optLabel = 'group-hover:underline underline-offset-4'
 
 const on = (v: boolean) => (v ? 'border-2 border-outline' : 'border border-outline')
 
@@ -80,8 +86,8 @@ export default function RequestForm() {
       <header className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline gap-x-xl gap-y-sm px-lg pt-lg pb-xl text-caps tracking-caps uppercase">
         <span className="lowercase">мастерская</span>
         <nav className="flex flex-wrap gap-x-xl gap-y-sm">
-          <a href="/" className="whitespace-nowrap underline-offset-4 hover:underline">Заявка</a>
-          <a href="/masters" className="whitespace-nowrap underline-offset-4 hover:underline">Мастерские</a>
+          <a href="/" className="whitespace-nowrap underline-offset-4 transition-opacity duration-100 hover:underline active:opacity-70">Заявка</a>
+          <a href="/masters" className="whitespace-nowrap underline-offset-4 transition-opacity duration-100 hover:underline active:opacity-70">Мастерские</a>
         </nav>
       </header>
 
@@ -99,7 +105,7 @@ export default function RequestForm() {
                       checked={category === c.id}
                       onChange={() => { setCategory(c.id); setError(null) }} />
                     <Mark on={category === c.id} />
-                    <span className="mt-sm block">{c.label}</span>
+                    <span className={`mt-sm block ${optLabel}`}>{c.label}</span>
                   </label>
                 ))}
               </div>
@@ -117,8 +123,9 @@ export default function RequestForm() {
                       aria-describedby={error ? 'size-error' : undefined}
                       onChange={(e) => { setSize(e.target.value); setError(null) }}
                       className={`w-40 border-0 border-b bg-surface px-xs py-sm text-body
-                        tracking-body tabular-nums placeholder:opacity-40
-                        disabled:cursor-not-allowed disabled:opacity-40
+                        tracking-body tabular-nums transition-opacity duration-100
+                        placeholder:opacity-40 hover:opacity-70 active:opacity-70
+                        disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:opacity-40
                         ${error ? 'border-stroke-signal' : 'border-outline'}`} />
                     <span className="text-body-sm tracking-body-sm">{mainSize.unit}</span>
                   </div>
@@ -126,7 +133,7 @@ export default function RequestForm() {
                     <input type="checkbox" className="sr-only" checked={sizeUnknown}
                       onChange={(e) => { setSizeUnknown(e.target.checked); setError(null) }} />
                     <Mark on={sizeUnknown} />
-                    <span className="whitespace-nowrap">{mainSize.unknownLabel}</span>
+                    <span className={`whitespace-nowrap ${optLabel}`}>{mainSize.unknownLabel}</span>
                   </label>
                   {/* Сообщение чёрным: красный в этой системе — только линия */}
                   <div className="mt-md min-h-[1.5lh] max-w-[58ch] text-body-sm tracking-body-sm">
@@ -150,7 +157,7 @@ export default function RequestForm() {
                           </span>
                           <Mark on={shape === o.id} />
                         </span>
-                        <span className="mt-md block">{o.label}</span>
+                        <span className={`mt-md block ${optLabel}`}>{o.label}</span>
                       </label>
                     ))}
                   </div>
@@ -165,7 +172,7 @@ export default function RequestForm() {
                         <input type="radio" name="appliances" value={o.id} className="sr-only"
                           checked={appliances === o.id} onChange={() => setAppliances(o.id)} />
                         <Mark on={appliances === o.id} />
-                        <span>{o.label}</span>
+                        <span className={optLabel}>{o.label}</span>
                       </label>
                     ))}
                   </div>
@@ -182,7 +189,7 @@ export default function RequestForm() {
                   {rows.map(([k, v]) => (
                     <div key={k} className="mt-sm flex gap-md">
                       <dt className="w-40 shrink-0 opacity-60">{k}</dt>
-                      <dd className="min-w-0">{v}</dd>
+                      <dd className="min-w-0 tabular-nums">{v}</dd>
                     </div>
                   ))}
                 </dl>
@@ -190,7 +197,7 @@ export default function RequestForm() {
                   <button type="submit"
                     className="bg-primary px-2xl py-lg text-caps tracking-caps whitespace-nowrap
                       text-on-primary uppercase transition-opacity duration-100 hover:opacity-80
-                      disabled:cursor-not-allowed disabled:opacity-40">
+                      active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40">
                     {screen.submit}
                   </button>
                   {sizeUnknown && (

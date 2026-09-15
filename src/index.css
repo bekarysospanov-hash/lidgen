@@ -1,3 +1,10 @@
+/* Hallmark · design-system: DESIGN.md · theme: ARTU-derived (галерея на белом)
+ * axes: light / neo-grotesque-single-weight / monochrome + terminal lime
+ * Страница подчиняется DESIGN.md: тема, шрифт, радиусы и состояния берутся
+ * оттуда, а не выбираются здесь. Диверсификация НЕ применяется —
+ * на проекте с системой страницы обязаны быть одинаковыми, а не разными.
+ */
+
 /* Базовые стили. Токены НЕ здесь — они в src/design-tokens.css,
    сгенерированном из DESIGN.md. Цвет или шрифт сюда не дописывать:
    порядок — DESIGN.md → npm run design:tokens → код. */
