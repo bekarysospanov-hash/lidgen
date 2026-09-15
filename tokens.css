@@ -1,0 +1,39 @@
+/* Hallmark · portable tokens · theme: custom
+ * mood: "живой" · электрик
+ * axes: light / geometric-sans / cool ~255°
+ * Контраст проверен: ink/paper 16.84:1 · muted/paper 6.63:1 · paper/accent 5.62:1
+ * border/paper 3.39:1 · focus/paper 5.61:1
+ */
+:root {
+  /* Поверхности */
+  --color-paper:     oklch(97.5% 0.008 255);  /* основная бумага, дневной свет */
+  --color-paper-2:   oklch(94%   0.016 255);  /* мята — вторая поверхность */
+  --color-card:      oklch(99.3% 0.006 255);  /* карточка, не чистый #fff (гейт 7) */
+
+  /* Линии и границы */
+  --color-rule:      oklch(89%   0.014 255);  /* декоративная волосяная линия */
+  --color-border:    oklch(62%   0.018 255);  /* граница поля ввода, ≥3:1 */
+
+  /* Текст */
+  --color-ink:       oklch(20%   0.016 255);  /* основной */
+  --color-ink-2:     oklch(37%   0.014 255);  /* вторичный */
+  --color-muted:     oklch(46%   0.014 255);  /* подсказки, ≥4.5:1 */
+  --color-neutral:   oklch(55%   0.016 255);
+
+  /* Акцент */
+  --color-accent:    oklch(50%   0.190 255);  /* электрик, якорь */
+  --color-accent-2:  oklch(43%   0.190 255);  /* нажатое состояние */
+  --color-accent-sk: oklch(94%   0.040 255);  /* мягкая подложка выбора */
+  --color-focus:     oklch(50%   0.210 255);  /* только :focus-visible */
+  --color-danger:    oklch(48%   0.150  28);  /* ошибка валидации */
+
+  /* Типографика */
+  --font-display: "Golos Text", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Onest", ui-sans-serif, system-ui, sans-serif;
+
+  /* Движение */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+}

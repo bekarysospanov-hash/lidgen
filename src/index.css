@@ -1,0 +1,33 @@
+/* Базовые стили. Токены НЕ здесь — они в src/design-tokens.css,
+   сгенерированном из DESIGN.md. Цвет или шрифт сюда не дописывать:
+   порядок — DESIGN.md → npm run design:tokens → код. */
+@import "tailwindcss";
+@import "./design-tokens.css";
+
+html, body {
+  overflow-x: clip;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  -webkit-text-size-adjust: 100%;
+}
+
+h1, h2, h3 {
+  font-style: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 120ms !important;
+  }
+}

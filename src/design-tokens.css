@@ -1,0 +1,41 @@
+/* СГЕНЕРИРОВАНО ИЗ DESIGN.md — НЕ РЕДАКТИРОВАТЬ.
+   Обновление: npm run design:tokens */
+@theme {
+  --color-primary: #000000;
+  --color-on-primary: #ffffff;
+  --color-surface: #ffffff;
+  --color-on-surface: #000000;
+  --color-outline: #000000;
+  --color-terminal: #d7ff66;
+  --color-on-terminal: #000000;
+  --color-stroke-signal: #ff1313;
+  --font-heading: "Golos Text";
+  --font-subheading: "Golos Text";
+  --font-body: "Golos Text";
+  --font-body-sm: "Golos Text";
+  --font-caps: "Golos Text";
+  --text-heading: 32px;
+  --text-subheading: 24px;
+  --text-body: 20px;
+  --text-body-sm: 18px;
+  --text-caps: 18px;
+  --tracking-heading: 0.024em;
+  --tracking-subheading: 0.022em;
+  --tracking-body: 0.014em;
+  --tracking-body-sm: 0.014em;
+  --tracking-caps: 0.022em;
+  --font-weight-heading: 400;
+  --font-weight-subheading: 400;
+  --font-weight-body: 400;
+  --font-weight-body-sm: 400;
+  --font-weight-caps: 400;
+  --radius-none: 0px;
+  --spacing-xs: 8px;
+  --spacing-sm: 12px;
+  --spacing-md: 16px;
+  --spacing-lg: 20px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 80px;
+  --spacing-4xl: 108px;
+}

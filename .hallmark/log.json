@@ -1,0 +1,26 @@
+[
+  {
+    "date": "2026-09-15",
+    "macrostructure": "Bento Grid",
+    "theme": "custom",
+    "theme_axes": "light / geometric-sans / cool ~255°",
+    "vibe": "живой, электрик",
+    "nav": "N13",
+    "footer": "Ft5",
+    "enrichment": "none",
+    "brief": "lidgen · редизайн формы заявки (mood: живой)",
+    "gates": "57/58 — gate 23 near-miss 5.17%"
+  },
+  {
+    "date": "2026-09-15",
+    "macrostructure": "Narrative Workflow",
+    "theme": "custom",
+    "theme_axes": "light / roman-serif / chromatic-green ~147°",
+    "vibe": "дневной свет, спокойная уверенность, мягкость, забота",
+    "nav": "N9",
+    "footer": "Ft2",
+    "enrichment": "none",
+    "brief": "lidgen · форма заявки на мебель, US-04/05a/05b",
+    "gates": "57/58 — gate 23 отклонён осознанно (заливная кнопка 5.77%)"
+  }
+]
