@@ -62,7 +62,11 @@ export type RequestStatus = z.infer<typeof RequestStatus>
 export const FinishLevel = z.enum(['basic', 'medium', 'premium'])
 export type FinishLevel = z.infer<typeof FinishLevel>
 
-/** Обязателен с US-11 (срез 2), пока опционален (§2, §9). */
+/**
+ * Согласие на обработку ПДн (US-11). Хранится версия текста политики и время
+ * отметки, а не булев флаг: доказывать придётся, с чем именно человек
+ * согласился и когда, а текст политики со временем меняется.
+ */
 export const Consent = z.object({ policyVersion: z.string().min(1), acceptedAt: Iso })
 export type Consent = z.infer<typeof Consent>
 
@@ -86,7 +90,12 @@ export const CreateRequest = z.object({
   district: z.string().nullable().optional(),
   deadline: z.string().nullable().optional(),
   finishLevel: FinishLevel.nullable().optional(),
-  consent: Consent.optional(),
+  /**
+   * Обязателен с US-11: заявка без согласия не создаётся. Проверка живёт
+   * в схеме, а не только на экране, — форму можно обойти инструментами
+   * разработчика, схему нельзя (§5).
+   */
+  consent: Consent,
   source: Source.optional(),
   /** US-10. Пустой список законен: фото не блокирует отправку (§5). */
   photos: Photos.optional(),

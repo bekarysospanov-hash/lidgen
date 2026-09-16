@@ -49,6 +49,7 @@ function validCreateRequest(overrides: Record<string, unknown> = {}) {
     description: 'Нужна угловая кухня на заказ, с встроенной техникой',
     city: { code: 'almaty', name: null },
     phone: '+77012345678',
+    consent: { policyVersion: '2026-09-16', acceptedAt: '2026-09-16T10:00:00.000Z' },
     clientRequestId: '11111111-1111-4111-8111-111111111111',
     ...overrides,
   }
@@ -240,10 +241,18 @@ describe('CreateRequest', () => {
     )
   })
 
-  it('без consent проходит (в срезе 1 согласия нет)', () => {
-    const payload = validCreateRequest()
-    expect('consent' in payload).toBe(false)
-    expect(CreateRequest.safeParse(payload).success).toBe(true)
+  it('без consent заявка не создаётся: согласие обязательно (US-11)', () => {
+    const { consent, ...withoutConsent } = validCreateRequest() as Record<string, unknown>
+    expect(consent).toBeDefined()
+    const parsed = CreateRequest.safeParse(withoutConsent)
+    expect(parsed.success).toBe(false)
+    // Путь ошибки важен: по нему экран подсвечивает отметку, а не форму целиком.
+    expect(parsed.error?.issues.some((issue) => issue.path[0] === 'consent')).toBe(true)
+  })
+
+  it('согласие без версии политики не принимается — доказывать нечем', () => {
+    const payload = validCreateRequest({ consent: { acceptedAt: '2026-09-16T10:00:00.000Z' } })
+    expect(CreateRequest.safeParse(payload).success).toBe(false)
   })
 
   it('clientRequestId не-uuid отклоняется', () => {

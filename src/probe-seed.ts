@@ -5,6 +5,7 @@
 //
 // Удаляется вместе с оболочкой пробы — ищется грепом "PROBE:" (CLAUDE.md).
 import { api } from './api/client'
+import { POLICY_VERSION } from './texts/privacy'
 
 interface Seed {
   description: string
@@ -70,6 +71,9 @@ export async function seedProbeRequests(): Promise<void> {
         phone: seed.phone,
         district: seed.district,
         deadline: seed.deadline,
+        // Согласие обязательно с US-11: демо-заявка проходит тот же путь,
+        // что и настоящая, включая отметку на форме.
+        consent: { policyVersion: POLICY_VERSION, acceptedAt: new Date().toISOString() },
       })
       // Подтверждение — то же, что делает заказчица: без него заявка
       // не классифицируется и никому не маршрутизируется.

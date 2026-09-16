@@ -27,6 +27,7 @@ function createPayload(overrides: Record<string, unknown> = {}) {
     description: 'Нужна угловая кухня на заказ, с встроенной техникой',
     city: { code: 'almaty', name: null },
     phone: '+77012345678',
+    consent: { policyVersion: '2026-09-16', acceptedAt: '2026-09-16T10:00:00.000Z' },
     clientRequestId: '11111111-1111-4111-8111-111111111111',
     ...overrides,
   }
@@ -51,6 +52,18 @@ describe('createRequest', () => {
     expect(RequestId.safeParse(result.id).success).toBe(true)
     expect(result.otp.codeLength).toBe(4)
     expect(RequestCreated.parse(result)).toBeTruthy()
+  })
+
+  it('без согласия на ПДн заявка не создаётся (US-11)', async () => {
+    const { consent, ...withoutConsent } = createPayload() as Record<string, unknown>
+    expect(consent).toBeDefined()
+
+    await expect(mockApi.createRequest(withoutConsent)).rejects.toSatisfy(
+      (e: unknown) =>
+        isApiError(e) &&
+        e.code === 'VALIDATION_FAILED' &&
+        JSON.stringify(e.details).includes('consent'),
+    )
   })
 
   it('token в ответе createRequest отсутствует — выдаётся только в confirmOtp', async () => {

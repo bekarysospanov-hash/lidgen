@@ -19,6 +19,7 @@ import {
   field,
   fieldLabel,
   hintText,
+  link,
   panel,
   stepPanel,
 } from '../../components/ui'
@@ -46,6 +47,7 @@ import {
   summary,
   type CategoryId,
 } from '../../questions/categories'
+import { consentRow, POLICY_VERSION } from '../../texts/privacy'
 import { errorText, validationUnmapped } from '../../texts/request'
 
 /**
@@ -164,7 +166,7 @@ const optLabel = 'group-hover:underline underline-offset-4'
 
 type ShapeId = (typeof kitchenShape.options)[number]['id']
 type ApplianceId = (typeof kitchenAppliances.options)[number]['id']
-type FieldKey = 'size' | 'description' | 'city' | 'cityName' | 'phone'
+type FieldKey = 'size' | 'description' | 'city' | 'cityName' | 'phone' | 'consent'
 type FieldErrors = Partial<Record<FieldKey, string>>
 
 /** Куда ставить фокус по первой незакрытой ошибке — порядок как на экране. */
@@ -174,6 +176,7 @@ const FOCUS_ORDER: [FieldKey, string][] = [
   ['city', 'city-almaty'],
   ['cityName', 'city-other-name'],
   ['phone', 'phone'],
+  ['consent', 'consent'],
 ]
 
 export default function RequestForm() {
@@ -195,6 +198,12 @@ export default function RequestForm() {
   const filePicker = useRef<HTMLInputElement>(null)
 
   const [errors, setErrors] = useState<FieldErrors>({})
+  /**
+   * US-11. Отметка живёт в состоянии экрана и никуда не сохраняется между
+   * заходами: согласие даётся на конкретную отправку, а «однажды отмеченное»
+   * согласие согласием не является.
+   */
+  const [consentGiven, setConsentGiven] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [created, setCreated] = useState<RequestCreated | null>(null)
@@ -348,7 +357,13 @@ export default function RequestForm() {
       else next.phone = phoneAsk.errorInvalid
     }
 
-    if (!sizeValue || !parsedText.success || !cityValue || !phoneValue) return { errors: next }
+    // Без согласия заявка не собирается вовсе. Схема отклонила бы её и так
+    // (контракт §5), но человеку нужна причина на экране, а не отказ сервера.
+    if (!consentGiven) next.consent = consentRow.error
+
+    if (!sizeValue || !parsedText.success || !cityValue || !phoneValue || !consentGiven) {
+      return { errors: next }
+    }
 
     const details: Details = chosen === 'kitchen'
       ? { category: 'kitchen', shape, appliances }
@@ -366,6 +381,9 @@ export default function RequestForm() {
         // US-10: снимки уходят как есть, включая пустой список. Проверять
         // их здесь нечего — каждый уже принят сервером при загрузке (§5).
         photos: photoList,
+        // Версия текста и время отметки, а не булев флаг: доказывать придётся,
+        // с чем именно человек согласился и когда (US-11).
+        consent: { policyVersion: POLICY_VERSION, acceptedAt: new Date().toISOString() },
         clientRequestId: attemptId.current,
       },
     }
@@ -698,6 +716,36 @@ export default function RequestForm() {
                 (DESIGN.md § Elevation). */}
             <Section>
               <Summary rows={rows} />
+
+              {/* US-11. Чекбокса в системе нет вовсе, и заводить его здесь
+                  нельзя — правка DESIGN.md отдельное решение. Согласие
+                  собирается строкой блока с точкой выбора: отметка зелёная,
+                  как и всякий выбор в системе. Ссылка на политику открывается
+                  отдельной вкладкой, иначе заполненная форма теряется. */}
+              <div className="mt-xl">
+                <Rows>
+                  <label className={blockRow(consentGiven)} htmlFor="consent">
+                    <input type="checkbox" id="consent" className="sr-only"
+                      checked={consentGiven}
+                      onChange={(e) => {
+                        setConsentGiven(e.target.checked)
+                        setErrors({ ...errors, consent: undefined })
+                        touched()
+                      }} />
+                    <span className="min-w-0">
+                      <span className={`block ${optLabel}`}>{consentRow.label}</span>
+                      <span className={`mt-xs block ${hintText}`}>{consentRow.hint}</span>
+                    </span>
+                    <Dot on={consentGiven} />
+                  </label>
+                </Rows>
+                <p className="mt-md">
+                  <a href="/privacy" target="_blank" rel="noreferrer" className={link}>
+                    {consentRow.linkText}
+                  </a>
+                </p>
+                <Note id="consent-note" error={errors.consent} />
+              </div>
 
               {/* Кнопка стоит на холсте, а не внутри плашки: главное действие
                   экрана не принадлежит сводке, оно принадлежит странице. */}

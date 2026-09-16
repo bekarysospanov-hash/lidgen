@@ -68,6 +68,7 @@ function createPayload() {
     description: 'Нужна угловая кухня на заказ',
     city: { code: 'almaty', name: null },
     phone: '+77012345678',
+    consent: { policyVersion: '2026-09-16', acceptedAt: '2026-09-16T10:00:00.000Z' },
     clientRequestId: REQUEST_ID,
   }
 }
