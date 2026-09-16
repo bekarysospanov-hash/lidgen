@@ -104,6 +104,16 @@ export const buttonText =
 /** panel-nested — второй уровень, радиус 4, отступ 12. Глубже не вкладывать. */
 export const panelNested = 'rounded-sm bg-surface-container-high p-md'
 
+/**
+ * badge — шильдик: сливовая заливка, белая надпись, радиус 4, короткое слово
+ * (§ Components). Появился здесь, когда появилось применение: отметка
+ * «отвечено» в списке заявок кабинета. Слива — место акцента и никогда
+ * не выбор и не действие, а отметка о прошедшем событии — ровно акцент.
+ */
+export const badge =
+  'inline-flex items-center rounded-sm bg-accent px-sm py-xs ' +
+  'text-label tracking-label font-medium text-on-accent'
+
 /** link — синяя, с подчёркиванием. Подчёркивание не убирать (§ Components). */
 export const link = 'text-link underline underline-offset-4'
 

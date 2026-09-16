@@ -2,7 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import Offers from './pages/client/Offers'
 import MasterLogin from './pages/master/Login'
 import MasterProfileEdit from './pages/master/Profile'
-import QuoteForm from './pages/master/QuoteForm'
+import RequestCard from './pages/master/RequestCard'
 import MasterRequests from './pages/master/Requests'
 import Landing from './pages/public/Landing'
 import MasterProfile from './pages/public/MasterProfile'
@@ -26,7 +26,7 @@ export default function App() {
       {/* Мебельщик — кабинет */}
       <Route path="/master" element={<MasterLogin />} />
       <Route path="/master/requests" element={<MasterRequests />} />
-      <Route path="/master/requests/:id/quote" element={<QuoteForm />} />
+      <Route path="/master/requests/:id" element={<RequestCard />} />
       <Route path="/master/profile" element={<MasterProfileEdit />} />
 
       <Route path="*" element={<main className="p-8">Страница не найдена</main>} />

@@ -1,16 +1,18 @@
 // US-21 — страница предложений по токену. Вход без регистрации: доступ даёт
 // владение строкой из ссылки (контракт §3, §7). Токен берётся из адреса
 // и никуда не сохраняется — хранить его в браузере запрещено (спека §8).
-// Рендер карточек КП — US-22; здесь обязаны быть честными состояния:
-// загрузка, нерабочая ссылка, обрыв связи и пустой список.
+// Одно КП показывается целиком и без интерфейса сравнения — это US-21,
+// срез 1; сравнение и накопление включаются от двух предложений (US-22,
+// срез 3). Состояния обязаны быть честными: загрузка, нерабочая ссылка,
+// обрыв связи и пустой список.
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
-import type { RequestForClient } from '../../contract'
-import { buttonFilled, hintText, panel } from '../../components/ui'
+import type { Quote, RequestForClient } from '../../contract'
+import { buttonFilled, fieldLabel, hintText, panel, panelNested } from '../../components/ui'
 import { errorText, offersPage, statusNote } from '../../texts/request'
 
 type View =
@@ -31,6 +33,34 @@ function toView(caught: unknown): View {
 /** Заголовок экрана: крупно, обычным регистром, вес 600 (§ Typography). */
 function Title({ children }: { children: React.ReactNode }) {
   return <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{children}</h1>
+}
+
+/**
+ * Одно предложение целиком (US-21). Имя мастерской и вилка — крупно: ради
+ * них человек и открывает ссылку, и это те самые «настоящие числа и имена»,
+ * которые дают ощущение присутствия, а не заглушки (DESIGN.md § Presence).
+ */
+function QuoteCard({ quote }: { quote: Quote }) {
+  return (
+    <div className={panel}>
+      <p className="text-subheading tracking-subheading font-medium">{quote.master.name}</p>
+
+      <div className={`mt-lg ${panelNested}`}>
+        <p className="text-subheading tracking-subheading font-medium tabular-nums">
+          {offersPage.quotePrice(quote.price.minKzt, quote.price.maxKzt)}
+        </p>
+        <p className={`mt-xs ${hintText}`}>
+          {offersPage.quoteLead}: {offersPage.quoteLeadValue(quote.leadTimeDays)}
+        </p>
+      </div>
+
+      <p className={`mt-xl ${fieldLabel}`}>{offersPage.quoteWhat}</p>
+      <p className="mt-xs max-w-[62ch] text-body tracking-body">{quote.composition}</p>
+
+      <p className={`mt-lg ${fieldLabel}`}>{offersPage.quoteMaterials}</p>
+      <p className="mt-xs max-w-[62ch] text-body tracking-body">{quote.materials}</p>
+    </div>
+  )
 }
 
 export default function Offers() {
@@ -123,13 +153,18 @@ export default function Offers() {
       </h1>
 
       {/* Статус заявки — «следы процесса»: человек должен видеть, что она
-          движется, а не лежит (DESIGN.md § Presence). */}
-      <section className="mt-3xl">
-        <div className={panel}>
-          <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
-          <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
-        </div>
-      </section>
+          движется, а не лежит (DESIGN.md § Presence). Но когда предложения
+          уже пришли, плашка становится лишней: она объявляет «мебельщики
+          ответили, откройте ссылку» тому, кто эту ссылку и открыл. Дальше
+          за статус говорят сами предложения. */}
+      {request.quotes.length === 0 && (
+        <section className="mt-3xl">
+          <div className={panel}>
+            <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
+            <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
+          </div>
+        </section>
+      )}
 
       <section className="mt-3xl">
         {request.quotes.length === 0 ? (
@@ -141,10 +176,27 @@ export default function Offers() {
         ) : (
           <>
             <h2 className="text-subheading tracking-subheading font-medium">{offersPage.quotesHere}</h2>
-            <p className="mt-sm text-body tracking-body tabular-nums">{request.quotes.length}</p>
+            {/* Каждое КП — плашка: разнородные поля одного ответа, то самое
+                «это одно целое», ради которого плашка и существует.
+                Интерфейса сравнения нет — он включается от двух предложений
+                и живёт в US-22, срез 3 (PRD, US-21). */}
+            <ul className="mt-lg flex flex-col gap-xl">
+              {request.quotes.map((quote) => (
+                <li key={quote.id}>
+                  <QuoteCard quote={quote} />
+                </li>
+              ))}
+            </ul>
           </>
         )}
       </section>
+
+      {request.quotes.length > 0 && (
+        <section className="mt-3xl">
+          <h2 className="text-subheading tracking-subheading font-medium">{offersPage.nextTitle}</h2>
+          <p className="mt-sm max-w-[62ch] text-body tracking-body">{offersPage.nextBody}</p>
+        </section>
+      )}
     </PageShell>
   )
 }

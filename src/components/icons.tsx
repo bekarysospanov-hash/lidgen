@@ -116,3 +116,19 @@ export function CheckIcon() {
     </svg>
   )
 }
+
+/**
+ * Шеврон — строка ведёт дальше (DESIGN.md § Components, «Строка блока»).
+ * Вторая иконка, которой система разрешает жить без подписи: стрелку узнают
+ * по форме, а сама строка подписана названием заявки. Направление вправо,
+ * а не вниз: строка открывает новый экран, а не раскрывается на месте.
+ */
+export function ChevronIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 5l7 7-7 7" />
+    </svg>
+  )
+}
