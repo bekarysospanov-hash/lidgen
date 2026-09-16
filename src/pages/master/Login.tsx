@@ -133,6 +133,13 @@ export default function MasterLogin() {
       <MasterShell>
         <h1 className="text-heading tracking-heading font-semibold">{loginPage.notFoundTitle}</h1>
         <p className="mt-lg max-w-[58ch] text-body tracking-body">{loginPage.notFoundBody}</p>
+        {/* Тупик обязан говорить, что подходит: без этого на пробе человек
+            упирается в «нет в списке» и не знает, каким номером войти. */}
+        {probeVisible && (
+          <p className={`mt-lg max-w-[58ch] ${hintText}`}>
+            {probeHint.phones} {probeHint.phonesMore}
+          </p>
+        )}
         <button
           type="button"
           onClick={() => {
@@ -141,7 +148,7 @@ export default function MasterLogin() {
           }}
           className={`mt-xl ${buttonFilled}`}
         >
-          {loginPage.changePhone}
+          {loginPage.notFoundBack}
         </button>
       </MasterShell>
     )
@@ -216,7 +223,11 @@ export default function MasterLogin() {
       {error ? (
         <p className={`mt-xs ${errorTextClass}`}>{error.text}</p>
       ) : (
-        probeVisible && <p className={`mt-xs ${hintText}`}>{probeHint.phones}</p>
+        probeVisible && (
+          <p className={`mt-xs max-w-[58ch] ${hintText}`}>
+            {probeHint.phones} {probeHint.phonesMore}
+          </p>
+        )
       )}
 
       <button type="button" onClick={requestCode} disabled={busy} className={`mt-xl block ${buttonFilled}`}>

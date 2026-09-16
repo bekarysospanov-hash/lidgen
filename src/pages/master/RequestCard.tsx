@@ -25,6 +25,7 @@ import type { MasterSession, RequestForMaster } from '../../contract'
 import {
   categories,
   city as cityQuestion,
+  finishLevel,
   kitchenAppliances,
   kitchenShape,
   metersUnit,
@@ -188,9 +189,10 @@ export default function RequestCard() {
     value: [cityName, request.district].filter(Boolean).join(', '),
   })
   details.push({ label: quotePage.deadlineLabel, value: request.deadline ?? quotePage.notSet })
-  // Уровень отделки спрашивается с US-08, срез 2. На скелете он пуст у всех
-  // заявок — и честнее сказать «не спрашивали», чем поставить прочерк.
-  details.push({ label: quotePage.finishLabel, value: quotePage.finishUnknown })
+  // Уровень отделки спрашивается с US-08. Поле необязательное: заказчица
+  // могла его пропустить — тогда честное «не указан», а не прочерк.
+  const finish = finishLevel.options.find((option) => option.id === request.finishLevel)
+  details.push({ label: quotePage.finishLabel, value: finish?.label ?? quotePage.notSet })
 
   function validate(): boolean {
     const found: Partial<Record<keyof Draft, string>> = {}

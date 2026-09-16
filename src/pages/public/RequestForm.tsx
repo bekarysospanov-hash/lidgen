@@ -35,7 +35,10 @@ import type {
 import {
   categories,
   city as cityAsk,
+  deadline as deadlineAsk,
   description as descriptionAsk,
+  district as districtAsk,
+  finishLevel as finishAsk,
   photos as photosAsk,
   kitchenAppliances,
   kitchenShape,
@@ -164,6 +167,8 @@ function Summary({ rows }: { rows: [string, string][] }) {
 /** Подпись варианта: подчёркивается при наведении на карточку. */
 const optLabel = 'group-hover:underline underline-offset-4'
 
+type FinishId = (typeof finishAsk.options)[number]['id']
+type DeadlineId = (typeof deadlineAsk.options)[number]['id']
 type ShapeId = (typeof kitchenShape.options)[number]['id']
 type ApplianceId = (typeof kitchenAppliances.options)[number]['id']
 type FieldKey = 'size' | 'description' | 'city' | 'cityName' | 'phone' | 'consent'
@@ -204,6 +209,14 @@ export default function RequestForm() {
    * согласие согласием не является.
    */
   const [consentGiven, setConsentGiven] = useState(false)
+  /**
+   * US-08 — общие поля. Ни одно не блокирует отправку: спрашиваем настойчиво,
+   * но заявка без них остаётся валидной (PRD, «обязательный минимум»).
+   */
+  const [finish, setFinish] = useState<FinishId | null>(null)
+  const [deadlineId, setDeadlineId] = useState<DeadlineId | null>(null)
+  const [deadlineDate, setDeadlineDate] = useState('')
+  const [district, setDistrict] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [created, setCreated] = useState<RequestCreated | null>(null)
@@ -301,6 +314,10 @@ export default function RequestForm() {
   if (shape) rows.push([L.shape, kitchenShape.options.find((o) => o.id === shape)!.label])
   if (appliances)
     rows.push([L.appliances, kitchenAppliances.options.find((o) => o.id === appliances)!.label])
+  if (finish) rows.push([L.finish, finishAsk.options.find((o) => o.id === finish)!.label])
+  if (deadlineId === 'date' && deadlineDate.trim()) rows.push([L.deadline, deadlineDate.trim()])
+  else if (deadlineId && deadlineId !== 'date')
+    rows.push([L.deadline, deadlineAsk.value[deadlineId]])
   if (cityCode)
     rows.push([
       L.city,
@@ -365,6 +382,18 @@ export default function RequestForm() {
       return { errors: next }
     }
 
+    /**
+     * Срок уходит строкой, которую читает мебельщик, а не кодом варианта:
+     * контракт хранит свободный текст (§2), и «к Новому году» в заявке
+     * полезнее, чем 'date'.
+     */
+    const deadlineValue =
+      deadlineId === 'date'
+        ? deadlineDate.trim() || null
+        : deadlineId
+          ? deadlineAsk.value[deadlineId]
+          : null
+
     const details: Details = chosen === 'kitchen'
       ? { category: 'kitchen', shape, appliances }
       : { category: chosen }
@@ -378,6 +407,9 @@ export default function RequestForm() {
         description: parsedText.data,
         city: cityValue,
         phone: phoneValue,
+        district: district.trim() || null,
+        deadline: deadlineValue,
+        finishLevel: finish,
         // US-10: снимки уходят как есть, включая пустой список. Проверять
         // их здесь нечего — каждый уже принят сервером при загрузке (§5).
         photos: photoList,
@@ -673,6 +705,58 @@ export default function RequestForm() {
               )}
             </Section>
 
+            {/* US-08. Строки, а не картинки: снимков реальных работ ещё нет,
+                они идут треком A вместе с каталогом. Место под них
+                оставлено — заменятся так же, как схемы форм кухни. */}
+            <Section>
+              <Ask title={finishAsk.question} hint={finishAsk.hint}>
+                <Rows>
+                  {finishAsk.options.map((o) => (
+                    <div key={o.id} className={blockRowDivider}>
+                      <label className={blockRow(finish === o.id)}>
+                        <input type="radio" name="finish" value={o.id} className="sr-only"
+                          checked={finish === o.id}
+                          onChange={() => { setFinish(o.id); touched() }} />
+                        <span className="min-w-0">
+                          <span className={`block ${optLabel}`}>{o.label}</span>
+                          <span className={`mt-xs block ${hintText}`}>{o.hint}</span>
+                        </span>
+                        <Dot on={finish === o.id} />
+                      </label>
+                    </div>
+                  ))}
+                </Rows>
+              </Ask>
+            </Section>
+
+            <Section>
+              <Ask title={deadlineAsk.question} hint={deadlineAsk.hint}>
+                <div className="flex flex-wrap gap-sm">
+                  {deadlineAsk.options.map((o) => (
+                    <label key={o.id} className={chip(deadlineId === o.id)}>
+                      <input type="radio" name="deadline" value={o.id} className="sr-only"
+                        checked={deadlineId === o.id}
+                        onChange={() => { setDeadlineId(o.id); touched() }} />
+                      <span>{o.label}</span>
+                    </label>
+                  ))}
+                </div>
+                {/* Дата — свободной строкой: «к Новому году» человек называет
+                    охотнее, чем 20.12, и мебельщику этого хватает. */}
+                {deadlineId === 'date' && (
+                  <div className="mt-lg">
+                    <label htmlFor="deadline-date" className={`block ${fieldLabel}`}>
+                      {deadlineAsk.dateLabel}
+                    </label>
+                    <input id="deadline-date" value={deadlineDate}
+                      placeholder={deadlineAsk.datePlaceholder}
+                      onChange={(e) => { setDeadlineDate(e.target.value); touched() }}
+                      className={`mt-sm block w-full max-w-[32ch] ${field()}`} />
+                  </div>
+                )}
+              </Ask>
+            </Section>
+
             <Section>
               <Ask title={cityAsk.question} hint={cityAsk.hint}>
                 <div className="flex flex-wrap gap-sm">
@@ -698,6 +782,20 @@ export default function RequestForm() {
                       className={`mt-sm block w-full max-w-[32ch] ${field(Boolean(errors.cityName))}`} />
                   </div>
                 )}
+                {/* ЖК или район. Отправку не блокирует, но по нему проверяется
+                    сегмент: новосёлы в новостройках, а не «кто угодно из
+                    города» (US-08, сценарий «район сохраняется»). */}
+                <div className="mt-lg">
+                  <label htmlFor="district" className={`block ${fieldLabel}`}>
+                    {districtAsk.label}
+                  </label>
+                  <input id="district" autoComplete="address-level3" value={district}
+                    placeholder={districtAsk.placeholder}
+                    aria-describedby="district-note"
+                    onChange={(e) => { setDistrict(e.target.value); touched() }}
+                    className={`mt-sm block w-full max-w-[36ch] ${field()}`} />
+                  <p id="district-note" className={`mt-sm ${hintText}`}>{districtAsk.hint}</p>
+                </div>
                 <Note id="city-note" error={errors.city ?? errors.cityName} />
               </Ask>
             </Section>

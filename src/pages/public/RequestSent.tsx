@@ -6,6 +6,7 @@
 // терять единственную ссылку. Телефона в состоянии нет, и это главное.
 import { Link, useLocation } from 'react-router-dom'
 import { PageShell } from '../../components/PageShell'
+import { absoluteUrl } from '../../router-mode'
 import { RequestNumber, RequestStatus, Token } from '../../contract'
 import type { RequestStatus as RequestStatusValue } from '../../contract'
 import { buttonFilled, hintText, panel, panelNested } from '../../components/ui'
@@ -45,8 +46,10 @@ export default function RequestSent() {
 
   const note = statusNote[state.status]
   const path = `/offers/${state.token}`
-  // Ссылку пересылают целиком, поэтому показываем её абсолютной.
-  const absolute = `${window.location.origin}${path}`
+  // Ссылку пересылают целиком, поэтому показываем её абсолютной — и собираем
+  // с учётом роутера: на статическом хостинге путь живёт за решёткой,
+  // иначе пересланный адрес открывает пустоту (src/router-mode.ts).
+  const absolute = absoluteUrl(path)
 
   return (
     <PageShell>
