@@ -12,8 +12,9 @@ import bedroom from '../../assets/probe/bedroom.jpg'
 import cabinet from '../../assets/probe/cabinet.jpg'
 import kitchen from '../../assets/probe/kitchen.jpg'
 import { PageShell } from '../../components/PageShell'
-import { buttonFilled, hintText, panel } from '../../components/ui'
-import { landing } from '../../texts/landing'
+import { buttonFilled, hintText, link, panel } from '../../components/ui'
+import { landing, probePanel } from '../../texts/landing'
+import { probeVisible } from '../../texts/master'
 
 /**
  * Снимок — радиус 0 и без рамки (DESIGN.md § Components, § Shapes).
@@ -79,6 +80,25 @@ export default function Landing() {
             ratio="aspect-[3/4]" />
         </div>
       </section>
+
+      {/* PROBE: две двери для того, кто смотрит пробу. Без этого блока
+          кабинет мебельщика открывается только правкой адреса руками —
+          с телефона это невозможно. Исчезает вместе с моками. */}
+      {probeVisible && (
+        <section className="mt-3xl">
+          <div className={panel}>
+            <h2 className="text-subheading tracking-subheading font-medium">{probePanel.title}</h2>
+            <p className="mt-sm max-w-[54ch] text-body tracking-body">{probePanel.body}</p>
+            <div className="mt-lg flex flex-col gap-md">
+              <Link to="/request" className={link}>{probePanel.toRequest}</Link>
+              <span>
+                <Link to="/master" className={link}>{probePanel.toMaster}</Link>
+                <span className={`mt-xs block ${hintText}`}>{probePanel.masterNote}</span>
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="mt-3xl">
         <h2 className="text-subheading tracking-subheading font-medium">{landing.catalogue.title}</h2>
