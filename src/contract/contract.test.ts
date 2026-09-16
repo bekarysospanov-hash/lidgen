@@ -645,6 +645,27 @@ describe('Photo и Photos — US-10', () => {
   })
 })
 
+describe('Details — шкаф (US-06)', () => {
+  it('двери и высота необязательны: заявка без них валидна', () => {
+    const parsed = Details.parse({ category: 'wardrobe' })
+    expect(parsed).toEqual({ category: 'wardrobe', doors: null, toCeiling: null })
+  })
+
+  it('купе и «до потолка» проходят', () => {
+    const value = { category: 'wardrobe', doors: 'sliding', toCeiling: true }
+    expect(Details.safeParse(value).success).toBe(true)
+  })
+
+  it('выдуманный тип дверей отклоняется, а не проглатывается', () => {
+    expect(Details.safeParse({ category: 'wardrobe', doors: 'revolving' }).success).toBe(false)
+  })
+
+  it('поля шкафа в ветку кухни не протаскиваются', () => {
+    const value = { category: 'kitchen', shape: 'corner', appliances: 'yes', doors: 'sliding' }
+    expect(Details.safeParse(value).success).toBe(false)
+  })
+})
+
 describe('кабинет мебельщика — схемы US-14, US-17, US-19a', () => {
   const master = {
     id: 'aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1',

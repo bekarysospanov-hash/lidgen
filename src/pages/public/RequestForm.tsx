@@ -5,6 +5,7 @@ import { isApiError } from '../../api/errors'
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { CloseIcon } from '../../components/icons'
 import { KitchenShape } from '../../components/KitchenShape'
+import { WardrobeDoors } from '../../components/WardrobeDoors'
 import { OtpConfirm } from '../../components/OtpConfirm'
 import { PageShell } from '../../components/PageShell'
 import { PhoneInput } from '../../components/PhoneInput'
@@ -48,6 +49,8 @@ import {
   phone as phoneAsk,
   screen,
   summary,
+  wardrobeCeiling,
+  wardrobeDoors,
   type CategoryId,
 } from '../../questions/categories'
 import { consentRow, POLICY_VERSION } from '../../texts/privacy'
@@ -167,6 +170,7 @@ function Summary({ rows }: { rows: [string, string][] }) {
 /** Подпись варианта: подчёркивается при наведении на карточку. */
 const optLabel = 'group-hover:underline underline-offset-4'
 
+type DoorsId = (typeof wardrobeDoors.options)[number]['id']
 type FinishId = (typeof finishAsk.options)[number]['id']
 type DeadlineId = (typeof deadlineAsk.options)[number]['id']
 type ShapeId = (typeof kitchenShape.options)[number]['id']
@@ -213,6 +217,9 @@ export default function RequestForm() {
    * US-08 — общие поля. Ни одно не блокирует отправку: спрашиваем настойчиво,
    * но заявка без них остаётся валидной (PRD, «обязательный минимум»).
    */
+  /** US-06 — двери и высота шкафа. Как и у кухни, отправку не блокируют. */
+  const [doors, setDoors] = useState<DoorsId | null>(null)
+  const [toCeiling, setToCeiling] = useState<boolean | null>(null)
   const [finish, setFinish] = useState<FinishId | null>(null)
   const [deadlineId, setDeadlineId] = useState<DeadlineId | null>(null)
   const [deadlineDate, setDeadlineDate] = useState('')
@@ -314,6 +321,9 @@ export default function RequestForm() {
   if (shape) rows.push([L.shape, kitchenShape.options.find((o) => o.id === shape)!.label])
   if (appliances)
     rows.push([L.appliances, kitchenAppliances.options.find((o) => o.id === appliances)!.label])
+  if (doors) rows.push([L.doors, wardrobeDoors.options.find((o) => o.id === doors)!.label])
+  if (toCeiling !== null)
+    rows.push([L.ceiling, wardrobeCeiling.options.find((o) => o.id === (toCeiling ? 'yes' : 'no'))!.label])
   if (finish) rows.push([L.finish, finishAsk.options.find((o) => o.id === finish)!.label])
   if (deadlineId === 'date' && deadlineDate.trim()) rows.push([L.deadline, deadlineDate.trim()])
   else if (deadlineId && deadlineId !== 'date')
@@ -394,9 +404,12 @@ export default function RequestForm() {
           ? deadlineAsk.value[deadlineId]
           : null
 
-    const details: Details = chosen === 'kitchen'
-      ? { category: 'kitchen', shape, appliances }
-      : { category: chosen }
+    const details: Details =
+      chosen === 'kitchen'
+        ? { category: 'kitchen', shape, appliances }
+        : chosen === 'wardrobe'
+          ? { category: 'wardrobe', doors, toCeiling }
+          : { category: chosen }
 
     if (!attemptId.current) attemptId.current = crypto.randomUUID()
 
@@ -642,6 +655,49 @@ export default function RequestForm() {
                         <label key={o.id} className={chip(appliances === o.id)}>
                           <input type="radio" name="appliances" value={o.id} className="sr-only"
                             checked={appliances === o.id} onChange={() => { setAppliances(o.id); touched() }} />
+                          <span>{o.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </Ask>
+                </Section>
+              </>
+            )}
+
+            {/* US-06. Двери картинками: «купе» и «распашные» человек
+                различает глазами мгновенно, а словами путает. Вид спереди,
+                а не сверху, как у кухни: шкаф узнают по фасаду. */}
+            {category === 'wardrobe' && (
+              <>
+                <Section>
+                  <Ask title={wardrobeDoors.question} hint={wardrobeDoors.hint}>
+                    <Rows>
+                      {wardrobeDoors.options.map((o) => (
+                        <div key={o.id} className={blockRowDivider}>
+                          <label className={blockRow(doors === o.id)}>
+                            <input type="radio" name="doors" value={o.id} className="sr-only"
+                              checked={doors === o.id} onChange={() => { setDoors(o.id); touched() }} />
+                            <WardrobeDoors id={o.id} />
+                            <span className="min-w-0">
+                              <span className={`block ${optLabel}`}>{o.label}</span>
+                              <span className={`mt-xs block ${hintText}`}>{o.hint}</span>
+                            </span>
+                            <Dot on={doors === o.id} />
+                          </label>
+                        </div>
+                      ))}
+                    </Rows>
+                  </Ask>
+                </Section>
+
+                <Section>
+                  <Ask title={wardrobeCeiling.question} hint={wardrobeCeiling.hint}>
+                    <div className="flex flex-wrap gap-sm">
+                      {wardrobeCeiling.options.map((o) => (
+                        <label key={o.id} className={chip(toCeiling === (o.id === 'yes'))}>
+                          <input type="radio" name="toCeiling" value={o.id} className="sr-only"
+                            checked={toCeiling === (o.id === 'yes')}
+                            onChange={() => { setToCeiling(o.id === 'yes'); touched() }} />
                           <span>{o.label}</span>
                         </label>
                       ))}

@@ -26,6 +26,7 @@ import {
   categories,
   city as cityQuestion,
   finishLevel,
+  wardrobeDoors,
   kitchenAppliances,
   kitchenShape,
   metersUnit,
@@ -176,6 +177,16 @@ export default function RequestCard() {
   // Ветка кухни вытаскивается в переменную: union сужается по своему
   // дискриминанту, а не по пути через свойство заявки.
   const kitchen = request.details
+  if (kitchen.category === 'wardrobe') {
+    const doors = wardrobeDoors.options.find((option) => option.id === kitchen.doors)
+    if (doors) details.push({ label: quotePage.doorsLabel, value: doors.label })
+    if (kitchen.toCeiling !== null) {
+      details.push({
+        label: quotePage.ceilingLabel,
+        value: kitchen.toCeiling ? quotePage.ceilingYes : quotePage.ceilingNo,
+      })
+    }
+  }
   if (kitchen.category === 'kitchen') {
     const shape = kitchenShape.options.find((option) => option.id === kitchen.shape)
     const appliances = kitchenAppliances.options.find(

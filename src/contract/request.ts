@@ -34,7 +34,16 @@ export const KitchenDetails = z.strictObject({
   appliances: KitchenAppliances.nullable().default(null),
 })
 
-export const WardrobeDetails = z.strictObject({ category: z.literal('wardrobe') })
+/** Тип дверей шкафа (US-06). Купе и распашные различаются по цене сильно. */
+export const WardrobeDoors = z.enum(['swing', 'sliding', 'none'])
+export type WardrobeDoors = z.infer<typeof WardrobeDoors>
+
+export const WardrobeDetails = z.strictObject({
+  category: z.literal('wardrobe'),
+  doors: WardrobeDoors.nullable().default(null),
+  /** До потолка или нет — от этого зависит и цена, и сложность монтажа. */
+  toCeiling: z.boolean().nullable().default(null),
+})
 export const BathroomDetails = z.strictObject({ category: z.literal('bathroom') })
 export const OtherDetails = z.strictObject({ category: z.literal('other') })
 
