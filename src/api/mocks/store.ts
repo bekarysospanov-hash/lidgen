@@ -14,6 +14,7 @@ import type {
   RequestStatus,
   Source,
 } from '../../contract'
+import { resetPhotos } from './photos'
 
 /**
  * Полная серверная запись (§2). Телефон хранится здесь и никогда не попадает
@@ -56,6 +57,9 @@ const events: Event[] = []
 let numberCounter = 0
 
 export function reset(): void {
+  // Снимки убираются вместе со всем остальным: без этого blob:-адреса
+  // прошлого прогона остаются висеть в памяти вкладки.
+  resetPhotos()
   requests.clear()
   tokens.clear()
   byClientRequestId.clear()

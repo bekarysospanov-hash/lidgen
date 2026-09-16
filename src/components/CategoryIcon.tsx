@@ -12,10 +12,11 @@
 // нельзя — набор сразу рассыпается; планировки кухонь рисуются сверху и
 // поэтому живут отдельным компонентом KitchenShape.
 
-/** Категории из src/questions/categories.ts — четыре, пятой не бывает. */
-type IconId = 'kitchen' | 'wardrobe' | 'bathroom' | 'other'
+// Тип берётся из ядра, а не повторяется здесь: добавится категория —
+// компилятор потребует иконку, а не промолчит.
+import type { CategoryId } from '../questions/categories'
 
-export function CategoryIcon({ id }: { id: IconId }) {
+export function CategoryIcon({ id }: { id: CategoryId }) {
   return (
     <svg viewBox="0 0 32 32" aria-hidden="true" className="size-8 shrink-0"
       fill="none" stroke="currentColor" strokeWidth="1.75"

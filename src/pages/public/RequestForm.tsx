@@ -137,6 +137,28 @@ function photoErrorText(caught: unknown): string {
   return photosAsk.errorFailed
 }
 
+/**
+ * Сводка ответов. Показывается дважды — на шаге с кодом и над кнопкой, —
+ * и до этой правки была скопирована в оба места: правка в одном тихо
+ * расходилась со вторым. Плашка здесь обязательна: разнородные строки
+ * образуют одно целое «вот что уйдёт мебельщикам» (DESIGN.md § Elevation).
+ */
+function Summary({ rows }: { rows: [string, string][] }) {
+  return (
+    <div className={panel}>
+      <p className="text-subheading tracking-subheading font-medium">{summary.title}</p>
+      <dl className="mt-md text-body-sm tracking-body-sm">
+        {rows.map(([k, v]) => (
+          <div key={k} className="mt-sm flex gap-md">
+            <dt className={`w-40 shrink-0 ${hintText}`}>{k}</dt>
+            <dd className="min-w-0 tabular-nums">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  )
+}
+
 /** Подпись варианта: подчёркивается при наведении на карточку. */
 const optLabel = 'group-hover:underline underline-offset-4'
 
@@ -257,10 +279,9 @@ export default function RequestForm() {
   const isKitchen = category === 'kitchen'
   const stage: 'form' | 'otp' = created ? 'otp' : 'form'
 
-  // Счётчик шагов из блоков убран (решение PM, 16.09): счётчик, заголовок
-  // и плашка втроём давали грязную лестницу, а число вопросов уже названо
-  // в лиде. formSteps и stepLabel остались в src/questions — они понадобятся,
-  // когда форма станет пошаговой.
+  // Счётчик шагов убран целиком, вместе с механикой в src/questions
+  // (решение PM, 16.09): счётчик, заголовок и плашка втроём давали
+  // лестницу, а число вопросов уже названо в лиде.
 
   const L = summary.labels
   const rows: [string, string][] = []
@@ -473,17 +494,7 @@ export default function RequestForm() {
             }}
           />
           <Section>
-            <div className={panel}>
-              <p className="text-subheading tracking-subheading font-medium">{summary.title}</p>
-              <dl className="mt-md text-body-sm tracking-body-sm">
-                {rows.map(([k, v]) => (
-                  <div key={k} className="mt-sm flex gap-md">
-                    <dt className={`w-40 shrink-0 ${hintText}`}>{k}</dt>
-                    <dd className="min-w-0 tabular-nums">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+            <Summary rows={rows} />
           </Section>
         </div>
       )}
@@ -686,17 +697,7 @@ export default function RequestForm() {
                 строки образуют одно целое «вот что уйдёт мебельщикам»
                 (DESIGN.md § Elevation). */}
             <Section>
-              <div className={panel}>
-                <p className="text-subheading tracking-subheading font-medium">{summary.title}</p>
-                <dl className="mt-md text-body-sm tracking-body-sm">
-                  {rows.map(([k, v]) => (
-                    <div key={k} className="mt-sm flex gap-md">
-                      <dt className={`w-40 shrink-0 ${hintText}`}>{k}</dt>
-                      <dd className="min-w-0 tabular-nums">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
+              <Summary rows={rows} />
 
               {/* Кнопка стоит на холсте, а не внутри плашки: главное действие
                   экрана не принадлежит сводке, оно принадлежит странице. */}

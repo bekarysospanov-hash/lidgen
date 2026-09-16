@@ -7,7 +7,13 @@
 //
 // Здесь не заводится ничего сверх DESIGN.md: это ровно input · block-row ·
 // chip · choice-dot · button-filled · button-text · panel · panel-nested ·
-// badge из раздела Components.
+// link из раздела Components.
+//
+// И ничего сверх ПРИМЕНЁННОГО: `badge` описан в системе, но ни на одном
+// экране пока не стоит, поэтому строки под него здесь нет. Заводить впрок
+// нельзя — неприменённая строка классов не проверяется ничем и тихо
+// расходится с файлом. Появится шильдик на карточке мебельщика — появится
+// и строка.
 
 /**
  * input — белый фон, граница 1px `outline`, радиус 4. Одно из двух мест
@@ -97,11 +103,6 @@ export const buttonText =
 
 /** panel-nested — второй уровень, радиус 4, отступ 12. Глубже не вкладывать. */
 export const panelNested = 'rounded-sm bg-surface-container-high p-md'
-
-/** badge — сливовая заливка, белая надпись, радиус 4. Короткое слово, не предложение. */
-export const badge =
-  'inline-block rounded-sm bg-accent px-sm py-xs text-label tracking-label ' +
-  'font-medium text-on-accent'
 
 /** link — синяя, с подчёркиванием. Подчёркивание не убирать (§ Components). */
 export const link = 'text-link underline underline-offset-4'

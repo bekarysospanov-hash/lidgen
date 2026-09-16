@@ -171,14 +171,7 @@ export const screen = {
    */
   lede: 'Семь коротких вопросов. Без замеров и звонков вслепую.',
   stepCategory: 'Что вы хотите заказать',
-  stepDetails: 'Пара вопросов про кухню',
   submit: 'Продолжить',
-  /**
-   * Счётчик длины формы. Обычным регистром и мелким кеглем: капс в системе
-   * занят навигацией, кнопками и полосой (DESIGN.md § Typography).
-   */
-  step: (n: number, total: number | null) =>
-    total === null ? `Шаг ${n}` : `Шаг ${n} из ${total}`,
   submitting: 'Отправляем',
   /** Кнопка под лимитом: отсчёт идёт из retryAfterSec сервера, не из своего. */
   submitIn: (sec: number) => `Повторить можно через ${sec} с`,
@@ -209,29 +202,8 @@ export function metersUnit(value: string | number): string {
   return mainSize.unitMany
 }
 
-/** Секции формы, по порядку экрана. */
-export type StepId =
-  | 'category' | 'size' | 'shape' | 'appliances' | 'description' | 'city' | 'phone'
-
-/**
- * Фактический список шагов выбранной категории. У кухни их на два больше,
- * поэтому общее число считается отсюда, а не пишется в разметке: счётчик,
- * обещающий «из 5» там, где вопросов семь, хуже отсутствующего.
- * До выбора категории длина формы ещё не известна: набор вопросов зависит
- * от того, что выберут. Показывать в этот момент «из 5», чтобы через секунду
- * стало «из 7», — хуже, чем не показывать числа вовсе: прыгающая цифра
- * читается как ошибка, а не как уточнение.
- */
-export function formSteps(category: CategoryId | null): StepId[] {
-  const kitchenOnly: StepId[] = category === 'kitchen' ? ['shape', 'appliances'] : []
-  return ['category', 'size', ...kitchenOnly, 'description', 'city', 'phone']
-}
-
-/** Подпись счётчика для секции: «Шаг 3 из 7». */
-export function stepLabel(
-  step: StepId,
-  steps: StepId[],
-  category: CategoryId | null,
-): string {
-  return screen.step(steps.indexOf(step) + 1, category === null ? null : steps.length)
-}
+// Счётчик шагов удалён вместе с механикой (решение PM, 16.09): «Шаг 3 из 7»
+// над каждым блоком давал третью строку подряд — счётчик, заголовок, плашка —
+// и читался как лестница. Число вопросов теперь названо один раз, в лиде.
+// Вернётся, если форма станет пошаговой: тогда счётчик снова будет правдой,
+// потому что шаг начнёт меняться.
