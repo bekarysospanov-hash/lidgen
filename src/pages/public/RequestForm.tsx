@@ -330,7 +330,7 @@ export default function RequestForm() {
 
   return (
     <PageShell>
-      <h1 className="max-w-[20ch] text-heading tracking-heading">{screen.title}</h1>
+      <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{screen.title}</h1>
       {stage === 'form' && (
         <p className="mt-lg max-w-[58ch] text-body tracking-body">{screen.lede}</p>
       )}
