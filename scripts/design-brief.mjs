@@ -57,7 +57,8 @@ const spacing = keysOf('spacing')
 const components = keysOf('components')
 
 // Раздел запретов из прозы — он и есть то, что нарушают чаще всего.
-const donts = (prose.match(/### Don't\n([\s\S]*?)(?:\n## |\n$|$)/) || [, ''])[1]
+const dontsBlock = prose.match(/### Don't\n([\s\S]*?)(?:\n## |\n$|$)/)
+const donts = (dontsBlock ? dontsBlock[1] : '')
   .split('\n')
   .filter((l) => l.startsWith('- '))
   .map((l) => '  ' + l.slice(2).replace(/Никогда не /, '').trim())
