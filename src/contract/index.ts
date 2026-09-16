@@ -3,6 +3,7 @@
 export * from './primitives'
 export * from './request'
 export * from './otp'
+export * from './photo'
 export * from './quote'
 export * from './events'
 export * from './errors'

@@ -9,6 +9,7 @@ import type {
   EventType,
   FinishLevel,
   MainSize,
+  Photo,
   Quote,
   RequestStatus,
   Source,
@@ -43,6 +44,8 @@ export interface RequestRecord {
   otpSentAt: string
   /** Первое открытие клиентской страницы; повторные открытия его не двигают. */
   clientFirstOpenedAt: string | null
+  /** US-10 — снимки помещения; пустой список законен (§5). */
+  photos: Photo[]
   quotes: Quote[]
 }
 

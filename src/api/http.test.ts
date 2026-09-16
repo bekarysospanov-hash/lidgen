@@ -45,6 +45,7 @@ function validClientRequestBody(extra: Record<string, unknown> = {}) {
     district: null,
     deadline: null,
     finishLevel: null,
+    photos: [],
     quotes: [],
     ...extra,
   }
@@ -128,6 +129,7 @@ describe('confirmOtp', () => {
           district: null,
           deadline: null,
           finishLevel: null,
+          photos: [],
           quotes: [],
         },
         token: TOKEN,
@@ -159,6 +161,7 @@ describe('getRequestByToken', () => {
         district: null,
         deadline: null,
         finishLevel: null,
+        photos: [],
         quotes: [],
       }),
     )
@@ -333,5 +336,63 @@ describe('таймаут', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+/**
+ * US-10. Две вещи, которые ломаются молча и которые поэтому проверяются:
+ * Content-Type у multipart не выставляется руками (иначе сервер не найдёт
+ * boundary), и снятый снимок уходит методом DELETE, а не остаётся висеть.
+ */
+describe('uploadPhoto и deletePhoto — US-10', () => {
+  const PHOTO = {
+    id: '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e6f',
+    url: 'https://cdn.example.kz/3f1b8a2e.jpg',
+    name: 'kitchen.jpg',
+    bytes: 1024,
+    mime: 'image/jpeg',
+  }
+
+  function jpeg(): File {
+    return new File([new Blob([new Uint8Array(1024)])], 'kitchen.jpg', { type: 'image/jpeg' })
+  }
+
+  it('POST на /api/photos с multipart-телом', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(200, PHOTO))
+
+    const photo = await httpApi.uploadPhoto(jpeg())
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toContain('/api/photos')
+    expect(options?.method).toBe('POST')
+    expect(options?.body).toBeInstanceOf(FormData)
+    expect(photo.name).toBe('kitchen.jpg')
+  })
+
+  it('Content-Type руками НЕ выставляется — его ставит браузер вместе с boundary', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(200, PHOTO))
+
+    await httpApi.uploadPhoto(jpeg())
+
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const headers = (options?.headers ?? {}) as Record<string, string>
+    expect(Object.keys(headers).map((k) => k.toLowerCase())).not.toContain('content-type')
+  })
+
+  it('ответ не по контракту — CONTRACT_VIOLATION, а не молчаливый проглот', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(200, { ...PHOTO, mime: 'application/pdf' }))
+
+    await expect(httpApi.uploadPhoto(jpeg()))
+      .rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'CONTRACT_VIOLATION')
+  })
+
+  it('DELETE на /api/photos/{id}; пустое тело ответа не роняет разбор', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(204, undefined))
+
+    await httpApi.deletePhoto(PHOTO.id)
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toContain(`/api/photos/${PHOTO.id}`)
+    expect(options?.method).toBe('DELETE')
   })
 })

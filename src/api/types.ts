@@ -5,6 +5,7 @@ import type {
   ConfirmOtpInput,
   CreateRequest,
   OtpSent,
+  Photo,
   RequestConfirmed,
   RequestCreated,
   RequestForClient,
@@ -19,7 +20,14 @@ export type CreateRequestInput = CreateRequest | Record<string, unknown>
 export type ResendOtpInputLike = { requestId: string } | Record<string, unknown>
 export type ConfirmOtpInputLike = ConfirmOtpInput | Record<string, unknown>
 
-/** Четыре операции скелета (docs/api-contract.md §5). Всё остальное — §9. */
+/**
+ * Загрузка снимка. Наружу отдаётся File — реальный бэкенд получит его
+ * multipart-ом, мок положит в память вкладки. Экран в обоих случаях работает
+ * с готовым Photo и про способ доставки не знает.
+ */
+export type UploadPhotoInputLike = File
+
+/** Шесть операций скелета (docs/api-contract.md §5). Всё остальное — §9. */
 export interface Api {
   /** POST /api/requests — создаёт заявку и отправляет первый код. */
   createRequest(input: CreateRequestInput): Promise<RequestCreated>
@@ -29,4 +37,12 @@ export interface Api {
   confirmOtp(input: ConfirmOtpInputLike): Promise<RequestConfirmed>
   /** GET /api/client/requests/{token} — проекция без id и phone. */
   getRequestByToken(token: string): Promise<RequestForClient>
+  /** POST /api/photos — multipart, один файл за вызов (US-10, §5). */
+  uploadPhoto(file: UploadPhotoInputLike): Promise<Photo>
+  /**
+   * DELETE /api/photos/{id} — снятый снимок исчезает и на сервере.
+   * Без этой операции отвергнутые файлы копятся в хранилище, а во вкладке
+   * остаются висеть blob:-адреса, каждый до 10 МБ (US-10, §5).
+   */
+  deletePhoto(id: string): Promise<void>
 }

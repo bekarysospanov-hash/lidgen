@@ -7,6 +7,7 @@ import {
   CreateRequest,
   ErrorEnvelope,
   OtpSent,
+  Photo,
   RequestConfirmed,
   RequestCreated,
   RequestForClient,
@@ -18,6 +19,7 @@ import type {
   ConfirmOtpInputLike,
   CreateRequestInput,
   ResendOtpInputLike,
+  UploadPhotoInputLike,
 } from './types'
 
 /** База берётся из окружения: моки и прод отличаются переключателем, не кодом. */
@@ -47,6 +49,12 @@ async function readJson(response: { json: () => Promise<unknown> }): Promise<unk
   } catch {
     return undefined
   }
+}
+
+/** Схема для ответов без тела: разбирать нечего, но call требует схему. */
+const PASSTHROUGH: Schema<unknown> = {
+  parse: (value: unknown) => value,
+  safeParse: () => ({ success: true }),
 }
 
 async function call<T>(path: string, init: RequestInit, schema: Schema<T>): Promise<T> {
@@ -125,5 +133,27 @@ export const httpApi: Api = {
     return call(`/api/client/requests/${encodeURIComponent(token)}`, {
       method: 'GET',
     }, RequestForClient)
+  },
+
+  /**
+   * Multipart, один файл за вызов. Заголовок Content-Type здесь НЕ ставится
+   * намеренно: его вместе с boundary проставляет сам браузер, а заданный
+   * руками обрывает разбор на сервере.
+   */
+  async uploadPhoto(file: UploadPhotoInputLike) {
+    const body = new FormData()
+    body.append('file', file)
+    return call('/api/photos', { method: 'POST', body }, Photo)
+  },
+
+  /**
+   * Удаление снятого снимка. Тела в ответе нет, поэтому схема пропускающая:
+   * разбирать нечего, а ошибки всё равно перехватит call по статусу.
+   */
+  async deletePhoto(id: string) {
+    await call(`/api/photos/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: jsonHeaders,
+    }, PASSTHROUGH)
   },
 }

@@ -3,6 +3,10 @@
 // Источник правды: docs/api-contract.md (11 разделов).
 import { describe, expect, it } from 'vitest'
 import {
+  PHOTO_MAX_BYTES,
+  PHOTO_MAX_COUNT,
+  Photo,
+  Photos,
   ApiErrorBody,
   CategoryId,
   City,
@@ -359,6 +363,7 @@ function validRequestForClient(overrides: Record<string, unknown> = {}) {
     district: null,
     deadline: null,
     finishLevel: null,
+    photos: [],
     quotes: [],
     ...overrides,
   }
@@ -579,5 +584,48 @@ describe('ErrorEnvelope', () => {
     expect(
       ErrorEnvelope.safeParse({ error: { code: 'FOO', message: 'подождите' } }).success,
     ).toBe(false)
+  })
+})
+
+/**
+ * US-10 — снимки помещения. Схема держит три границы: тип файла, размер
+ * и количество. Каждая из них — то, что обязан проверять сервер, и то,
+ * на чём экран обязан уметь показать отказ.
+ */
+describe('Photo и Photos — US-10', () => {
+  const valid = {
+    id: '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e6f',
+    url: 'blob:http://localhost/3f1b8a2e',
+    name: 'kitchen.jpg',
+    bytes: 1_200_000,
+    mime: 'image/jpeg',
+  }
+
+  it('валидный снимок проходит', () => {
+    expect(Photo.safeParse(valid).success).toBe(true)
+  })
+
+  it('heic принимается — так снимает iPhone по умолчанию', () => {
+    expect(Photo.safeParse({ ...valid, mime: 'image/heic' }).success).toBe(true)
+  })
+
+  it('чужой тип файла отклоняется', () => {
+    expect(Photo.safeParse({ ...valid, mime: 'application/pdf' }).success).toBe(false)
+  })
+
+  it('файл больше десяти мегабайт отклоняется', () => {
+    expect(Photo.safeParse({ ...valid, bytes: PHOTO_MAX_BYTES + 1 }).success).toBe(false)
+  })
+
+  it('пустой список законен: фото не блокирует отправку', () => {
+    expect(Photos.safeParse([]).success).toBe(true)
+  })
+
+  it('шестой снимок отклоняется', () => {
+    const many = Array.from({ length: PHOTO_MAX_COUNT + 1 }, (_, i) => ({
+      ...valid,
+      id: `3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e${String(i).padStart(2, '0')}`,
+    }))
+    expect(Photos.safeParse(many).success).toBe(false)
   })
 })

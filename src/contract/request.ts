@@ -11,6 +11,7 @@ import {
   Token,
 } from './primitives'
 import { OtpSent } from './otp'
+import { Photo, Photos } from './photo'
 import { Quote } from './quote'
 
 export const CategoryId = z.enum(['kitchen', 'wardrobe', 'bathroom', 'other'])
@@ -87,6 +88,8 @@ export const CreateRequest = z.object({
   finishLevel: FinishLevel.nullable().optional(),
   consent: Consent.optional(),
   source: Source.optional(),
+  /** US-10. Пустой список законен: фото не блокирует отправку (§5). */
+  photos: Photos.optional(),
   /** Ключ идемпотентности: один на попытку отправки формы, не на клик (§8). */
   clientRequestId: RequestId.optional(),
 })
@@ -121,6 +124,7 @@ export const RequestForClient = z.strictObject({
   district: z.string().nullable(),
   deadline: z.string().nullable(),
   finishLevel: FinishLevel.nullable(),
+  photos: z.array(Photo),
   quotes: z.array(Quote),
 })
 export type RequestForClient = z.infer<typeof RequestForClient>

@@ -56,6 +56,7 @@ function toClientProjection(record: RequestRecord) {
     district: record.district,
     deadline: record.deadline,
     finishLevel: record.finishLevel,
+    photos: record.photos,
     quotes: record.quotes,
   })
 }
@@ -125,6 +126,7 @@ export function create(input: CreateRequestInput): RequestCreated {
     token: null,
     otpSentAt: now.toISOString(),
     clientFirstOpenedAt: null,
+    photos: payload.photos ?? [],
     quotes: [],
   }
   putRequest(record)

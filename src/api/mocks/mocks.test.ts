@@ -3,6 +3,8 @@
 // docs/api-contract.md §10). reset() из store даёт изоляцию между тестами.
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  PHOTO_MAX_BYTES,
+  Photo,
   OtpSent,
   RequestConfirmed,
   RequestCreated,
@@ -371,5 +373,55 @@ describe('роли в событиях воронки', () => {
     const resent = listEvents().filter((event) => event.type === 'otp_requested')
     expect(resent).toHaveLength(2)
     expect(resent[1]?.actor.role).toBe('client')
+  })
+})
+
+/**
+ * US-10 — загрузка снимков. Мок обязан отказывать так же, как сервер:
+ * иначе экран никогда не встретит своего состояния ошибки, и на стыковке
+ * выяснится, что показывать нечего.
+ */
+describe('uploadPhoto — US-10', () => {
+  beforeEach(() => {
+    // blob:-адресов в node нет; подменяем ровно то, чего не хватает.
+    globalThis.URL.createObjectURL = () => 'blob:test'
+    globalThis.URL.revokeObjectURL = () => {}
+  })
+
+  function file(name: string, type: string, size: number): File {
+    const blob = new Blob([new Uint8Array(size)], { type })
+    return new File([blob], name, { type })
+  }
+
+  it('снимок принимается и возвращается по контракту', async () => {
+    const photo = await mockApi.uploadPhoto(file('kitchen.jpg', 'image/jpeg', 1024))
+    expect(Photo.safeParse(photo).success).toBe(true)
+    expect(photo.name).toBe('kitchen.jpg')
+  })
+
+  it('pdf отклоняется кодом контракта, а не молча', async () => {
+    await expect(mockApi.uploadPhoto(file('smeta.pdf', 'application/pdf', 1024)))
+      .rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED')
+  })
+
+  it('файл больше лимита отклоняется', async () => {
+    const big = file('huge.jpg', 'image/jpeg', PHOTO_MAX_BYTES + 1)
+    await expect(mockApi.uploadPhoto(big))
+      .rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED')
+  })
+
+  it('заявка с снимками сохраняет их в проекции клиента', async () => {
+    const photo = await mockApi.uploadPhoto(file('kitchen.jpg', 'image/jpeg', 1024))
+    const created = await mockApi.createRequest(createPayload({ photos: [photo] }))
+    const { token } = await mockApi.confirmOtp({ requestId: created.id, code: VALID_CODE })
+    const seen = await mockApi.getRequestByToken(token)
+    expect(seen.photos).toHaveLength(1)
+    expect(seen.photos[0].name).toBe('kitchen.jpg')
+  })
+
+  it('заявка без снимков законна — отправку они не блокируют', async () => {
+    const created = await mockApi.createRequest(createPayload())
+    const { token } = await mockApi.confirmOtp({ requestId: created.id, code: VALID_CODE })
+    expect((await mockApi.getRequestByToken(token)).photos).toEqual([])
   })
 })
