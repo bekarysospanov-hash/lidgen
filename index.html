@@ -4,6 +4,15 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Скелет пробы лежит на публичном адресе: мебельщик открывает кабинет
+         с телефона, а /request с того же адреса доступен кому угодно. Согласия
+         на обработку ПДн в срезе 1 сознательно нет (US-11, срез 2), значит
+         страница с полем телефона не должна попадать в поиск. -->
+    <meta name="robots" content="noindex, nofollow" />
+    <!-- Путь /offers/<token> сам по себе секрет (контракт §3, §7), а страница
+         тянет шрифты с внешнего домена. Без этого пина токен уехал бы
+         в Referer стороннему хосту. -->
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400&display=swap" rel="stylesheet" />
