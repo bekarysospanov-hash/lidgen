@@ -7,6 +7,7 @@
 import { Link, useLocation } from 'react-router-dom'
 import { PageShell } from '../../components/PageShell'
 import { absoluteUrl } from '../../router-mode'
+import { rememberRequest } from '../../probe-trail'
 import { RequestNumber, RequestStatus, Token } from '../../contract'
 import type { RequestStatus as RequestStatusValue } from '../../contract'
 import { buttonFilled, hintText, panel, panelNested } from '../../components/ui'
@@ -46,6 +47,9 @@ export default function RequestSent() {
 
   const note = statusNote[state.status]
   const path = `/offers/${state.token}`
+  // PROBE: след для панели пробы на лендинге — чтобы вернуться к своим
+  // предложениям внутренним переходом, не перезагружая вкладку.
+  rememberRequest(state.token, state.number)
   // Ссылку пересылают целиком, поэтому показываем её абсолютной — и собираем
   // с учётом роутера: на статическом хостинге путь живёт за решёткой,
   // иначе пересланный адрес открывает пустоту (src/router-mode.ts).

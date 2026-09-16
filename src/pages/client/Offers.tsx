@@ -13,6 +13,7 @@ import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
 import type { Quote, RequestForClient } from '../../contract'
 import { buttonFilled, fieldLabel, hintText, panel, panelNested } from '../../components/ui'
+import { probeVisible } from '../../texts/master'
 import { errorText, offersPage, statusNote } from '../../texts/request'
 
 type View =
@@ -114,6 +115,9 @@ export default function Offers() {
       <PageShell>
         <Title>{offersPage.invalidTitle}</Title>
         <p className="mt-lg max-w-[58ch] text-body tracking-body">{offersPage.invalidBody}</p>
+        {probeVisible && (
+          <p className={`mt-lg max-w-[58ch] ${hintText}`}>{offersPage.probeInvalidNote}</p>
+        )}
       </PageShell>
     )
   }

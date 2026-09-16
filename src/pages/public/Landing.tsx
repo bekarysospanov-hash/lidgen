@@ -15,6 +15,7 @@ import { PageShell } from '../../components/PageShell'
 import { buttonFilled, hintText, link, panel } from '../../components/ui'
 import { landing, probePanel } from '../../texts/landing'
 import { probeVisible } from '../../texts/master'
+import { lastRequest } from '../../probe-trail'
 
 /**
  * Снимок — радиус 0 и без рамки (DESIGN.md § Components, § Shapes).
@@ -29,6 +30,9 @@ function Shot({ src, alt, ratio }: { src: string; alt: string; ratio: string }) 
 }
 
 export default function Landing() {
+  // PROBE: след последней заявки этой вкладки — см. probe-trail.ts.
+  const trail = lastRequest()
+
   return (
     <PageShell>
       {/* Обещание и кнопка — выше сгиба, до всякой прокрутки (US-01) */}
@@ -95,6 +99,17 @@ export default function Landing() {
                 <Link to="/master" className={link}>{probePanel.toMaster}</Link>
                 <span className={`mt-xs block ${hintText}`}>{probePanel.masterNote}</span>
               </span>
+              {/* Третья дверь появляется, только когда заявка уже оставлена
+                  в этой вкладке: возвращает к своим предложениям внутренним
+                  переходом, без копирования адреса. */}
+              {trail && (
+                <span>
+                  <Link to={`/offers/${trail.token}`} className={link}>
+                    {probePanel.toOffers(trail.number)}
+                  </Link>
+                  <span className={`mt-xs block ${hintText}`}>{probePanel.offersNote}</span>
+                </span>
+              )}
             </div>
           </div>
         </section>
