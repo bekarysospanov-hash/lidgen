@@ -18,13 +18,22 @@ const ALLOW = new Set(['src/design-tokens.css'])
 // Проверка значений (RULES ниже) такие нарушения не видит — нарушитель
 // пользуется легальными утилитами, просто запрещёнными нашей системой.
 const BANNED = [
-  { re: /\brounded-(?!none\b)[a-z0-9[\]]+/g, why: 'радиус ноль у всего — DESIGN.md § Shapes' },
-  { re: /\bfont-(bold|semibold|medium|light|extralight|thin|black|extrabold)\b/g,
-    why: 'один вес 400, иерархия размером и трекингом — DESIGN.md § Typography' },
-  { re: /\b(drop-)?shadow-[a-z0-9[\]]+/g, why: 'теней нет — DESIGN.md § Elevation' },
-  { re: /\bitalic\b/g, why: 'курсива нет — DESIGN.md § Запреты' },
-  { re: /\bbg-terminal\b/g, why: 'лайм только терминальной полосой — DESIGN.md § Colors' },
-  { re: /\btext-stroke-signal\b/g, why: 'красный только линией, не текстом — DESIGN.md § Colors' },
+  { re: /\brounded-(?!none\b|sm\b|md\b)[a-z0-9[\]]+/g,
+    why: 'три ступени радиуса: 0 фото и линии, 4 кнопки и поля, 8 карточки — DESIGN.md § Shapes' },
+  { re: /\brounded(?![-a-z0-9])/g,
+    why: 'голый rounded — это дефолт Tailwind мимо шкалы — DESIGN.md § Shapes' },
+  { re: /\bfont-(bold|extrabold|black|light|extralight|thin)\b/g,
+    why: 'шкала весов 400 / 500 / 600, крайних нет — DESIGN.md § Typography' },
+  { re: /\b(drop-)?shadow-[a-z0-9[\]]+/g,
+    why: 'теней нет, высота передаётся цветом поверхности — DESIGN.md § Elevation' },
+  { re: /\bbg-gradient-[a-z-]+/g, why: 'градиентов нет — DESIGN.md § Elevation' },
+  { re: /\bitalic\b/g, why: 'курсива нет — DESIGN.md § Don\'ts' },
+  { re: /\buppercase\b/g,
+    why: 'регистр предложный везде, капса нет — DESIGN.md § Typography' },
+  { re: /\bbg-error\b/g,
+    why: 'красный только линией и текстом, заливкой никогда — DESIGN.md § Colors' },
+  { re: /\bbg-link\b/g,
+    why: 'синий только у ссылок, кнопка синей не бывает — DESIGN.md § Colors' },
 ]
 
 const RULES = [

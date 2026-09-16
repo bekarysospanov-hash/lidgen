@@ -1,5 +1,5 @@
-/* Hallmark · design-system: DESIGN.md · theme: ARTU-derived (галерея на белом)
- * axes: light / neo-grotesque-single-weight / monochrome + terminal lime
+/* Hallmark · design-system: DESIGN.md · theme: «Мастерская — присутствие»
+ * axes: light / neo-grotesque-weight-scale / graphite + green action, plum accent
  * Страница подчиняется DESIGN.md: тема, шрифт, радиусы и состояния берутся
  * оттуда, а не выбираются здесь. Диверсификация НЕ применяется —
  * на проекте с системой страницы обязаны быть одинаковыми, а не разными.
@@ -26,8 +26,11 @@ h1, h2, h3 {
   min-width: 0;
 }
 
+/* Фокус берёт primary, а не accent: DESIGN.md § Состояния. Слива — акцент
+   неинтерактивного, фокус же всегда про действие. design:check это расхождение
+   не ловит: ссылка на токен законна, просто токен был не тот. */
 :focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
   transition: none;
 }
