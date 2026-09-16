@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && jq -r \".tool_input.file_path // empty\" | { read -r f; case \"$f\" in *.test.ts|*.test.tsx) exit 0;; */src/*.tsx|*/src/*.ts|*/src/*.css) node scripts/design-brief.mjs | jq -Rs \"{hookSpecificOutput:{hookEventName:\\\"PreToolUse\\\",additionalContext:.}}\";; esac; }",
+            "timeout": 15,
+            "statusMessage": "DESIGN.md — выжимка перед записью"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-$PWD}\" && jq -r \".tool_input.file_path // empty\" | { read -r f; case \"$f\" in *.test.ts|*.test.tsx) exit 0;; */src/*.tsx|*/src/*.ts|*/src/*.css) node scripts/design-check.mjs 2>&1 | jq -Rs \"{hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\",additionalContext:.}}\";; esac; }",
+            "timeout": 30,
+            "statusMessage": "design:check после записи"
+          }
+        ]
+      }
+    ]
+  }
+}
