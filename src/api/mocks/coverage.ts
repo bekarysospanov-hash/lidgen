@@ -1,11 +1,10 @@
-// PROBE: мок-покрытие городов — стенд-ин серверных данных «мебельщики
-// на приёме» (§2 City, §10). На проде покрытие считается по списку
-// мебельщиков, принимающих заявки (US-14), а не по константе.
+// Покрытие города — свойство серверных данных, не контракта (§2 City, §4).
+// До US-14 здесь стояла константа из трёх городов; теперь у покрытия есть
+// источник: город покрыт, если в нём есть хотя бы один мебельщик на приёме.
 import type { CityCode } from '../../contract'
+import { listAcceptingIn } from './masters'
 
-const COVERED: ReadonlySet<CityCode> = new Set<CityCode>(['almaty', 'astana', 'shymkent'])
-
-/** Есть ли в городе мебельщики на приёме — свойство данных, не контракта. */
+/** Есть ли в городе мебельщики на приёме. */
 export function covered(code: CityCode): boolean {
-  return COVERED.has(code)
+  return listAcceptingIn(code).length > 0
 }

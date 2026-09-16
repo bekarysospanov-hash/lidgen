@@ -396,3 +396,143 @@ describe('uploadPhoto и deletePhoto — US-10', () => {
     expect(options?.method).toBe('DELETE')
   })
 })
+
+describe('кабинет мебельщика (§5б)', () => {
+  const MASTER_ID = 'aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1'
+  const MASTER_TOKEN = 'b'.repeat(32)
+
+  const sessionBody = () => ({
+    master: { id: MASTER_ID, name: 'Мастерская на Сайране', city: { code: 'almaty', name: null } },
+    token: MASTER_TOKEN,
+  })
+
+  const listItemBody = () => ({
+    id: REQUEST_ID,
+    number: '2609-001',
+    routedAt: '2026-09-16T10:00:00.000Z',
+    category: 'kitchen',
+    mainSize: { known: true, meters: 3.2 },
+    city: { code: 'almaty', name: null },
+    district: null,
+    deadline: null,
+    photosCount: 0,
+    quotedByMe: false,
+  })
+
+  const quoteBody = () => ({
+    id: '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e01',
+    requestId: REQUEST_ID,
+    master: { id: MASTER_ID, name: 'Мастерская на Сайране' },
+    composition: 'Корпуса, фасады, столешница',
+    materials: 'ЛДСП корпус, крашеный МДФ фасады',
+    price: { minKzt: 900_000, maxKzt: 1_400_000 },
+    leadTimeDays: 30,
+    photos: [],
+    sentAt: '2026-09-16T12:00:00.000Z',
+    updatedAt: null,
+  })
+
+  function headersOf(call: number): Record<string, string> {
+    const [, options] = fetchMock.mock.calls[call] as [string, RequestInit]
+    return (options?.headers ?? {}) as Record<string, string>
+  }
+
+  it('запрос кода: POST на /api/master/otp/request', async () => {
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse(200, { channel: 'sms', codeLength: 4, retryAfterSec: 0 }),
+    )
+
+    await httpApi.masterRequestCode({ phone: '+77010000001' })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toContain('/api/master/otp/request')
+    expect(options?.method).toBe('POST')
+  })
+
+  it('подтверждение кода отдаёт сессию по контракту', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(200, sessionBody()))
+
+    const session = await httpApi.masterConfirmCode({ phone: '+77010000001', code: '1234' })
+
+    expect(session.token).toBe(MASTER_TOKEN)
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/master/otp/confirm')
+  })
+
+  it('токен уходит заголовком Authorization, а не в URL', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(200, [listItemBody()]))
+
+    await httpApi.listRequestsForMaster(MASTER_TOKEN)
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toBe('/api/master/requests')
+    expect(String(url)).not.toContain(MASTER_TOKEN)
+    expect(headersOf(0).Authorization).toBe(`Bearer ${MASTER_TOKEN}`)
+  })
+
+  it('список разбирается массивом проекций', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(200, [listItemBody()]))
+
+    const list = await httpApi.listRequestsForMaster(MASTER_TOKEN)
+
+    expect(list).toHaveLength(1)
+    expect(list[0].number).toBe('2609-001')
+  })
+
+  it('телефон, протёкший в список, ловится как CONTRACT_VIOLATION', async () => {
+    const leaked = { ...listItemBody(), clientPhone: '+77012345678' }
+    fetchMock.mockResolvedValueOnce(fakeResponse(200, [leaked]))
+
+    await expect(httpApi.listRequestsForMaster(MASTER_TOKEN)).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'CONTRACT_VIOLATION',
+    )
+  })
+
+  it('чужая заявка: конверт NOT_ROUTED_TO_YOU доходит до вызывающего', async () => {
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse(403, { error: { code: 'NOT_ROUTED_TO_YOU', message: 'Эта заявка не ваша' } }),
+    )
+
+    await expect(httpApi.getRequestForMaster(MASTER_TOKEN, REQUEST_ID)).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'NOT_ROUTED_TO_YOU',
+    )
+  })
+
+  it('протухшая сессия: MASTER_UNAUTHORIZED, а не CONTRACT_VIOLATION', async () => {
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse(401, { error: { code: 'MASTER_UNAUTHORIZED', message: 'Нужно войти заново' } }),
+    )
+
+    await expect(httpApi.listRequestsForMaster(MASTER_TOKEN)).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+    )
+  })
+
+  it('КП уходит POST на /api/master/requests/{id}/quote с токеном в заголовке', async () => {
+    fetchMock.mockResolvedValueOnce(fakeResponse(201, quoteBody()))
+
+    const quote = await httpApi.createQuote(MASTER_TOKEN, REQUEST_ID, {
+      composition: 'Корпуса, фасады, столешница',
+      materials: 'ЛДСП корпус, крашеный МДФ фасады',
+      price: { minKzt: 900_000, maxKzt: 1_400_000 },
+      leadTimeDays: 30,
+    })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toBe(`/api/master/requests/${REQUEST_ID}/quote`)
+    expect(options?.method).toBe('POST')
+    expect(headersOf(0).Authorization).toBe(`Bearer ${MASTER_TOKEN}`)
+    expect(quote.price.maxKzt).toBe(1_400_000)
+  })
+
+  it('перевёрнутая вилка не уходит на сервер вовсе', async () => {
+    await expect(
+      httpApi.createQuote(MASTER_TOKEN, REQUEST_ID, {
+        composition: 'Корпуса',
+        materials: 'ЛДСП',
+        price: { minKzt: 1_400_000, maxKzt: 900_000 },
+        leadTimeDays: 30,
+      }),
+    ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})

@@ -13,6 +13,10 @@ export const ErrorCode = z.enum([
   'TOKEN_INVALID',
   'RATE_LIMITED',
   'INTERNAL',
+  'MASTER_NOT_FOUND',
+  'MASTER_UNAUTHORIZED',
+  'NOT_ROUTED_TO_YOU',
+  'QUOTE_ALREADY_SENT',
 ])
 export type ErrorCode = z.infer<typeof ErrorCode>
 
@@ -48,6 +52,12 @@ export const ApiErrorBody = z.discriminatedUnion('code', [
   z.object({ code: z.literal('TOKEN_INVALID'), message }),
   z.object({ code: z.literal('RATE_LIMITED'), message, retryAfterSec: z.int().min(0) }),
   z.object({ code: z.literal('INTERNAL'), message }),
+  /** Кабинет мебельщика (§5б, §6). */
+  z.object({ code: z.literal('MASTER_NOT_FOUND'), message }),
+  z.object({ code: z.literal('MASTER_UNAUTHORIZED'), message }),
+  /** Чужая заявка и несуществующая отвечают одинаково — иначе id перебирается. */
+  z.object({ code: z.literal('NOT_ROUTED_TO_YOU'), message }),
+  z.object({ code: z.literal('QUOTE_ALREADY_SENT'), message }),
 ])
 export type ApiErrorBody = z.infer<typeof ApiErrorBody>
 

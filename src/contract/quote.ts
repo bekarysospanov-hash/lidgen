@@ -17,12 +17,19 @@ export type QuotePrice = z.infer<typeof QuotePrice>
 export const QuoteMaster = z.object({ id: z.uuid(), name: z.string().min(1) })
 export type QuoteMaster = z.infer<typeof QuoteMaster>
 
+/**
+ * Текст КП: обрезается по краям, пустое после обрезки — ошибка. Та же
+ * дисциплина, что у описания заявки: строка из пробелов не должна проходить
+ * как «состав решения».
+ */
+export const QuoteText = z.string().trim().min(1).max(2000)
+
 export const Quote = z.object({
   id: z.uuid(),
   requestId: RequestId,
   master: QuoteMaster,
-  composition: z.string().min(1),
-  materials: z.string().min(1),
+  composition: QuoteText,
+  materials: QuoteText,
   price: QuotePrice,
   leadTimeDays: z.int().gt(0),
   photos: z.array(z.url()).max(3).default([]),
@@ -30,3 +37,21 @@ export const Quote = z.object({
   updatedAt: Iso.nullable(),
 })
 export type Quote = z.infer<typeof Quote>
+
+/**
+ * Тело createQuote (§5б). `master` сервер проставляет сам из сессии — иначе
+ * мебельщик отправляет КП от чужого имени; `id`, `requestId` и `sentAt`
+ * тоже его работа, а `updatedAt` появится только с US-19b (срез 3).
+ *
+ * Вилка обязательна и на сервере, не только в форме (US-19a): равенство
+ * границ проходит — это твёрдая цена, законный ответ; чего схема не
+ * пропускает, так это отсутствия одной из границ.
+ */
+export const CreateQuote = z.object({
+  composition: QuoteText,
+  materials: QuoteText,
+  price: QuotePrice,
+  leadTimeDays: z.int().gt(0),
+  photos: z.array(z.url()).max(3).optional(),
+})
+export type CreateQuote = z.infer<typeof CreateQuote>

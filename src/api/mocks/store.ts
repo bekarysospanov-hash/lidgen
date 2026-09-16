@@ -14,7 +14,6 @@ import type {
   RequestStatus,
   Source,
 } from '../../contract'
-import { resetPhotos } from './photos'
 
 /**
  * Полная серверная запись (§2). Телефон хранится здесь и никогда не попадает
@@ -56,10 +55,25 @@ const byClientRequestId = new Map<string, string>()
 const events: Event[] = []
 let numberCounter = 0
 
+/**
+ * Кто ещё должен очиститься вместе с хранилищем: снимки, маршруты, сессии
+ * кабинета. Реестр, а не прямые вызовы, потому что все эти модули сами
+ * читают store — импортировать их отсюда значило бы замкнуть кольцо и
+ * поставить порядок инициализации в зависимость от того, кого первым
+ * импортировал тест.
+ */
+const resetHandlers = new Set<() => void>()
+
+export function onReset(handler: () => void): void {
+  resetHandlers.add(handler)
+}
+
 export function reset(): void {
   // Снимки убираются вместе со всем остальным: без этого blob:-адреса
-  // прошлого прогона остаются висеть в памяти вкладки.
-  resetPhotos()
+  // прошлого прогона остаются висеть в памяти вкладки. Сессия кабинета —
+  // тоже: пережив reset, она дала бы следующему прогону доступ к заявкам,
+  // которых больше нет.
+  for (const handler of resetHandlers) handler()
   requests.clear()
   tokens.clear()
   byClientRequestId.clear()

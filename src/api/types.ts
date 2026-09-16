@@ -3,12 +3,19 @@
 // (CLAUDE.md, docs/api-contract.md §5).
 import type {
   ConfirmOtpInput,
+  CreateQuote,
   CreateRequest,
+  MasterConfirmCodeInput,
+  MasterRequestCodeInput,
+  MasterSession,
   OtpSent,
   Photo,
+  Quote,
   RequestConfirmed,
   RequestCreated,
   RequestForClient,
+  RequestForMaster,
+  RequestForMasterListItem,
 } from '../contract'
 
 /**
@@ -27,7 +34,15 @@ export type ConfirmOtpInputLike = ConfirmOtpInput | Record<string, unknown>
  */
 export type UploadPhotoInputLike = File
 
-/** Шесть операций скелета (docs/api-contract.md §5). Всё остальное — §9. */
+/** Вход операций кабинета — так же «сырой», как и остальные (§5б). */
+export type MasterCodeInputLike = MasterRequestCodeInput | Record<string, unknown>
+export type MasterConfirmInputLike = MasterConfirmCodeInput | Record<string, unknown>
+export type CreateQuoteInputLike = CreateQuote | Record<string, unknown>
+
+/**
+ * Одиннадцать операций скелета: шесть публичных (§5) и пять в кабинете
+ * мебельщика (§5б). Всё остальное — §9.
+ */
 export interface Api {
   /** POST /api/requests — создаёт заявку и отправляет первый код. */
   createRequest(input: CreateRequestInput): Promise<RequestCreated>
@@ -45,4 +60,19 @@ export interface Api {
    * остаются висеть blob:-адреса, каждый до 10 МБ (US-10, §5).
    */
   deletePhoto(id: string): Promise<void>
+
+  // --- Кабинет мебельщика (§5б). masterToken уходит заголовком
+  // Authorization: Bearer, а не в пути и не в теле: в URL он попал бы
+  // в логи прокси и в Referer, а за ним — список чужих заявок (§3).
+
+  /** POST /api/master/otp/request — код на номер мебельщика (US-17). */
+  masterRequestCode(input: MasterCodeInputLike): Promise<OtpSent>
+  /** POST /api/master/otp/confirm — выдаёт masterToken на 12 часов. */
+  masterConfirmCode(input: MasterConfirmInputLike): Promise<MasterSession>
+  /** GET /api/master/requests — маршрутизированные ему, новые первыми (US-18). */
+  listRequestsForMaster(token: string): Promise<RequestForMasterListItem[]>
+  /** GET /api/master/requests/{id} — карточка, по ней называется вилка. */
+  getRequestForMaster(token: string, id: string): Promise<RequestForMaster>
+  /** POST /api/master/requests/{id}/quote — одно КП на заявку (US-19a). */
+  createQuote(token: string, id: string, input: CreateQuoteInputLike): Promise<Quote>
 }

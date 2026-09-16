@@ -108,10 +108,13 @@ describe('confirmOtp', () => {
     expect(RequestConfirmed.parse(confirmed)).toBeTruthy()
   })
 
-  it('верный код, almaty + mainSize.known → qualified, token выдан, событие otp_confirmed', async () => {
+  it('верный код, almaty + mainSize.known → routed (маршрутизация синхронна), token выдан, событие otp_confirmed', async () => {
     const { created, confirmed } = await createAndConfirm()
 
-    expect(confirmed.request.status).toBe('qualified')
+    // qualified живёт ровно один шаг: мок маршрутизирует тем же вызовом,
+    // потому что сервера с отдельным шагом рассылки у пробы нет (§4, §10).
+    expect(confirmed.request.status).toBe('routed')
+    expect(confirmed.request.routedAt).not.toBeNull()
     expect(confirmed.request.phoneConfirmedAt).not.toBeNull()
     expect(Token.safeParse(confirmed.token).success).toBe(true)
 
@@ -423,5 +426,246 @@ describe('uploadPhoto — US-10', () => {
     const created = await mockApi.createRequest(createPayload())
     const { token } = await mockApi.confirmOtp({ requestId: created.id, code: VALID_CODE })
     expect((await mockApi.getRequestByToken(token)).photos).toEqual([])
+  })
+})
+
+describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', () => {
+  const ALMATY_PHONES = ['+77010000001', '+77010000002', '+77010000003']
+  const ASTANA_PHONE = '+77010000004'
+
+  async function login(phone: string) {
+    await mockApi.masterRequestCode({ phone })
+    return mockApi.masterConfirmCode({ phone, code: VALID_CODE })
+  }
+
+  const quotePayload = (overrides: Record<string, unknown> = {}) => ({
+    composition: 'Корпуса, фасады, столешница',
+    materials: 'ЛДСП корпус, крашеный МДФ фасады',
+    price: { minKzt: 900_000, maxKzt: 1_400_000 },
+    leadTimeDays: 30,
+    ...overrides,
+  })
+
+  describe('вход по номеру и коду', () => {
+    it('номера нет в списке мастерских → MASTER_NOT_FOUND', async () => {
+      await expect(mockApi.masterRequestCode({ phone: '+77019999999' })).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'MASTER_NOT_FOUND',
+      )
+    })
+
+    it('верный код выдаёт сессию с именем мастерской, но без телефона', async () => {
+      const session = await login(ALMATY_PHONES[0])
+      expect(Token.safeParse(session.token).success).toBe(true)
+      expect(session.master.name).toBe('Мастерская на Сайране')
+      expect('phone' in session.master).toBe(false)
+    })
+
+    it('неверный код не пускает', async () => {
+      await mockApi.masterRequestCode({ phone: ALMATY_PHONES[0] })
+      await expect(
+        mockApi.masterConfirmCode({ phone: ALMATY_PHONES[0], code: INVALID_CODE }),
+      ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'OTP_INVALID')
+    })
+
+    it('повторный запрос кода упирается в кулдаун — как и у заявки', async () => {
+      await mockApi.masterRequestCode({ phone: ALMATY_PHONES[0] })
+      await expect(mockApi.masterRequestCode({ phone: ALMATY_PHONES[0] })).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'OTP_RESEND_TOO_SOON',
+      )
+    })
+
+    it('код нельзя подтвердить, если его не запрашивали', async () => {
+      await expect(
+        mockApi.masterConfirmCode({ phone: ALMATY_PHONES[0], code: VALID_CODE }),
+      ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'OTP_INVALID')
+    })
+
+    it('reset уносит сессию: заявок прошлого прогона она не откроет', async () => {
+      const { token } = await login(ALMATY_PHONES[0])
+      reset()
+      await expect(mockApi.listRequestsForMaster(token)).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+      )
+    })
+
+    it('мусорный токен не открывает список', async () => {
+      await expect(mockApi.listRequestsForMaster('нетакойтокен')).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+      )
+    })
+  })
+
+  describe('маршрутизация (US-14)', () => {
+    it('пустой список законен: заявок ещё нет', async () => {
+      const { token } = await login(ALMATY_PHONES[0])
+      expect(await mockApi.listRequestsForMaster(token)).toEqual([])
+    })
+
+    it('заявка из Алматы уходит троим мебельщикам этого города', async () => {
+      await createAndConfirm()
+
+      for (const phone of ALMATY_PHONES) {
+        const { token } = await login(phone)
+        const list = await mockApi.listRequestsForMaster(token)
+        expect(list).toHaveLength(1)
+        expect(list[0].category).toBe('kitchen')
+      }
+    })
+
+    it('мебельщику из другого города заявка не видна', async () => {
+      await createAndConfirm()
+      const { token } = await login(ASTANA_PHONE)
+      expect(await mockApi.listRequestsForMaster(token)).toEqual([])
+    })
+
+    it('incomplete не маршрутизируется — сначала дозвон', async () => {
+      const { confirmed } = await createAndConfirm({ mainSize: { known: false } })
+      expect(confirmed.request.status).toBe('incomplete')
+      expect(confirmed.request.routedAt).toBeNull()
+
+      const { token } = await login(ALMATY_PHONES[0])
+      expect(await mockApi.listRequestsForMaster(token)).toEqual([])
+    })
+
+    it('вне покрытия не маршрутизируется — передавать некому', async () => {
+      const { confirmed } = await createAndConfirm({ city: { code: 'other', name: 'Талдыкорган' } })
+      expect(confirmed.request.status).toBe('out_of_coverage')
+      expect(confirmed.request.routedAt).toBeNull()
+    })
+
+    it('список отсортирован: новые первыми', async () => {
+      await createAndConfirm()
+      await createAndConfirm({ clientRequestId: '22222222-2222-4222-8222-222222222222' })
+
+      const { token } = await login(ALMATY_PHONES[0])
+      const list = await mockApi.listRequestsForMaster(token)
+      expect(list).toHaveLength(2)
+      expect(list[0].routedAt >= list[1].routedAt).toBe(true)
+    })
+  })
+
+  describe('карточка заявки (US-18)', () => {
+    it('несуществующая и чужая заявка отвечают одинаково', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ASTANA_PHONE)
+
+      const missing = mockApi.getRequestForMaster(token, '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e99')
+      const foreign = mockApi.getRequestForMaster(token, created.id)
+
+      for (const call of [missing, foreign]) {
+        await expect(call).rejects.toSatisfy(
+          (e: unknown) => isApiError(e) && e.code === 'NOT_ROUTED_TO_YOU',
+        )
+      }
+    })
+
+    it('до отправки КП телефона заказчицы в карточке нет вовсе', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+
+      const card = await mockApi.getRequestForMaster(token, created.id)
+      expect(card.clientPhone).toBeNull()
+      expect(card.myQuote).toBeNull()
+      expect(card.description).toBeTruthy()
+    })
+
+    it('чужое КП в карточке не показывается — ни ценой, ни фактом', async () => {
+      const { created } = await createAndConfirm()
+      const first = await login(ALMATY_PHONES[0])
+      const second = await login(ALMATY_PHONES[1])
+
+      await mockApi.createQuote(first.token, created.id, quotePayload())
+      const card = await mockApi.getRequestForMaster(second.token, created.id)
+
+      expect(card.myQuote).toBeNull()
+      expect(card.clientPhone).toBeNull()
+      expect(JSON.stringify(card)).not.toContain('900000')
+    })
+  })
+
+  describe('отправка КП (US-19a)', () => {
+    it('КП отправлено: телефон заказчицы открывается только теперь', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+
+      const quote = await mockApi.createQuote(token, created.id, quotePayload())
+      expect(quote.master.name).toBe('Мастерская на Сайране')
+
+      const card = await mockApi.getRequestForMaster(token, created.id)
+      expect(card.clientPhone).toBe('+77012345678')
+      expect(card.myQuote?.id).toBe(quote.id)
+    })
+
+    it('первое КП переводит заявку в quoted и видно заказчице по токену', async () => {
+      const { created, confirmed } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+      await mockApi.createQuote(token, created.id, quotePayload())
+
+      const seen = await mockApi.getRequestByToken(confirmed.token)
+      expect(seen.status).toBe('quoted')
+      expect(seen.quotes).toHaveLength(1)
+      expect(seen.quotes[0].price.minKzt).toBe(900_000)
+    })
+
+    it('второе КП по той же заявке не принимается', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+      await mockApi.createQuote(token, created.id, quotePayload())
+
+      await expect(mockApi.createQuote(token, created.id, quotePayload())).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'QUOTE_ALREADY_SENT',
+      )
+    })
+
+    it('ответ второго мебельщика статус не двигает, но копится у заказчицы', async () => {
+      const { created, confirmed } = await createAndConfirm()
+      const first = await login(ALMATY_PHONES[0])
+      const second = await login(ALMATY_PHONES[1])
+
+      await mockApi.createQuote(first.token, created.id, quotePayload())
+      await mockApi.createQuote(second.token, created.id, quotePayload())
+
+      const seen = await mockApi.getRequestByToken(confirmed.token)
+      expect(seen.status).toBe('quoted')
+      expect(seen.quotes).toHaveLength(2)
+    })
+
+    it('КП без верхней границы вилки не принимается', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+
+      await expect(
+        mockApi.createQuote(token, created.id, quotePayload({ price: { minKzt: 900_000 } })),
+      ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED')
+    })
+
+    it('в чужую заявку КП не отправить', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ASTANA_PHONE)
+
+      await expect(mockApi.createQuote(token, created.id, quotePayload())).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'NOT_ROUTED_TO_YOU',
+      )
+    })
+
+    it('после ответа список помечает заявку как отвеченную', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+
+      expect((await mockApi.listRequestsForMaster(token))[0].quotedByMe).toBe(false)
+      await mockApi.createQuote(token, created.id, quotePayload())
+      expect((await mockApi.listRequestsForMaster(token))[0].quotedByMe).toBe(true)
+    })
+
+    it('событие quote_sent записано от имени мебельщика', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+      await mockApi.createQuote(token, created.id, quotePayload())
+
+      const sent = listEvents().filter((event) => event.type === 'quote_sent')
+      expect(sent).toHaveLength(1)
+      expect(sent[0].actor.role).toBe('master')
+      expect(sent[0].requestId).toBe(created.id)
+    })
   })
 })

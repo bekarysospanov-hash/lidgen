@@ -32,6 +32,12 @@ import {
   ResendOtpInput,
   ConfirmOtpInput,
   Token,
+  CreateQuote,
+  Master,
+  MasterProfile,
+  RequestForMaster,
+  RequestForMasterListItem,
+  Routing,
 } from './index'
 
 // Валидный CreateRequest для кухни — кейсы ниже отличаются одним полем
@@ -627,5 +633,140 @@ describe('Photo и Photos — US-10', () => {
       id: `3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e${String(i).padStart(2, '0')}`,
     }))
     expect(Photos.safeParse(many).success).toBe(false)
+  })
+})
+
+describe('кабинет мебельщика — схемы US-14, US-17, US-19a', () => {
+  const master = {
+    id: 'aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
+    name: 'Мастерская на Сайране',
+    city: { code: 'almaty', name: null },
+    phone: '+77010000001',
+    acceptingFrom: '2026-09-01T00:00:00.000Z',
+  }
+
+  it('«на приёме» — дата, а не флаг: null законен, булево нет', () => {
+    expect(Master.safeParse({ ...master, acceptingFrom: null }).success).toBe(true)
+    expect(Master.safeParse({ ...master, acceptingFrom: true }).success).toBe(false)
+  })
+
+  it('MasterProfile строгий: телефон в него не протащить', () => {
+    const profile = { id: master.id, name: master.name, city: master.city }
+    expect(MasterProfile.safeParse(profile).success).toBe(true)
+    expect(MasterProfile.safeParse({ ...profile, phone: master.phone }).success).toBe(false)
+  })
+
+  it('маршрут — не больше трёх получателей и не меньше одного', () => {
+    const base = { requestId: '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e01', routedAt: master.acceptingFrom }
+    const ids = (n: number) =>
+      Array.from({ length: n }, (_, i) => `aaaaaaa${i + 1}-aaaa-4aaa-8aaa-aaaaaaaaaaa${i + 1}`)
+    expect(Routing.safeParse({ ...base, masterIds: ids(3) }).success).toBe(true)
+    expect(Routing.safeParse({ ...base, masterIds: ids(4) }).success).toBe(false)
+    expect(Routing.safeParse({ ...base, masterIds: [] }).success).toBe(false)
+  })
+
+  describe('CreateQuote', () => {
+    const valid = {
+      composition: 'Корпуса, фасады, столешница, мойка',
+      materials: 'ЛДСП корпус, фасады крашеный МДФ',
+      price: { minKzt: 900_000, maxKzt: 1_400_000 },
+      leadTimeDays: 30,
+    }
+
+    it('вилка обязательна: одиночного числа схема не знает', () => {
+      expect(CreateQuote.safeParse(valid).success).toBe(true)
+      expect(CreateQuote.safeParse({ ...valid, price: { minKzt: 900_000 } }).success).toBe(false)
+    })
+
+    it('равные границы проходят — это твёрдая цена, законный ответ', () => {
+      const price = { minKzt: 1_000_000, maxKzt: 1_000_000 }
+      expect(CreateQuote.safeParse({ ...valid, price }).success).toBe(true)
+    })
+
+    it('перевёрнутая вилка отклоняется', () => {
+      const price = { minKzt: 1_400_000, maxKzt: 900_000 }
+      expect(CreateQuote.safeParse({ ...valid, price }).success).toBe(false)
+    })
+
+    it('срок изготовления — положительное число дней', () => {
+      expect(CreateQuote.safeParse({ ...valid, leadTimeDays: 0 }).success).toBe(false)
+    })
+
+    it('строка из пробелов не проходит как состав решения', () => {
+      expect(CreateQuote.safeParse({ ...valid, composition: '   ' }).success).toBe(false)
+    })
+
+    it('мебельщика в теле запроса нет — сервер ставит его из сессии', () => {
+      const withMaster = { ...valid, master: { id: master.id, name: master.name } }
+      // z.object не строгий, лишнее поле отбрасывается — важно, что оно
+      // не доезжает до Quote: имя отправителя КП не выбирается клиентом.
+      const parsed = CreateQuote.parse(withMaster) as Record<string, unknown>
+      expect('master' in parsed).toBe(false)
+    })
+  })
+
+  describe('проекции заявки для мебельщика', () => {
+    const listItem = {
+      id: '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e01',
+      number: '2609-014',
+      routedAt: '2026-09-16T10:00:00.000Z',
+      category: 'kitchen',
+      mainSize: { known: true, meters: 3.2 },
+      city: { code: 'almaty', name: null },
+      district: null,
+      deadline: null,
+      photosCount: 3,
+      quotedByMe: false,
+    }
+
+    it('список принимает проекцию целиком', () => {
+      expect(RequestForMasterListItem.safeParse(listItem).success).toBe(true)
+    })
+
+    it('телефон в списке — ошибка разбора, а не тихая находка на проде', () => {
+      const leaked = { ...listItem, clientPhone: '+77012345678' }
+      expect(RequestForMasterListItem.safeParse(leaked).success).toBe(false)
+    })
+
+    it('описание и снимки в список не попадают — их место в карточке', () => {
+      expect(RequestForMasterListItem.safeParse({ ...listItem, description: 'текст' }).success).toBe(
+        false,
+      )
+    })
+
+    it('статуса в проекции нет: мебельщику полезен один бит quotedByMe', () => {
+      expect(RequestForMasterListItem.safeParse({ ...listItem, status: 'routed' }).success).toBe(
+        false,
+      )
+    })
+
+    const card = {
+      id: listItem.id,
+      number: listItem.number,
+      routedAt: listItem.routedAt,
+      details: { category: 'kitchen', shape: 'corner', appliances: 'yes' },
+      mainSize: listItem.mainSize,
+      description: 'Кухня в новостройке, нужен расчёт',
+      city: listItem.city,
+      district: null,
+      deadline: null,
+      finishLevel: null,
+      photos: [],
+      myQuote: null,
+      clientPhone: null,
+    }
+
+    it('карточка до отправки КП: телефон null, своего КП нет', () => {
+      expect(RequestForMaster.safeParse(card).success).toBe(true)
+    })
+
+    it('карточка после КП принимает номер клиента', () => {
+      const after = { ...card, clientPhone: '+77012345678' }
+      expect(RequestForMaster.safeParse(after).success).toBe(true)
+    })
+
+    it('чужих КП в карточке нет — поле quotes схемой не предусмотрено', () => {
+      expect(RequestForMaster.safeParse({ ...card, quotes: [] }).success).toBe(false)
+    })
   })
 })

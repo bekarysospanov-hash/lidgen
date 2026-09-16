@@ -18,6 +18,7 @@ import type {
 } from '../types'
 import { ApiError, validationFailed } from '../errors'
 import { covered } from './coverage'
+import { routeRequest } from './routing'
 import { OTP_CHANNEL, OTP_CODE_LENGTH, isOtpValid, resendRetryAfterSec } from './otp'
 import {
   addEvent,
@@ -192,11 +193,18 @@ export function confirm(input: ConfirmOtpInputLike): RequestConfirmed {
 
   if (!valid) throw new ApiError('OTP_INVALID', 'Код не подошёл')
 
-  record.phoneConfirmedAt = new Date().toISOString()
+  const now = new Date()
+  record.phoneConfirmedAt = now.toISOString()
   record.status = classify(record)
   record.token = newToken()
-  putRequest(record)
   addEvent('otp_confirmed', record.id, 'client', { status: record.status })
+
+  // PROBE: сервера, который маршрутизировал бы отдельным шагом с рассылкой
+  // уведомлений (US-15), у пробы нет — мок делает это синхронно, тем же
+  // вызовом (§4, §10). Контракт синхронности не требует: qualified без
+  // routedAt остаётся законным состоянием.
+  routeRequest(record, now)
+  putRequest(record)
 
   return ensure(RequestConfirmed, {
     request: toClientProjection(record),

@@ -6,6 +6,7 @@
 // адрес хранилища; форма ответа та же, поэтому экран менять не придётся.
 import { PHOTO_MAX_BYTES, PHOTO_MIME, Photo } from '../../contract'
 import { ApiError } from '../errors'
+import { onReset } from './store'
 
 /** Живёт до перезагрузки вкладки, как и весь мок-стор. */
 const uploaded = new Map<string, Photo>()
@@ -64,3 +65,6 @@ export function upload(file: File): Photo {
   uploaded.set(photo.id, photo)
   return photo
 }
+
+// Снимки чистятся вместе с хранилищем (store.reset).
+onReset(resetPhotos)

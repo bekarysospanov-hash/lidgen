@@ -2,6 +2,7 @@
 import type { Api } from '../types'
 import { remove, upload } from './photos'
 import { confirm, create, getByToken, resend } from './requests'
+import { confirmCode, getRequest, listRequests, requestCode, sendQuote } from './master'
 
 // PROBE: искусственная задержка ответа — имитирует сетевой RTT реального
 // бэка, чтобы состояния загрузки на экранах проверялись по-настоящему (§10).
@@ -41,7 +42,29 @@ export const mockApi: Api = {
     await delay()
     remove(id)
   },
+  async masterRequestCode(input) {
+    await delay()
+    return requestCode(input)
+  },
+  async masterConfirmCode(input) {
+    await delay()
+    return confirmCode(input)
+  },
+  async listRequestsForMaster(token) {
+    await delay()
+    return listRequests(token)
+  },
+  async getRequestForMaster(token, id) {
+    await delay()
+    return getRequest(token, id)
+  },
+  async createQuote(token, id, input) {
+    await delay()
+    return sendQuote(token, id, input)
+  },
 }
 
 export { reset, listEvents, getRequestRecord } from './store'
 export { resetPhotos } from './photos'
+export { listMasters, findMasterByPhone } from './masters'
+export { routingFor } from './routing'

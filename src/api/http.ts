@@ -4,20 +4,31 @@
 // в половине полей (§6).
 import {
   ConfirmOtpInput,
+  CreateQuote,
   CreateRequest,
   ErrorEnvelope,
+  MasterConfirmCodeInput,
+  MasterRequestCodeInput,
+  MasterSession,
   OtpSent,
   Photo,
+  Quote,
   RequestConfirmed,
   RequestCreated,
   RequestForClient,
+  RequestForMaster,
+  RequestForMasterListItem,
   ResendOtpInput,
 } from '../contract'
+import { z } from 'zod'
 import { ApiError, validationFailed } from './errors'
 import type {
   Api,
   ConfirmOtpInputLike,
+  CreateQuoteInputLike,
   CreateRequestInput,
+  MasterCodeInputLike,
+  MasterConfirmInputLike,
   ResendOtpInputLike,
   UploadPhotoInputLike,
 } from './types'
@@ -101,6 +112,16 @@ async function call<T>(path: string, init: RequestInit, schema: Schema<T>): Prom
 
 const jsonHeaders = { 'Content-Type': 'application/json' }
 
+/**
+ * Сессия кабинета уходит заголовком Authorization, а не в пути и не в теле:
+ * в URL токен попал бы в логи прокси и в Referer, а за ним — список чужих
+ * заявок с телефонами (§3).
+ */
+const bearer = (token: string) => ({ ...jsonHeaders, Authorization: `Bearer ${token}` })
+
+/** Список заявок кабинета: массив проекций, а не объект с полем (§5б). */
+const RequestsForMaster = z.array(RequestForMasterListItem)
+
 export const httpApi: Api = {
   async createRequest(input: CreateRequestInput) {
     const payload = parseInput<CreateRequest>(CreateRequest, input)
@@ -155,5 +176,46 @@ export const httpApi: Api = {
       method: 'DELETE',
       headers: jsonHeaders,
     }, PASSTHROUGH)
+  },
+
+  async masterRequestCode(input: MasterCodeInputLike) {
+    const payload = parseInput<MasterRequestCodeInput>(MasterRequestCodeInput, input)
+    return call('/api/master/otp/request', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    }, OtpSent)
+  },
+
+  async masterConfirmCode(input: MasterConfirmInputLike) {
+    const payload = parseInput<MasterConfirmCodeInput>(MasterConfirmCodeInput, input)
+    return call('/api/master/otp/confirm', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    }, MasterSession)
+  },
+
+  async listRequestsForMaster(token: string) {
+    return call('/api/master/requests', {
+      method: 'GET',
+      headers: bearer(token),
+    }, RequestsForMaster)
+  },
+
+  async getRequestForMaster(token: string, id: string) {
+    return call(`/api/master/requests/${encodeURIComponent(id)}`, {
+      method: 'GET',
+      headers: bearer(token),
+    }, RequestForMaster)
+  },
+
+  async createQuote(token: string, id: string, input: CreateQuoteInputLike) {
+    const payload = parseInput<CreateQuote>(CreateQuote, input)
+    return call(`/api/master/requests/${encodeURIComponent(id)}/quote`, {
+      method: 'POST',
+      headers: bearer(token),
+      body: JSON.stringify(payload),
+    }, Quote)
   },
 }

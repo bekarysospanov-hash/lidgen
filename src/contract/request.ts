@@ -129,6 +129,61 @@ export const RequestForClient = z.strictObject({
 })
 export type RequestForClient = z.infer<typeof RequestForClient>
 
+/**
+ * Проекция для списка заявок в кабинете (US-18, §5б). Отдельная от карточки
+ * не ради экрана, а ради сервера: гонять описание и пять снимков в списке
+ * из двадцати строк незачем. Строгая — лишнее поле роняет разбор, а не
+ * проглатывается: так утечка телефона в список становится ошибкой стыковки.
+ */
+export const RequestForMasterListItem = z.strictObject({
+  id: RequestId,
+  number: RequestNumber,
+  /** Когда заявка пришла ЕМУ, а не когда создана. Список сортируется по нему. */
+  routedAt: Iso,
+  category: CategoryId,
+  mainSize: MainSize,
+  city: City,
+  district: z.string().nullable(),
+  deadline: z.string().nullable(),
+  /** Число, а не снимки: «есть 3 фото» — всё, что нужно в списке. */
+  photosCount: z.int().min(0),
+  /** Отвечал уже или нет. Иначе мебельщик отвечает дважды (US-19a). */
+  quotedByMe: z.boolean(),
+})
+export type RequestForMasterListItem = z.infer<typeof RequestForMasterListItem>
+
+/**
+ * Проекция карточки заявки (US-18, US-19a, §5б) — по ней называется вилка.
+ *
+ * Чего здесь нет и почему: `status` — восемь состояний §4 внутренняя кухня,
+ * мебельщику полезен один бит «я уже ответил»; чужие КП — ни цен, ни счётчика
+ * «ответили 2 из 3»: подсказка уводит цену от себестоимости к страху опоздать,
+ * а эксперимент проверяет как раз цену без выезда.
+ */
+export const RequestForMaster = z.strictObject({
+  id: RequestId,
+  number: RequestNumber,
+  routedAt: Iso,
+  details: Details,
+  mainSize: MainSize,
+  /** Свободный текст заказчицы — его мебельщик читает первым. */
+  description: z.string(),
+  city: City,
+  district: z.string().nullable(),
+  deadline: z.string().nullable(),
+  finishLevel: FinishLevel.nullable(),
+  photos: z.array(Photo),
+  /** Своё отправленное КП — что он уже назвал. Чужих здесь нет. */
+  myQuote: Quote.nullable(),
+  /**
+   * null до отправки своего КП, номер — после (§7). Требование ПДн, а не
+   * деталь экрана: до КП телефон не приходит на фронт вовсе, скрыть уже
+   * присланное значение на клиенте невозможно.
+   */
+  clientPhone: Phone.nullable(),
+})
+export type RequestForMaster = z.infer<typeof RequestForMaster>
+
 /** Ответ confirmOtp: классификация статуса и токен одним ответом (§5). */
 export const RequestConfirmed = z.object({
   request: RequestForClient,
