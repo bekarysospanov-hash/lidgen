@@ -2,9 +2,13 @@
 // подмена на реальный бэкенд должна быть переключателем, а не переписыванием
 // экранов (конвенция проекта, CLAUDE.md).
 //
-// PROBE: пока реализации нет — контракт не описан. Следующий шаг:
-// src/contract с zod-схемами, затем src/api/mocks по ним.
+// Моки реализуют тот же контракт (src/contract), что потом реализует сервер,
+// поэтому переключение не меняет ни одного экрана: VITE_USE_MOCKS=false —
+// и те же вызовы уходят в httpApi по путям docs/api-contract.md §5.
+import { httpApi } from './http'
+import { mockApi } from './mocks'
+import type { Api } from './types'
 
-export const USE_MOCKS = true
+const useMocks = import.meta.env.VITE_USE_MOCKS !== 'false'
 
-export const api = {} as const
+export const api: Api = useMocks ? mockApi : httpApi

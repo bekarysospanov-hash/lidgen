@@ -1,0 +1,583 @@
+// Тесты контракта (zod-схемы). Красные до реализации src/contract/index.ts —
+// это ожидаемо: TDD, реализацию пишет следующий этап.
+// Источник правды: docs/api-contract.md (11 разделов).
+import { describe, expect, it } from 'vitest'
+import {
+  ApiErrorBody,
+  CategoryId,
+  City,
+  CityCode,
+  CreateRequest,
+  Details,
+  ErrorCode,
+  ErrorEnvelope,
+  Event,
+  EventType,
+  Iso,
+  MainSize,
+  OtpCode,
+  OtpSent,
+  Phone,
+  Quote,
+  RequestConfirmed,
+  RequestCreated,
+  RequestForClient,
+  RequestId,
+  RequestNumber,
+  RequestStatus,
+  ResendOtpInput,
+  ConfirmOtpInput,
+  Token,
+} from './index'
+
+// Валидный CreateRequest для кухни — кейсы ниже отличаются одним полем
+// (api-contract.md §5, таблица CreateRequest).
+function validCreateRequest(overrides: Record<string, unknown> = {}) {
+  return {
+    details: { category: 'kitchen', shape: 'corner', appliances: 'yes' },
+    mainSize: { known: true, meters: 12.5 },
+    description: 'Нужна угловая кухня на заказ, с встроенной техникой',
+    city: { code: 'almaty', name: null },
+    phone: '+77012345678',
+    clientRequestId: '11111111-1111-4111-8111-111111111111',
+    ...overrides,
+  }
+}
+
+describe('Phone', () => {
+  it('+77012345678 — валидный номер РК', () => {
+    expect(Phone.safeParse('+77012345678').success).toBe(true)
+  })
+
+  it.each([
+    ['87012345678', 'без плюса'],
+    ['+7701234567', '9 цифр после кода'],
+    ['+771234567890', '11 цифр после кода'],
+    ['abc', 'не число'],
+    ['', 'пустая строка'],
+  ])('%s отклоняется (%s)', (value) => {
+    expect(Phone.safeParse(value).success).toBe(false)
+  })
+})
+
+describe('RequestId', () => {
+  it('валидный uuid проходит', () => {
+    expect(RequestId.safeParse('11111111-1111-4111-8111-111111111111').success).toBe(true)
+  })
+
+  it('произвольная строка отклоняется', () => {
+    expect(RequestId.safeParse('не-uuid').success).toBe(false)
+  })
+})
+
+describe('RequestNumber', () => {
+  it('формат ГГММ-NNN проходит', () => {
+    expect(RequestNumber.safeParse('2609-001').success).toBe(true)
+  })
+
+  it('буквы в номере отклоняются', () => {
+    expect(RequestNumber.safeParse('A609-001').success).toBe(false)
+  })
+
+  it('короче 4 символов отклоняется', () => {
+    expect(RequestNumber.safeParse('123').success).toBe(false)
+  })
+
+  it('длиннее 12 символов отклоняется', () => {
+    expect(RequestNumber.safeParse('1234567890123').success).toBe(false)
+  })
+})
+
+describe('Token', () => {
+  it.each([
+    ['a'.repeat(21), false, '21 символ'],
+    ['a'.repeat(22), true, '22 символа'],
+    ['a'.repeat(64), true, '64 символа'],
+    ['a'.repeat(65), false, '65 символов'],
+    [`${'a'.repeat(20)}+_`, false, "содержит '+'"],
+    [`${'a'.repeat(20)}/_`, false, "содержит '/'"],
+  ])('%s → %s (%s)', (value, expected) => {
+    expect(Token.safeParse(value).success).toBe(expected)
+  })
+})
+
+describe('OtpCode', () => {
+  it.each([
+    ['1234', true],
+    ['123', false],
+    ['1234567', false],
+    ['abcd', false],
+  ])('%s → %s', (value, expected) => {
+    expect(OtpCode.safeParse(value).success).toBe(expected)
+  })
+})
+
+describe('Iso', () => {
+  it('валидная ISO-8601 UTC строка проходит', () => {
+    expect(Iso.safeParse('2026-09-15T10:00:00.000Z').success).toBe(true)
+  })
+
+  it('произвольная строка отклоняется', () => {
+    expect(Iso.safeParse('вчера').success).toBe(false)
+  })
+})
+
+describe('City', () => {
+  it("code:'other' без name отклоняется", () => {
+    expect(City.safeParse({ code: 'other', name: null }).success).toBe(false)
+  })
+
+  it("code:'other' с name проходит", () => {
+    expect(City.safeParse({ code: 'other', name: 'Караганда' }).success).toBe(true)
+  })
+
+  it("code:'almaty' с name:null проходит", () => {
+    expect(City.safeParse({ code: 'almaty', name: null }).success).toBe(true)
+  })
+})
+
+describe('CityCode', () => {
+  it('almaty — валидное значение', () => {
+    expect(CityCode.safeParse('almaty').success).toBe(true)
+  })
+
+  it('неизвестный код отклоняется', () => {
+    expect(CityCode.safeParse('novosibirsk').success).toBe(false)
+  })
+})
+
+describe('CategoryId', () => {
+  it('kitchen — валидная категория', () => {
+    expect(CategoryId.safeParse('kitchen').success).toBe(true)
+  })
+
+  it('неизвестная категория отклоняется', () => {
+    expect(CategoryId.safeParse('sofa').success).toBe(false)
+  })
+})
+
+describe('MainSize', () => {
+  it('known:false — самостоятельный валидный вариант', () => {
+    expect(MainSize.safeParse({ known: false }).success).toBe(true)
+  })
+
+  it('known:true с meters — валиден', () => {
+    expect(MainSize.safeParse({ known: true, meters: 3.2 }).success).toBe(true)
+  })
+
+  it.each([0, -1, 31])('meters:%d отклоняется', (meters) => {
+    expect(MainSize.safeParse({ known: true, meters }).success).toBe(false)
+  })
+
+  it('known:true без meters отклоняется', () => {
+    expect(MainSize.safeParse({ known: true }).success).toBe(false)
+  })
+})
+
+describe('Details — дискриминированный union по category', () => {
+  it('kitchen с валидными shape/appliances проходит', () => {
+    expect(
+      Details.safeParse({ category: 'kitchen', shape: 'corner', appliances: 'yes' }).success,
+    ).toBe(true)
+  })
+
+  it('kitchen с невалидным shape отклоняется', () => {
+    expect(Details.safeParse({ category: 'kitchen', shape: 'foo' }).success).toBe(false)
+  })
+
+  it('лишнее поле ветки кухни у шкафа отклоняется', () => {
+    expect(Details.safeParse({ category: 'wardrobe', shape: 'corner' }).success).toBe(false)
+  })
+
+  it('неизвестная категория отклоняется', () => {
+    expect(Details.safeParse({ category: 'unknown' }).success).toBe(false)
+  })
+})
+
+describe('CreateRequest', () => {
+  it('валидный payload для кухни проходит', () => {
+    expect(CreateRequest.safeParse(validCreateRequest()).success).toBe(true)
+  })
+
+  it('пустое description отклоняется', () => {
+    expect(CreateRequest.safeParse(validCreateRequest({ description: '' })).success).toBe(false)
+  })
+
+  it('description из пробелов отклоняется (trim)', () => {
+    expect(CreateRequest.safeParse(validCreateRequest({ description: '   ' })).success).toBe(
+      false,
+    )
+  })
+
+  it('description длиной 2001 символ отклоняется', () => {
+    expect(
+      CreateRequest.safeParse(validCreateRequest({ description: 'а'.repeat(2001) })).success,
+    ).toBe(false)
+  })
+
+  it('description длиной 1 символ проходит', () => {
+    expect(CreateRequest.safeParse(validCreateRequest({ description: 'а' })).success).toBe(true)
+  })
+
+  it('district/deadline/finishLevel можно не передавать', () => {
+    const payload = validCreateRequest()
+    expect(CreateRequest.safeParse(payload).success).toBe(true)
+  })
+
+  it("finishLevel:'gold' отклоняется", () => {
+    expect(CreateRequest.safeParse(validCreateRequest({ finishLevel: 'gold' })).success).toBe(
+      false,
+    )
+  })
+
+  it('без consent проходит (в срезе 1 согласия нет)', () => {
+    const payload = validCreateRequest()
+    expect('consent' in payload).toBe(false)
+    expect(CreateRequest.safeParse(payload).success).toBe(true)
+  })
+
+  it('clientRequestId не-uuid отклоняется', () => {
+    expect(
+      CreateRequest.safeParse(validCreateRequest({ clientRequestId: 'не-uuid' })).success,
+    ).toBe(false)
+  })
+
+  it('clientRequestId валидный uuid проходит', () => {
+    expect(
+      CreateRequest.safeParse(
+        validCreateRequest({ clientRequestId: '22222222-2222-4222-8222-222222222222' }),
+      ).success,
+    ).toBe(true)
+  })
+})
+
+describe('RequestStatus', () => {
+  it.each([
+    'unconfirmed',
+    'qualified',
+    'incomplete',
+    'out_of_coverage',
+    'unreached',
+    'routed',
+    'quoted',
+    'closed',
+  ])('%s — валидное значение', (status) => {
+    expect(RequestStatus.safeParse(status).success).toBe(true)
+  })
+
+  it('неизвестный статус отклоняется', () => {
+    expect(RequestStatus.safeParse('foo').success).toBe(false)
+  })
+})
+
+describe('OtpSent', () => {
+  it('валидная форма проходит', () => {
+    expect(OtpSent.safeParse({ channel: 'sms', codeLength: 4, retryAfterSec: 0 }).success).toBe(
+      true,
+    )
+  })
+
+  it('неизвестный channel отклоняется', () => {
+    expect(
+      OtpSent.safeParse({ channel: 'email', codeLength: 4, retryAfterSec: 0 }).success,
+    ).toBe(false)
+  })
+
+  it('codeLength вне диапазона 4..6 отклоняется', () => {
+    expect(
+      OtpSent.safeParse({ channel: 'sms', codeLength: 3, retryAfterSec: 0 }).success,
+    ).toBe(false)
+    expect(
+      OtpSent.safeParse({ channel: 'sms', codeLength: 7, retryAfterSec: 0 }).success,
+    ).toBe(false)
+  })
+})
+
+describe('RequestCreated', () => {
+  const base = {
+    id: '11111111-1111-4111-8111-111111111111',
+    number: '2609-001',
+    status: 'unconfirmed' as const,
+    createdAt: '2026-09-15T10:00:00.000Z',
+    otp: { channel: 'sms' as const, codeLength: 4, retryAfterSec: 0 },
+  }
+
+  it('валидная форма проходит', () => {
+    expect(RequestCreated.safeParse(base).success).toBe(true)
+  })
+
+  it('status отличный от unconfirmed отклоняется', () => {
+    expect(RequestCreated.safeParse({ ...base, status: 'qualified' }).success).toBe(false)
+  })
+
+  it('token в ответе createRequest не встречается (выдаётся только в confirmOtp)', () => {
+    expect('token' in base).toBe(false)
+  })
+})
+
+describe('ResendOtpInput', () => {
+  it('валидный requestId проходит', () => {
+    expect(
+      ResendOtpInput.safeParse({ requestId: '11111111-1111-4111-8111-111111111111' }).success,
+    ).toBe(true)
+  })
+
+  it('невалидный requestId отклоняется', () => {
+    expect(ResendOtpInput.safeParse({ requestId: 'abc' }).success).toBe(false)
+  })
+})
+
+describe('ConfirmOtpInput', () => {
+  it('валидные requestId и code проходят', () => {
+    expect(
+      ConfirmOtpInput.safeParse({
+        requestId: '11111111-1111-4111-8111-111111111111',
+        code: '1234',
+      }).success,
+    ).toBe(true)
+  })
+
+  it('без code отклоняется', () => {
+    expect(
+      ConfirmOtpInput.safeParse({ requestId: '11111111-1111-4111-8111-111111111111' }).success,
+    ).toBe(false)
+  })
+})
+
+function validRequestForClient(overrides: Record<string, unknown> = {}) {
+  return {
+    number: '2609-001',
+    status: 'qualified',
+    createdAt: '2026-09-15T10:00:00.000Z',
+    phoneConfirmedAt: '2026-09-15T10:05:00.000Z',
+    routedAt: null,
+    completedManually: false,
+    details: { category: 'kitchen', shape: 'corner', appliances: 'yes' },
+    mainSize: { known: true, meters: 12.5 },
+    description: 'Нужна угловая кухня на заказ',
+    city: { code: 'almaty', name: null },
+    district: null,
+    deadline: null,
+    finishLevel: null,
+    quotes: [],
+    ...overrides,
+  }
+}
+
+describe('RequestForClient — проекция без ПДн', () => {
+  it('валидная проекция без phone/id проходит', () => {
+    expect(RequestForClient.safeParse(validRequestForClient()).success).toBe(true)
+  })
+
+  it('объект с полем phone не проходит строгий парс', () => {
+    expect(
+      RequestForClient.safeParse(validRequestForClient({ phone: '+77012345678' })).success,
+    ).toBe(false)
+  })
+
+  it('объект с полем id не проходит строгий парс', () => {
+    expect(
+      RequestForClient.safeParse(
+        validRequestForClient({ id: '11111111-1111-4111-8111-111111111111' }),
+      ).success,
+    ).toBe(false)
+  })
+})
+
+describe('RequestConfirmed', () => {
+  it('request + token проходит', () => {
+    expect(
+      RequestConfirmed.safeParse({
+        request: validRequestForClient(),
+        token: 'a'.repeat(22),
+      }).success,
+    ).toBe(true)
+  })
+
+  it('без token отклоняется', () => {
+    expect(RequestConfirmed.safeParse({ request: validRequestForClient() }).success).toBe(false)
+  })
+})
+
+function validQuote(overrides: Record<string, unknown> = {}) {
+  return {
+    id: '33333333-3333-4333-8333-333333333333',
+    requestId: '11111111-1111-4111-8111-111111111111',
+    master: { id: '44444444-4444-4444-8444-444444444444', name: 'Мастерская «Дуб»' },
+    composition: 'Угловая кухня, фасады МДФ, встроенная техника',
+    materials: 'МДФ в плёнке, фурнитура Blum',
+    price: { minKzt: 500000, maxKzt: 700000 },
+    leadTimeDays: 30,
+    photos: [],
+    sentAt: '2026-09-15T10:00:00.000Z',
+    updatedAt: null,
+    ...overrides,
+  }
+}
+
+describe('Quote', () => {
+  it('валидное КП проходит', () => {
+    expect(Quote.safeParse(validQuote()).success).toBe(true)
+  })
+
+  it('price.minKzt > price.maxKzt отклоняется', () => {
+    expect(
+      Quote.safeParse(validQuote({ price: { minKzt: 500000, maxKzt: 400000 } })).success,
+    ).toBe(false)
+  })
+
+  it('price.minKzt === price.maxKzt проходит', () => {
+    expect(
+      Quote.safeParse(validQuote({ price: { minKzt: 500000, maxKzt: 500000 } })).success,
+    ).toBe(true)
+  })
+
+  it('leadTimeDays:0 отклоняется', () => {
+    expect(Quote.safeParse(validQuote({ leadTimeDays: 0 })).success).toBe(false)
+  })
+
+  it('photos длиной 4 отклоняется (максимум 3)', () => {
+    expect(
+      Quote.safeParse(
+        validQuote({
+          photos: [
+            'https://example.com/1.jpg',
+            'https://example.com/2.jpg',
+            'https://example.com/3.jpg',
+            'https://example.com/4.jpg',
+          ],
+        }),
+      ).success,
+    ).toBe(false)
+  })
+})
+
+describe('EventType', () => {
+  it.each([
+    'visit',
+    'continue_clicked',
+    'category_selected',
+    'required_filled',
+    'request_submitted',
+    'otp_requested',
+    'otp_confirmed',
+    'routed',
+    'master_opened',
+    'quote_sent',
+    'client_page_opened',
+    'contact_made',
+    'manual_completion',
+    'request_closed',
+  ])('%s — валидный тип события', (type) => {
+    expect(EventType.safeParse(type).success).toBe(true)
+  })
+
+  it('неизвестный тип события отклоняется', () => {
+    expect(EventType.safeParse('unknown_event').success).toBe(false)
+  })
+})
+
+describe('Event', () => {
+  it('событие без requestId (visit) валидно', () => {
+    expect(
+      Event.safeParse({
+        id: '55555555-5555-4555-8555-555555555555',
+        type: 'visit',
+        at: '2026-09-15T10:00:00.000Z',
+        requestId: null,
+        actor: { role: 'client' },
+      }).success,
+    ).toBe(true)
+  })
+
+  it('событие без обязательного type отклоняется', () => {
+    expect(
+      Event.safeParse({
+        id: '55555555-5555-4555-8555-555555555555',
+        at: '2026-09-15T10:00:00.000Z',
+        requestId: null,
+        actor: { role: 'client' },
+      }).success,
+    ).toBe(false)
+  })
+})
+
+describe('ErrorCode', () => {
+  it.each([
+    'VALIDATION_FAILED',
+    'REQUEST_NOT_FOUND',
+    'OTP_INVALID',
+    'OTP_EXPIRED',
+    'OTP_ATTEMPTS_EXCEEDED',
+    'OTP_RESEND_TOO_SOON',
+    'ALREADY_CONFIRMED',
+    'TOKEN_INVALID',
+    'RATE_LIMITED',
+    'INTERNAL',
+  ])('%s — валидный код ошибки', (code) => {
+    expect(ErrorCode.safeParse(code).success).toBe(true)
+  })
+
+  it('неизвестный код отклоняется', () => {
+    expect(ErrorCode.safeParse('FOO').success).toBe(false)
+  })
+})
+
+describe('ApiErrorBody', () => {
+  it('OTP_RESEND_TOO_SOON с retryAfterSec проходит', () => {
+    expect(
+      ApiErrorBody.safeParse({
+        code: 'OTP_RESEND_TOO_SOON',
+        message: 'подождите',
+        retryAfterSec: 30,
+      }).success,
+    ).toBe(true)
+  })
+
+  it('OTP_RESEND_TOO_SOON без retryAfterSec отклоняется', () => {
+    expect(
+      ApiErrorBody.safeParse({ code: 'OTP_RESEND_TOO_SOON', message: 'подождите' }).success,
+    ).toBe(false)
+  })
+
+  it('VALIDATION_FAILED требует fields', () => {
+    expect(
+      ApiErrorBody.safeParse({
+        code: 'VALIDATION_FAILED',
+        message: 'ошибка',
+        fields: [{ path: 'phone', message: 'неверный формат' }],
+      }).success,
+    ).toBe(true)
+    expect(
+      ApiErrorBody.safeParse({ code: 'VALIDATION_FAILED', message: 'ошибка' }).success,
+    ).toBe(false)
+  })
+
+  it('неизвестный код отклоняется', () => {
+    expect(ApiErrorBody.safeParse({ code: 'FOO', message: 'ошибка' }).success).toBe(false)
+  })
+})
+
+describe('ErrorEnvelope', () => {
+  it('{ error: { code: OTP_RESEND_TOO_SOON, message, retryAfterSec } } проходит', () => {
+    expect(
+      ErrorEnvelope.safeParse({
+        error: { code: 'OTP_RESEND_TOO_SOON', message: 'подождите', retryAfterSec: 30 },
+      }).success,
+    ).toBe(true)
+  })
+
+  it('тот же код без retryAfterSec отклоняется', () => {
+    expect(
+      ErrorEnvelope.safeParse({
+        error: { code: 'OTP_RESEND_TOO_SOON', message: 'подождите' },
+      }).success,
+    ).toBe(false)
+  })
+
+  it('неизвестный код отклоняется', () => {
+    expect(
+      ErrorEnvelope.safeParse({ error: { code: 'FOO', message: 'подождите' } }).success,
+    ).toBe(false)
+  })
+})
