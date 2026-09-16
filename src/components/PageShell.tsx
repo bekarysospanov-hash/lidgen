@@ -7,6 +7,7 @@
 // остаётся холстом — выделяться должно содержимое, а не рама вокруг него.
 import { Link } from 'react-router-dom'
 import { shell } from '../texts/shell'
+import { BrandMark, MastersIcon, RequestIcon } from './icons'
 
 /**
  * Словесный знак. Графит, а не синий: система требует у ссылки синеву
@@ -15,24 +16,45 @@ import { shell } from '../texts/shell'
  * приходит наведением (DESIGN.md § Состояния, § Affordance).
  */
 const brandLink =
-  'whitespace-nowrap text-subheading tracking-subheading font-medium ' +
-  'text-on-surface underline-offset-4 hover:underline'
+  'flex items-center gap-sm whitespace-nowrap text-subheading tracking-subheading ' +
+  'font-medium text-on-surface underline-offset-4 hover:underline'
 
-/** Пункты навигации — переходы, то есть ссылки: синие, подчёркнуты всегда. */
+/**
+ * Пункты навигации — переходы, то есть ссылки: синие, подчёркнуты всегда.
+ * Иконка объясняет, куда ведёт пункт, раньше чем человек прочитает слово;
+ * подпись остаётся — иконка без подписи допустима только у стрелки
+ * и закрытия (DESIGN.md § Иконки).
+ */
 const navLink =
-  'whitespace-nowrap text-body tracking-body text-link underline underline-offset-4'
+  'flex size-10 items-center justify-center rounded-sm text-link ' +
+  'transition-colors duration-100 hover:bg-surface-container'
 
 export function PageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-dvh flex-col bg-surface text-on-surface">
       {/* Link, а не <a>: полная перезагрузка страницы обнулила бы заявку. */}
-      <header className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline gap-x-xl gap-y-sm px-lg pt-lg pb-xl">
+      {/* Знак слева, переходы прижаты вправо: посередине шапки им делать
+          нечего, а у правого края они попадают под большой палец. */}
+      <header className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline justify-between gap-x-xl gap-y-sm px-lg pt-lg pb-xl">
         {/* Словесный знак ведёт на лендинг; «Заявка» — на саму форму, а не
             на главную: со скелета до формы надо доходить руками (US-03). */}
-        <Link to="/" className={brandLink}>{shell.brand}</Link>
-        <nav className="flex flex-wrap gap-x-lg gap-y-sm">
-          <Link to="/request" className={navLink}>{shell.nav.request}</Link>
-          <Link to="/masters" className={navLink}>{shell.nav.masters}</Link>
+        <Link to="/" className={brandLink}>
+          <BrandMark />
+          {shell.brand}
+        </Link>
+        {/* Подписи сняты, остались иконки: пунктов два, они постоянны и
+            запоминаются за один визит (DESIGN.md § Иконки). Слово не
+            исчезает совсем — оно уходит в aria-label и подсказку, иначе
+            экранный диктор прочитает пустую ссылку. */}
+        <nav className="-mr-sm flex items-center gap-xs">
+          <Link to="/request" className={navLink}
+            aria-label={shell.nav.request} title={shell.nav.request}>
+            <RequestIcon />
+          </Link>
+          <Link to="/masters" className={navLink}
+            aria-label={shell.nav.masters} title={shell.nav.masters}>
+            <MastersIcon />
+          </Link>
         </nav>
       </header>
 
