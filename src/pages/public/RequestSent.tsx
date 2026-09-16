@@ -8,6 +8,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { PageShell } from '../../components/PageShell'
 import { RequestNumber, RequestStatus, Token } from '../../contract'
 import type { RequestStatus as RequestStatusValue } from '../../contract'
+import { buttonFilled, hintText, panel, panelNested } from '../../components/ui'
 import { sentPage, statusNote } from '../../texts/request'
 
 interface SentState {
@@ -36,7 +37,7 @@ export default function RequestSent() {
   if (!state) {
     return (
       <PageShell>
-        <h1 className="max-w-[20ch] text-heading tracking-heading">{sentPage.fallbackTitle}</h1>
+        <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{sentPage.fallbackTitle}</h1>
         <p className="mt-lg max-w-[58ch] text-body tracking-body">{sentPage.fallbackBody}</p>
       </PageShell>
     )
@@ -49,29 +50,39 @@ export default function RequestSent() {
 
   return (
     <PageShell>
-      <h1 className="max-w-[20ch] text-heading tracking-heading">{sentPage.title}</h1>
+      <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{sentPage.title}</h1>
 
-      <section className="mt-xl border-t border-outline py-xl">
-        <p className="text-body-sm tracking-body-sm">{sentPage.numberLabel}</p>
-        <p className="mt-sm text-heading tracking-heading tabular-nums">{state.number}</p>
-        <p className="mt-md max-w-[58ch] text-body-sm tracking-body-sm">{sentPage.numberNote}</p>
+      {/* Номер — настоящее число, по которому заявку найдут на дозвоне.
+          Плашка здесь оправдана: подпись, номер и пояснение — одно целое. */}
+      <section className="mt-3xl">
+        <div className={panel}>
+          <p className={hintText}>{sentPage.numberLabel}</p>
+          <p className="mt-xs text-heading tracking-heading font-semibold tabular-nums">
+            {state.number}
+          </p>
+          <p className={`mt-md max-w-[58ch] ${hintText}`}>{sentPage.numberNote}</p>
+        </div>
       </section>
 
-      <section className="border-t border-outline py-xl">
-        <h2 className="text-subheading tracking-subheading">{note.title}</h2>
+      <section className="mt-3xl">
+        <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
         <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
       </section>
 
-      <section className="border-t border-outline py-xl">
-        <h2 className="text-subheading tracking-subheading">{sentPage.linkTitle}</h2>
-        <p className="mt-sm max-w-[62ch] text-body-sm tracking-body-sm">{sentPage.linkNote}</p>
-        <p className="mt-lg max-w-full overflow-x-auto border-b border-outline px-xs py-sm text-body-sm tracking-body-sm break-all">
-          {absolute}
-        </p>
-        <Link to={path}
-          className="mt-lg inline-block bg-primary px-2xl py-lg text-caps tracking-caps
-            whitespace-nowrap text-on-primary uppercase transition-opacity duration-100
-            hover:opacity-80 active:opacity-70">
+      {/* Заголовок, пояснение и сама строка — одно целое, поэтому плашка
+          первого уровня. Строка ссылки вложена в неё вторым уровнем: на холсте
+          второй уровень стоять не может, он по определению «вложенное в блок»
+          (DESIGN.md § Elevation). */}
+      <section className="mt-3xl">
+        <div className={panel}>
+          <h2 className="text-subheading tracking-subheading font-medium">{sentPage.linkTitle}</h2>
+          <p className={`mt-sm max-w-[62ch] ${hintText}`}>{sentPage.linkNote}</p>
+          <p className={`mt-lg max-w-full overflow-x-auto text-body-sm tracking-body-sm break-all ${panelNested}`}>
+            {absolute}
+          </p>
+        </div>
+        {/* Кнопка на холсте: главное действие принадлежит странице, не плашке. */}
+        <Link to={path} className={`mt-xl whitespace-nowrap ${buttonFilled}`}>
           {sentPage.linkOpen}
         </Link>
       </section>

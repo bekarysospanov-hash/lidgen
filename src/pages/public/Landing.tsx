@@ -12,22 +12,18 @@ import bedroom from '../../assets/probe/bedroom.jpg'
 import cabinet from '../../assets/probe/cabinet.jpg'
 import kitchen from '../../assets/probe/kitchen.jpg'
 import { PageShell } from '../../components/PageShell'
+import { buttonFilled, hintText, panel } from '../../components/ui'
 import { landing } from '../../texts/landing'
 
-/** Кнопка главного действия: чёрный прямоугольник, белый капс, радиус ноль. */
-const button =
-  'inline-block bg-primary px-2xl py-lg text-caps tracking-caps uppercase ' +
-  'text-on-primary transition-opacity duration-100 hover:opacity-80 ' +
-  'active:opacity-70 focus-visible:outline focus-visible:outline-2 ' +
-  'focus-visible:outline-outline focus-visible:outline-offset-2'
-
-/** Снимок в волосяной рамке — так система показывает изображение. */
+/**
+ * Снимок — радиус 0 и без рамки (DESIGN.md § Components, § Shapes).
+ * Прежняя волосяная рамка пришла из отменённой системы: там она заменяла
+ * границу кадра, здесь кадр держит сам себя, а обводок у блоков нет.
+ */
 function Shot({ src, alt, ratio }: { src: string; alt: string; ratio: string }) {
   return (
-    <div className="border border-outline p-sm">
-      <img src={src} alt={alt} loading="lazy"
-        className={`w-full max-w-full ${ratio} object-cover`} />
-    </div>
+    <img src={src} alt={alt} loading="lazy"
+      className={`w-full max-w-full ${ratio} object-cover`} />
   )
 }
 
@@ -36,41 +32,44 @@ export default function Landing() {
     <PageShell>
       {/* Обещание и кнопка — выше сгиба, до всякой прокрутки (US-01) */}
       <section className="pt-lg pb-2xl">
-        <h1 className="max-w-[16ch] text-heading tracking-heading text-balance">
+        {/* Единственный display на странице — так велит шкала (§ Typography). */}
+        <h1 className="max-w-[16ch] text-display tracking-display font-semibold text-balance">
           {landing.promise}
         </h1>
         <p className="mt-lg max-w-[54ch] text-body tracking-body">{landing.lede}</p>
         <div className="mt-xl">
-          <Link to="/request" className={button}>{landing.cta}</Link>
-          <p className="mt-md max-w-[44ch] text-body-sm tracking-body-sm">
+          <Link to="/request" className={buttonFilled}>{landing.cta}</Link>
+          <p className={`mt-md max-w-[44ch] ${hintText}`}>
             {landing.ctaNote}
           </p>
         </div>
       </section>
 
-      {/* Главный снимок. Ради него система и построена такой пустой */}
-      <section className="border-t border-outline py-xl">
+      {/* Главный снимок: во всю ширину колонки, радиус 0, без рамки */}
+      <section className="mt-3xl">
         <Shot src={kitchen} alt={landing.works.alt.kitchen}
           ratio="aspect-[3/2]" />
       </section>
 
-      <section className="border-t border-outline py-xl">
-        <h2 className="text-subheading tracking-subheading">{landing.how.title}</h2>
-        <ol className="mt-xl grid grid-cols-1 gap-xl sm:grid-cols-3">
+      <section className="mt-3xl">
+        <h2 className="text-subheading tracking-subheading font-medium">{landing.how.title}</h2>
+        {/* Шаг — плашка: номер, заголовок и пояснение читаются как одно целое,
+            и три плашки рядом показывают, что шагов ровно три. */}
+        <ol className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-3">
           {landing.how.steps.map((step) => (
-            <li key={step.n}>
+            <li key={step.n} className={panel}>
               {/* Номер шага — не украшение: порядок здесь несёт смысл */}
-              <p className="text-body-sm tracking-body-sm tabular-nums">{step.n}</p>
-              <h3 className="mt-sm text-body tracking-body text-balance">{step.title}</h3>
-              <p className="mt-sm max-w-[38ch] text-body-sm tracking-body-sm">{step.body}</p>
+              <p className={`tabular-nums ${hintText}`}>{step.n}</p>
+              <h3 className="mt-xs text-body tracking-body font-medium text-balance">{step.title}</h3>
+              <p className={`mt-sm max-w-[38ch] ${hintText}`}>{step.body}</p>
             </li>
           ))}
         </ol>
       </section>
 
-      <section className="border-t border-outline py-xl">
-        <h2 className="text-subheading tracking-subheading">{landing.works.title}</h2>
-        <p className="mt-sm max-w-[54ch] text-body-sm tracking-body-sm">
+      <section className="mt-3xl">
+        <h2 className="text-subheading tracking-subheading font-medium">{landing.works.title}</h2>
+        <p className={`mt-sm max-w-[54ch] ${hintText}`}>
           {landing.works.note}
         </p>
         <div className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-2">
@@ -81,13 +80,13 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="border-t border-outline py-xl">
-        <h2 className="text-subheading tracking-subheading">{landing.catalogue.title}</h2>
-        <p className="mt-sm max-w-[54ch] text-body-sm tracking-body-sm">
+      <section className="mt-3xl">
+        <h2 className="text-subheading tracking-subheading font-medium">{landing.catalogue.title}</h2>
+        <p className={`mt-sm max-w-[54ch] ${hintText}`}>
           {landing.catalogue.body}
         </p>
         <div className="mt-xl">
-          <Link to="/request" className={button}>{landing.cta}</Link>
+          <Link to="/request" className={buttonFilled}>{landing.cta}</Link>
         </div>
       </section>
     </PageShell>

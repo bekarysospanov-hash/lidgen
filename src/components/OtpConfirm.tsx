@@ -7,6 +7,7 @@ import { api } from '../api/client'
 import { isApiError } from '../api/errors'
 import type { OtpSent, RequestConfirmed } from '../contract'
 import { errorText, otpDeadEnd, otpStep } from '../texts/request'
+import { buttonFilled, buttonText, errorTextClass, field, fieldLabel, hintText } from './ui'
 
 /** Номер показываем, но не целиком: он уже подтверждается, а не вводится. */
 function maskPhone(phone: string): string {
@@ -113,14 +114,12 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
   if (deadEnd) {
     const exit = otpDeadEnd[deadEnd]
     return (
-      <section className="border-t border-outline py-xl">
-        <h2 className="text-subheading tracking-subheading">{exit.title}</h2>
+      <section className="mt-3xl">
+        <h2 className="text-subheading tracking-subheading font-medium">{exit.title}</h2>
         <p className="mt-sm max-w-[62ch] text-body tracking-body">{exit.body}</p>
         {/* Единственное действие экрана в этом состоянии — значит залитая. */}
         <button type="button" onClick={onRestart}
-          className="mt-xl bg-primary px-2xl py-lg text-caps tracking-caps whitespace-nowrap
-            text-on-primary uppercase transition-opacity duration-100 hover:opacity-80
-            active:opacity-70">
+          className={`mt-xl whitespace-nowrap ${buttonFilled}`}>
           {otpStep.restart}
         </button>
       </section>
@@ -128,14 +127,14 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
   }
 
   return (
-    <section className="border-t border-outline py-xl">
-      <h2 className="text-subheading tracking-subheading">{otpStep.title}</h2>
-      <p className="mt-sm max-w-[62ch] text-body-sm tracking-body-sm">
+    <section className="mt-3xl">
+      <h2 className="text-subheading tracking-subheading font-medium">{otpStep.title}</h2>
+      <p className={`mt-sm max-w-[62ch] ${hintText}`}>
         {otpStep.lede} {maskPhone(phone)}
       </p>
 
       <form onSubmit={submit} className="mt-lg">
-        <label htmlFor="otp-code" className="block text-body-sm tracking-body-sm">
+        <label htmlFor="otp-code" className={`block ${fieldLabel}`}>
           {otpStep.codeLabel}
         </label>
         <input
@@ -151,18 +150,15 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
             setCode(event.target.value.replace(/\D/g, '').slice(0, otp.codeLength))
             setError(null)
           }}
-          className={`mt-sm block w-40 border-0 border-b bg-surface px-xs py-sm text-body
-            tracking-body tabular-nums transition-opacity duration-100
-            placeholder:opacity-40 hover:opacity-70 active:opacity-70
-            disabled:cursor-not-allowed disabled:opacity-40
-            ${error ? 'border-stroke-signal' : 'border-outline'}`}
+          className={`mt-sm block w-40 tabular-nums ${field(Boolean(error))}`}
         />
 
-        {/* Сообщение чёрным: красный в этой системе только линия */}
+        {/* Ошибка красным и в тексте, и в границе поля — § Состояния требует
+            обоих каналов; подсказка и ответ на повтор идут приглушённым. */}
         <div
           id="otp-message"
           role="status"
-          className="mt-md min-h-[1.5lh] max-w-[58ch] text-body-sm tracking-body-sm"
+          className={`mt-md min-h-[1.5lh] max-w-[58ch] ${error ? errorTextClass : hintText}`}
         >
           {error ?? note ?? otpStep.probeHint}
         </div>
@@ -171,22 +167,19 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
           <button
             type="submit"
             disabled={busy}
-            className="bg-primary px-2xl py-lg text-caps tracking-caps whitespace-nowrap
-              text-on-primary uppercase transition-opacity duration-100 hover:opacity-80
-              active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`whitespace-nowrap ${buttonFilled}`}
           >
             {busy ? otpStep.submitting : otpStep.submit}
           </button>
 
           {/* Вторая кнопка залитой быть не может: заливка — у главного
-              действия экрана, одного (DESIGN.md § Components). */}
+              действия экрана, одного (DESIGN.md § Components). Кнопка-текст
+              системы: зелёная надпись без заливки. */}
           <button
             type="button"
             onClick={resend}
             disabled={busy || cooldown > 0}
-            className="self-start text-body-sm tracking-body-sm underline-offset-4
-              transition-opacity duration-100 hover:underline active:opacity-70
-              disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:no-underline"
+            className={`self-start ${buttonText}`}
           >
             {cooldown > 0 ? otpStep.resendIn(cooldown) : otpStep.resend}
           </button>

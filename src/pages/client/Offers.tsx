@@ -10,6 +10,7 @@ import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
 import type { RequestForClient } from '../../contract'
+import { buttonFilled, hintText, panel } from '../../components/ui'
 import { errorText, offersPage, statusNote } from '../../texts/request'
 
 type View =
@@ -27,9 +28,9 @@ function toView(caught: unknown): View {
   return { kind: 'failed', message: errorText[caught.code] }
 }
 
-/** Заголовок экрана: крупно, обычным регистром. */
+/** Заголовок экрана: крупно, обычным регистром, вес 600 (§ Typography). */
 function Title({ children }: { children: React.ReactNode }) {
-  return <h1 className="max-w-[20ch] text-heading tracking-heading">{children}</h1>
+  return <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{children}</h1>
 }
 
 export default function Offers() {
@@ -104,9 +105,7 @@ export default function Offers() {
           {network ? offersPage.networkBody : view.message}
         </p>
         <button type="button" onClick={retry}
-          className="mt-xl bg-primary px-2xl py-lg text-caps tracking-caps whitespace-nowrap
-            text-on-primary uppercase transition-opacity duration-100 hover:opacity-80
-            active:opacity-70">
+          className={`mt-xl whitespace-nowrap ${buttonFilled}`}>
           {offersPage.retry}
         </button>
       </PageShell>
@@ -118,23 +117,30 @@ export default function Offers() {
 
   return (
     <PageShell>
-      <p className="text-body-sm tracking-body-sm">{offersPage.numberLabel}</p>
-      <h1 className="mt-sm text-heading tracking-heading tabular-nums">{request.number}</h1>
+      <p className={hintText}>{offersPage.numberLabel}</p>
+      <h1 className="mt-xs text-heading tracking-heading font-semibold tabular-nums">
+        {request.number}
+      </h1>
 
-      <section className="mt-xl border-t border-outline py-xl">
-        <h2 className="text-subheading tracking-subheading">{note.title}</h2>
-        <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
+      {/* Статус заявки — «следы процесса»: человек должен видеть, что она
+          движется, а не лежит (DESIGN.md § Presence). */}
+      <section className="mt-3xl">
+        <div className={panel}>
+          <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
+          <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
+        </div>
       </section>
 
-      <section className="border-t border-outline py-xl">
+      <section className="mt-3xl">
         {request.quotes.length === 0 ? (
           <>
-            <h2 className="text-subheading tracking-subheading">{offersPage.emptyTitle}</h2>
+            {/* Пустое состояние говорит словами, а не серым прямоугольником. */}
+            <h2 className="text-subheading tracking-subheading font-medium">{offersPage.emptyTitle}</h2>
             <p className="mt-sm max-w-[62ch] text-body tracking-body">{offersPage.emptyBody}</p>
           </>
         ) : (
           <>
-            <h2 className="text-subheading tracking-subheading">{offersPage.quotesHere}</h2>
+            <h2 className="text-subheading tracking-subheading font-medium">{offersPage.quotesHere}</h2>
             <p className="mt-sm text-body tracking-body tabular-nums">{request.quotes.length}</p>
           </>
         )}

@@ -4,6 +4,7 @@
 // значение ходит по кругу «показ → разбор → значение», и круг обязан быть
 // тождественным. Один раз он таким не был — номер портился молча.
 import { format, nextValue, PHONE_MASK } from './phone'
+import { field } from './ui'
 
 export interface PhoneInputProps {
   id?: string
@@ -35,13 +36,10 @@ export function PhoneInput({
       aria-invalid={invalid}
       aria-describedby={describedBy}
       onChange={(event) => onChange(nextValue(value, event.target.value))}
-      // Волосяная граница снизу, радиус ноль — как у поля размера
-      // (DESIGN.md § Components). Ошибка красит границу, не текст.
-      className={`w-full max-w-[22ch] border-0 border-b bg-surface px-xs py-sm text-body
-        tracking-body tabular-nums transition-opacity duration-100
-        placeholder:opacity-40 hover:opacity-70 active:opacity-70
-        disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:opacity-40
-        ${invalid ? 'border-stroke-signal' : 'border-outline'}`}
+      // Поле системы: рамка 1px, радиус 4, ошибка красит границу — и вместе
+      // с ней красный текст под полем, его ставит вызывающий экран
+      // (DESIGN.md § Components, § Состояния).
+      className={`w-full max-w-[22ch] tabular-nums ${field(invalid)}`}
     />
   )
 }

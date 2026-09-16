@@ -2,10 +2,21 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
+import { CategoryIcon } from '../../components/CategoryIcon'
 import { KitchenShape } from '../../components/KitchenShape'
 import { OtpConfirm } from '../../components/OtpConfirm'
 import { PageShell } from '../../components/PageShell'
 import { PhoneInput } from '../../components/PhoneInput'
+import {
+  buttonFilled,
+  errorTextClass,
+  field,
+  fieldLabel,
+  hintText,
+  optionCard,
+  optionMark,
+  panel,
+} from '../../components/ui'
 import { City, Description, MainSize, Phone } from '../../contract'
 import type {
   CityCode,
@@ -32,71 +43,62 @@ import {
 } from '../../questions/categories'
 import { errorText, validationUnmapped } from '../../texts/request'
 
-/** Секция. Разделена волосяной линией — не отступом и не рамкой (DESIGN.md § Layout). */
+/**
+ * Секция-вопрос. Разделяется расстоянием, а не линией: 48 между блоками при
+ * 12–16 внутри блока уже дают группировку, и разделитель поверх неё —
+ * шум (DESIGN.md § Layout: «расстояние — главный инструмент группировки»).
+ */
 function Section({ children }: { children: React.ReactNode }) {
-  return <section className="border-t border-outline py-xl">{children}</section>
+  return <section className="mt-3xl first:mt-0">{children}</section>
 }
 
 /**
- * Вопрос. Обычный регистр: капс только у навигации, кнопок и полосы.
- * Над заголовком — счётчик шагов: шесть-семь секций подряд без обещания
- * длины человек с телефона просто закрывает. Набор обычный, мелкий —
- * ни капса, ни полоски прогресса: такой графики в системе нет.
+ * Вопрос: счётчик шага, заголовок блока, подсказка. Счётчик нужен потому,
+ * что шесть-семь секций подряд без обещания длины человек с телефона просто
+ * закрывает.
+ *
+ * Плашкой вопрос НЕ оборачивается, хотя соблазн есть: карточки вариантов
+ * внутри неё оказались бы на втором уровне поверхности, и выбранной было бы
+ * некуда подниматься — потолок вложенности (DESIGN.md § Elevation).
  */
 function Ask({ step, title, hint, children }: {
   step: string; title: string; hint?: string; children: React.ReactNode
 }) {
   return (
     <>
-      <p className="text-body-sm tracking-body-sm">{step}</p>
-      <h2 className="mt-sm text-subheading tracking-subheading">{title}</h2>
-      {hint && <p className="mt-sm max-w-[62ch] text-body-sm tracking-body-sm">{hint}</p>}
+      <p className={hintText}>{step}</p>
+      <h2 className="mt-xs text-subheading tracking-subheading font-medium text-balance">
+        {title}
+      </h2>
+      {hint && <p className={`mt-sm max-w-[62ch] ${hintText}`}>{hint}</p>}
       <div className="mt-lg">{children}</div>
     </>
   )
 }
 
-/** Индикатор: залитый квадрат. Радиус ноль, как у всего в системе. */
+/** Метка выбранного варианта — сливовый квадрат (DESIGN.md § Состояния). */
 function Mark({ on }: { on: boolean }) {
-  return (
-    <span aria-hidden="true"
-      className={`mt-[0.2em] size-3 shrink-0 border ${on ? 'border-outline bg-primary' : 'border-outline'}`} />
-  )
+  return <span aria-hidden="true" className={optionMark(on)} />
 }
 
 /**
- * Сообщение под полем. Чёрным: красный в этой системе — только линия
- * (DESIGN.md § Состояния). Место под сообщение держится всегда, иначе
- * появление ошибки дёргает вёрстку.
+ * Сообщение под полем. Ошибка — красным на 15px: § Состояния требует менять
+ * вместе границу поля и текст под ним, одной красной рамки человек на
+ * телефоне не замечает. Место под сообщение держится всегда, иначе появление
+ * ошибки дёргает вёрстку.
  */
 function Note({ id, error, hint }: { id: string; error?: string; hint?: string }) {
   return (
-    <div className="mt-md min-h-[1.5lh] max-w-[58ch] text-body-sm tracking-body-sm">
-      {error ? <p id={id} role="alert">{error}</p> : hint ? <p id={id}>{hint}</p> : null}
+    <div className="mt-sm min-h-[1.5lh] max-w-[58ch]">
+      {error
+        ? <p id={id} role="alert" className={errorTextClass}>{error}</p>
+        : hint ? <p id={id} className={hintText}>{hint}</p> : null}
     </div>
   )
 }
 
-// Состояния по DESIGN.md § Состояния: наведение — подчёркивание подписи,
-// нажатие — снижение непрозрачности. Цветом откликаться не на что, он один.
-const opt =
-  'group flex cursor-pointer items-start gap-sm bg-surface p-md text-left text-body-sm ' +
-  'tracking-body-sm transition-opacity duration-100 active:opacity-70 ' +
-  'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
-  'has-[:focus-visible]:outline-outline has-[:focus-visible]:outline-offset-2'
-
 /** Подпись варианта: подчёркивается при наведении на карточку. */
 const optLabel = 'group-hover:underline underline-offset-4'
-
-const on = (v: boolean) => (v ? 'border-2 border-outline' : 'border border-outline')
-
-/** Поле-строка: волосяная граница снизу, радиус ноль, ошибка красит границу. */
-const line = (invalid: boolean) =>
-  'border-0 border-b bg-surface px-xs py-sm text-body tracking-body ' +
-  'transition-opacity duration-100 placeholder:opacity-40 hover:opacity-70 ' +
-  'active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 ' +
-  'disabled:hover:opacity-40 ' +
-  (invalid ? 'border-stroke-signal' : 'border-outline')
 
 type ShapeId = (typeof kitchenShape.options)[number]['id']
 type ApplianceId = (typeof kitchenAppliances.options)[number]['id']
@@ -361,15 +363,17 @@ export default function RequestForm() {
             }}
           />
           <Section>
-            <dl className="text-body-sm tracking-body-sm">
-              <p className="text-body-sm tracking-body-sm">{summary.title}</p>
-              {rows.map(([k, v]) => (
-                <div key={k} className="mt-sm flex gap-md">
-                  <dt className="w-40 shrink-0 opacity-60">{k}</dt>
-                  <dd className="min-w-0 tabular-nums">{v}</dd>
-                </div>
-              ))}
-            </dl>
+            <div className={panel}>
+              <p className="text-subheading tracking-subheading font-medium">{summary.title}</p>
+              <dl className="mt-md text-body-sm tracking-body-sm">
+                {rows.map(([k, v]) => (
+                  <div key={k} className="mt-sm flex gap-md">
+                    <dt className={`w-40 shrink-0 ${hintText}`}>{k}</dt>
+                    <dd className="min-w-0 tabular-nums">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
           </Section>
         </div>
       )}
@@ -378,16 +382,22 @@ export default function RequestForm() {
       <form onSubmit={submit} className="mt-xl">
         <Section>
           <Ask step={stepLabel('category', steps, category)} title={screen.stepCategory}>
-            {/* Карточка — строка, а не колонка: на 375px колонка из четырёх
-                вариантов с одним словом внутри занимала по экрану на выбор. */}
-            <div className="grid grid-cols-1 gap-sm sm:grid-cols-4">
+            {/* Две колонки, а не четыре: у категории есть подсказка, и в
+                четверти ширины она рассыпается на три строки. */}
+            <div className="grid grid-cols-1 gap-md sm:grid-cols-2">
               {categories.map((c) => (
-                <label key={c.id} className={`${opt} items-center ${on(category === c.id)}`}>
+                <label key={c.id} className={optionCard(category === c.id)}>
                   <input type="radio" name="category" value={c.id} className="sr-only"
                     checked={category === c.id}
                     onChange={() => { setCategory(c.id); setErrors({}); touched() }} />
                   <Mark on={category === c.id} />
-                  <span className={optLabel}>{c.label}</span>
+                  {/* Иконка несёт содержание, а не украшает: категорию узнают
+                      по предмету раньше, чем прочитают слово (§ Иконки). */}
+                  <CategoryIcon id={c.id} />
+                  <span className="min-w-0">
+                    <span className={`block ${optLabel}`}>{c.label}</span>
+                    <span className={`mt-xs block ${hintText}`}>{c.hint}</span>
+                  </span>
                 </label>
               ))}
             </div>
@@ -407,11 +417,11 @@ export default function RequestForm() {
                     aria-invalid={Boolean(errors.size)}
                     aria-describedby="size-note"
                     onChange={(e) => { setSize(e.target.value); setErrors({ ...errors, size: undefined }); touched() }}
-                    className={`w-40 tabular-nums ${line(Boolean(errors.size))}`} />
+                    className={`w-40 tabular-nums ${field(Boolean(errors.size))}`} />
                   {/* Подпись единицы склоняется по введённому: «3,2 метра». */}
-                  <span className="text-body-sm tracking-body-sm">{metersUnit(size)}</span>
+                  <span className={hintText}>{metersUnit(size)}</span>
                 </div>
-                <label className={`${opt} mt-lg inline-flex items-center ${on(sizeUnknown)}`}>
+                <label className={`${optionCard(sizeUnknown)} mt-lg inline-flex items-center`}>
                   <input type="checkbox" className="sr-only" checked={sizeUnknown}
                     onChange={(e) => { setSizeUnknown(e.target.checked); setErrors({ ...errors, size: undefined }); touched() }} />
                   <Mark on={sizeUnknown} />
@@ -429,13 +439,13 @@ export default function RequestForm() {
                     title={kitchenShape.question} hint={kitchenShape.hint}>
                     <div className="grid grid-cols-2 gap-sm sm:grid-cols-4">
                       {kitchenShape.options.map((o) => (
-                        <label key={o.id} className={`${opt} flex-col ${on(shape === o.id)}`}>
+                        <label key={o.id} className={`${optionCard(shape === o.id)} flex-col`}>
                           <input type="radio" name="shape" value={o.id} className="sr-only"
                             checked={shape === o.id} onChange={() => { setShape(o.id); touched() }} />
-                          {/* Схема занимает место фотографии — в рамке волосяной линией */}
-                          <span className="border border-outline p-sm">
-                            <KitchenShape id={o.id} />
-                          </span>
+                          {/* Рамки вокруг схемы больше нет: плашка карточки её уже
+                              отделяет, а рамка внутри рамки давала двойной контур
+                              (§ Elevation — обводки блоков не применяются). */}
+                          <KitchenShape id={o.id} />
                           {/* Индикатор стоит перед подписью и на одной строке с ней —
                               как во всех остальных карточках формы, а не в углу. */}
                           <span className="mt-md flex items-start gap-sm">
@@ -451,9 +461,9 @@ export default function RequestForm() {
                 <Section>
                   <Ask step={stepLabel('appliances', steps, category)}
                     title={kitchenAppliances.question} hint={kitchenAppliances.hint}>
-                    <div className="grid grid-cols-1 gap-sm sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
                       {kitchenAppliances.options.map((o) => (
-                        <label key={o.id} className={`${opt} items-center ${on(appliances === o.id)}`}>
+                        <label key={o.id} className={`${optionCard(appliances === o.id)} items-center`}>
                           <input type="radio" name="appliances" value={o.id} className="sr-only"
                             checked={appliances === o.id} onChange={() => { setAppliances(o.id); touched() }} />
                           <Mark on={appliances === o.id} />
@@ -474,16 +484,16 @@ export default function RequestForm() {
                   aria-invalid={Boolean(errors.description)}
                   aria-describedby="description-note"
                   onChange={(e) => { setText(e.target.value); setErrors({ ...errors, description: undefined }); touched() }}
-                  className={`block w-full max-w-[62ch] resize-y ${line(Boolean(errors.description))}`} />
+                  className={`block w-full max-w-[62ch] resize-y ${field(Boolean(errors.description))}`} />
                 <Note id="description-note" error={errors.description} />
               </Ask>
             </Section>
 
             <Section>
               <Ask step={stepLabel('city', steps, category)} title={cityAsk.question} hint={cityAsk.hint}>
-                <div className="grid grid-cols-2 gap-sm sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-md sm:grid-cols-4">
                   {cityAsk.options.map((o) => (
-                    <label key={o.id} className={`${opt} items-center ${on(cityCode === o.id)}`}>
+                    <label key={o.id} className={`${optionCard(cityCode === o.id)} items-center`}>
                       <input type="radio" name="city" id={`city-${o.id}`} value={o.id}
                         className="sr-only" checked={cityCode === o.id}
                         onChange={() => { setCityCode(o.id); setErrors({ ...errors, city: undefined }); touched() }} />
@@ -494,7 +504,7 @@ export default function RequestForm() {
                 </div>
                 {cityCode === 'other' && (
                   <div className="mt-lg">
-                    <label htmlFor="city-other-name" className="block text-body-sm tracking-body-sm">
+                    <label htmlFor="city-other-name" className={`block ${fieldLabel}`}>
                       {cityAsk.otherLabel}
                     </label>
                     <input id="city-other-name" autoComplete="address-level2" value={cityName}
@@ -502,7 +512,7 @@ export default function RequestForm() {
                       aria-invalid={Boolean(errors.cityName)}
                       aria-describedby="city-note"
                       onChange={(e) => { setCityName(e.target.value); setErrors({ ...errors, cityName: undefined }); touched() }}
-                      className={`mt-sm block w-full max-w-[32ch] ${line(Boolean(errors.cityName))}`} />
+                      className={`mt-sm block w-full max-w-[32ch] ${field(Boolean(errors.cityName))}`} />
                   </div>
                 )}
                 <Note id="city-note" error={errors.city ?? errors.cityName} />
@@ -518,33 +528,37 @@ export default function RequestForm() {
               </Ask>
             </Section>
 
+            {/* Сводка — тот случай, когда плашка обязательна: разнородные
+                строки образуют одно целое «вот что уйдёт мебельщикам»
+                (DESIGN.md § Elevation). */}
             <Section>
-              <div className="flex flex-col gap-xl sm:flex-row sm:items-end sm:justify-between">
-                <dl className="text-body-sm tracking-body-sm">
-                  <p className="text-body-sm tracking-body-sm">{summary.title}</p>
+              <div className={panel}>
+                <p className="text-subheading tracking-subheading font-medium">{summary.title}</p>
+                <dl className="mt-md text-body-sm tracking-body-sm">
                   {rows.map(([k, v]) => (
                     <div key={k} className="mt-sm flex gap-md">
-                      <dt className="w-40 shrink-0 opacity-60">{k}</dt>
+                      <dt className={`w-40 shrink-0 ${hintText}`}>{k}</dt>
                       <dd className="min-w-0 tabular-nums">{v}</dd>
                     </div>
                   ))}
                 </dl>
-                <div>
-                  <button type="submit" disabled={busy || cooldown > 0}
-                    className="bg-primary px-2xl py-lg text-caps tracking-caps whitespace-nowrap
-                      text-on-primary uppercase transition-opacity duration-100 hover:opacity-80
-                      active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40">
-                    {busy
-                      ? screen.submitting
-                      : cooldown > 0
-                        ? screen.submitIn(cooldown)
-                        : screen.submit}
-                  </button>
-                  <div className="mt-md max-w-[40ch] text-body-sm tracking-body-sm">
-                    {sendError && <p role="alert">{sendError}</p>}
-                    {!sendError && <p>{screen.submitHint}</p>}
-                    {sizeUnknown && <p className="mt-sm">{screen.incompleteNote}</p>}
-                  </div>
+              </div>
+
+              {/* Кнопка стоит на холсте, а не внутри плашки: главное действие
+                  экрана не принадлежит сводке, оно принадлежит странице. */}
+              <div className="mt-xl">
+                <button type="submit" disabled={busy || cooldown > 0}
+                  className={`whitespace-nowrap ${buttonFilled}`}>
+                  {busy
+                    ? screen.submitting
+                    : cooldown > 0
+                      ? screen.submitIn(cooldown)
+                      : screen.submit}
+                </button>
+                <div className="mt-md max-w-[40ch]">
+                  {sendError && <p role="alert" className={errorTextClass}>{sendError}</p>}
+                  {!sendError && <p className={hintText}>{screen.submitHint}</p>}
+                  {sizeUnknown && <p className={`mt-sm ${hintText}`}>{screen.incompleteNote}</p>}
                 </div>
               </div>
             </Section>
