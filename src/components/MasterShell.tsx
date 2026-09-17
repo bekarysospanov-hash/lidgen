@@ -3,11 +3,12 @@
 // Марату не нужны и сбивают, а у него в шапке стоит то, чего нет у неё, —
 // имя его мастерской. Общее — знак, колонка до 1440 и отсутствие липкости
 // (DESIGN.md § Layout).
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { shell } from '../texts/shell'
 import { masterShell } from '../texts/master'
 import { BrandMark } from './icons'
-import { hintText } from './ui'
+import { buttonText, hintText } from './ui'
+import { clearSession } from '../pages/master/session'
 
 const brandLink =
   'flex items-center gap-sm whitespace-nowrap text-subheading tracking-subheading ' +
@@ -21,6 +22,8 @@ export function MasterShell({
   masterName?: string
   children: React.ReactNode
 }) {
+  const navigate = useNavigate()
+
   return (
     <div className="flex min-h-dvh flex-col bg-surface text-on-surface">
       <header className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline justify-between gap-x-xl gap-y-sm px-lg pt-lg pb-xl">
@@ -32,8 +35,24 @@ export function MasterShell({
           {shell.brand}
         </Link>
         {/* Имя мастерской — не украшение: у одного телефона бывает две
-            мастерские, и Марат должен видеть, под какой он отвечает. */}
-        <p className={hintText}>{masterName ?? masterShell.area}</p>
+            мастерские, и Марат должен видеть, под какой он отвечает.
+            Рядом выход: без него кабинет ловушка — сессия живёт 12 часов,
+            и войти другой мастерской нельзя вовсе. */}
+        <div className="flex items-baseline gap-lg">
+          <p className={hintText}>{masterName ?? masterShell.area}</p>
+          {masterName !== undefined && (
+            <button
+              type="button"
+              className={buttonText}
+              onClick={() => {
+                clearSession()
+                navigate('/master', { replace: true })
+              }}
+            >
+              {masterShell.signOut}
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="mx-auto w-full max-w-[1440px] flex-1 px-lg">{children}</main>
