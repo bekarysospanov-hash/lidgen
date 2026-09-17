@@ -9,6 +9,7 @@ import type {
   MasterRequestCodeInput,
   MasterSession,
   OtpSent,
+  SendEventsInput,
   Photo,
   Quote,
   RequestConfirmed,
@@ -38,6 +39,7 @@ export type UploadPhotoInputLike = File
 export type MasterCodeInputLike = MasterRequestCodeInput | Record<string, unknown>
 export type MasterConfirmInputLike = MasterConfirmCodeInput | Record<string, unknown>
 export type CreateQuoteInputLike = CreateQuote | Record<string, unknown>
+export type SendEventsInputLike = SendEventsInput | Record<string, unknown>
 
 /**
  * Одиннадцать операций скелета: шесть публичных (§5) и пять в кабинете
@@ -60,6 +62,12 @@ export interface Api {
    * остаются висеть blob:-адреса, каждый до 10 МБ (US-10, §5).
    */
   deletePhoto(id: string): Promise<void>
+  /**
+   * POST /api/events — воронка US-25a и путь заявки US-25b (§5).
+   * Единственная операция, отказ которой экран обязан проглотить молча:
+   * наблюдение не должно ломать продукт.
+   */
+  sendEvents(input: SendEventsInputLike): Promise<void>
 
   // --- Кабинет мебельщика (§5б). masterToken уходит заголовком
   // Authorization: Bearer, а не в пути и не в теле: в URL он попал бы

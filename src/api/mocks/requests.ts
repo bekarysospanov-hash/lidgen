@@ -2,6 +2,7 @@
 // контракт, а не обходит его: каждый ответ проходит свою zod-схему перед
 // отдачей, ошибки возвращаются те же, что обязан вернуть сервер (§1, §10).
 import {
+  SendEventsInput,
   ConfirmOtpInput,
   CreateRequest,
   RequestConfirmed,
@@ -225,4 +226,21 @@ export function getByToken(token: string): RequestForClient {
   addEvent('client_page_opened', record.id, 'client', { quotesCount: record.quotes.length })
 
   return toClientProjection(record)
+}
+
+/**
+ * Приём событий воронки (US-25a, §5). Мок кладёт их в тот же журнал, что
+ * и события, порождённые операциями: смотреть воронку надо целиком, а не
+ * двумя списками. `at` ставит «сервер», как и обещает контракт.
+ */
+export function acceptEvents(input: unknown): void {
+  const parsed = SendEventsInput.safeParse(input)
+  if (!parsed.success) throw validationFailed(parsed.error)
+
+  for (const event of parsed.data.events) {
+    addEvent(event.type, event.requestId, event.actor.role, {
+      ...(event.payload ?? {}),
+      ...(event.sessionId ? { sessionId: event.sessionId } : {}),
+    })
+  }
 }

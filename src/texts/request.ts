@@ -3,6 +3,7 @@
 // Механика сменится вместе с реальным бэком, формулировки вопросов — нет.
 // Язык интерфейса русский, тексты живут здесь, а не в компонентах (CLAUDE.md).
 import type { RequestStatus } from '../contract'
+import { days, priceRange } from './format'
 import type { ApiErrorCode } from '../api/errors'
 
 /** Шаг подтверждения номера. Форма его не покидает: отдельного роута нет. */
@@ -145,9 +146,8 @@ export const offersPage = {
   quoteWhat: 'Что входит',
   quoteMaterials: 'Из чего',
   quoteLead: 'Срок изготовления',
-  quotePrice: (min: number, max: number) =>
-    min === max ? `${money(min)} ₸` : `${money(min)} – ${money(max)} ₸`,
-  quoteLeadValue: (days: number) => `${days} ${dayWord(days)}`,
+  quotePrice: priceRange,
+  quoteLeadValue: days,
   /** Что делать дальше. Контакт мастерской — US-24, срез 3: не обещаем. */
   nextTitle: 'Что дальше',
   nextBody:
@@ -155,28 +155,6 @@ export const offersPage = {
     'Мы напишем, когда появится следующее.',
 } as const
 
-/** Разряды пробелом: «1 400 000» читается числом, «1400000» — строкой цифр. */
-function money(value: number): string {
-  return value.toLocaleString('ru-RU').replace(/\u00A0/g, ' ')
-}
-
-/** 1 день · 2–4 дня · 5–20 дней. Падежи согласованы (DESIGN.md § Presence). */
-function dayWord(count: number): string {
-  const tens = Math.abs(count) % 100
-  if (tens >= 11 && tens <= 14) return 'дней'
-  const ones = Math.abs(count) % 10
-  if (ones === 1) return 'день'
-  if (ones >= 2 && ones <= 4) return 'дня'
-  return 'дней'
-}
-
-/**
- * VALIDATION_FAILED, который не разложился ни по одному полю экрана.
- * Экран знает пять путей (mainSize, description, city, city.name, phone);
- * сервер вправе отказать и по другим — consent (US-11), source, поле,
- * которого на фронте ещё нет. Тогда «Проверьте отмеченные поля» врёт:
- * отмечать нечего. Говорим прямо, что исправить отсюда нельзя.
- */
 export const validationUnmapped = (paths: string[]): string =>
   paths.length > 0
     ? 'Сервер не принял заявку, и не из-за полей, которые есть на этом экране. ' +

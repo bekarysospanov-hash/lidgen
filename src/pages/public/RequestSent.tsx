@@ -80,11 +80,15 @@ export default function RequestSent() {
           первого уровня. Строка ссылки вложена в неё вторым уровнем: на холсте
           второй уровень стоять не может, он по определению «вложенное в блок»
           (DESIGN.md § Elevation). */}
+      {/* Вторая редакция системы: заголовок раздела стоит СНАРУЖИ плашки
+          и называет её, а плашка держит только элементы — здесь саму строку
+          ссылки и кнопку. Раньше заголовок сидел внутри, и блок читался
+          как карточка с шапкой, а не как раздел под заголовком. */}
       <section className="mt-3xl">
-        <div className={panel}>
-          <h2 className="text-subheading tracking-subheading font-medium">{sentPage.linkTitle}</h2>
-          <p className={`mt-sm max-w-[62ch] ${hintText}`}>{sentPage.linkNote}</p>
-          <p className={`mt-lg max-w-full overflow-x-auto text-body-sm tracking-body-sm break-all ${panelNested}`}>
+        <h2 className="text-subheading tracking-subheading font-medium">{sentPage.linkTitle}</h2>
+        <p className={`mt-sm max-w-[62ch] ${hintText}`}>{sentPage.linkNote}</p>
+        <div className={`mt-lg ${panel}`}>
+          <p className={`max-w-full overflow-x-auto text-body-sm tracking-body-sm break-all ${panelNested}`}>
             {absolute}
           </p>
         </div>

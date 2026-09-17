@@ -442,6 +442,48 @@ describe('uploadPhoto — US-10', () => {
   })
 })
 
+describe('события воронки (US-25a)', () => {
+  const funnelEvent = (type: string, overrides: Record<string, unknown> = {}) => ({
+    type,
+    requestId: null,
+    actor: { role: 'client' },
+    sessionId: 'sess-1',
+    ...overrides,
+  })
+
+  it('пачка событий попадает в тот же журнал, что и серверные', async () => {
+    await mockApi.sendEvents({
+      events: [funnelEvent('visit'), funnelEvent('category_selected', { payload: { category: 'kitchen' } })],
+    })
+
+    const types = listEvents().map((event) => event.type)
+    expect(types).toContain('visit')
+    expect(types).toContain('category_selected')
+  })
+
+  it('время ставит сервер: at приходит от него, а не от клиента', async () => {
+    await mockApi.sendEvents({ events: [funnelEvent('visit', { at: '1999-01-01T00:00:00.000Z' })] })
+
+    const visit = listEvents().find((event) => event.type === 'visit')!
+    expect(visit.at.startsWith('1999')).toBe(false)
+  })
+
+  it('событие воронки без sessionId не принимается — его не с чем связать', async () => {
+    const { sessionId, ...withoutSession } = funnelEvent('visit')
+    expect(sessionId).toBeDefined()
+
+    await expect(mockApi.sendEvents({ events: [withoutSession] })).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED',
+    )
+  })
+
+  it('пустая пачка не принимается', async () => {
+    await expect(mockApi.sendEvents({ events: [] })).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED',
+    )
+  })
+})
+
 describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', () => {
   const ALMATY_PHONES = ['+77010000001', '+77010000002', '+77010000003']
   const ASTANA_PHONE = '+77010000004'

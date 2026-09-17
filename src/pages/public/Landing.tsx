@@ -90,10 +90,10 @@ export default function Landing() {
           с телефона это невозможно. Исчезает вместе с моками. */}
       {probeVisible && (
         <section className="mt-3xl">
-          <div className={panel}>
-            <h2 className="text-subheading tracking-subheading font-medium">{probePanel.title}</h2>
-            <p className="mt-sm max-w-[54ch] text-body tracking-body">{probePanel.body}</p>
-            <div className="mt-lg flex flex-col gap-md">
+          <h2 className="text-subheading tracking-subheading font-medium">{probePanel.title}</h2>
+          <p className="mt-sm max-w-[54ch] text-body tracking-body">{probePanel.body}</p>
+          <div className={`mt-lg ${panel}`}>
+            <div className="flex flex-col gap-md">
               <Link to="/request" className={link}>{probePanel.toRequest}</Link>
               <span>
                 <Link to="/master" className={link}>{probePanel.toMaster}</Link>

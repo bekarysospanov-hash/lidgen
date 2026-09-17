@@ -163,10 +163,10 @@ export default function Offers() {
           за статус говорят сами предложения. */}
       {request.quotes.length === 0 && (
         <section className="mt-3xl">
-          <div className={panel}>
-            <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
-            <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
-          </div>
+          {/* Плашки нет: заголовок и абзац самостоятельны, а плашка вокруг
+              самостоятельного элемента — шум (DESIGN.md § Elevation). */}
+          <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
+          <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
         </section>
       )}
 

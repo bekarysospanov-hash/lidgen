@@ -1,7 +1,7 @@
 // mockApi реализует тот же интерфейс Api, что и httpApi. Подмена — в client.ts.
 import type { Api } from '../types'
 import { remove, upload } from './photos'
-import { confirm, create, getByToken, resend } from './requests'
+import { acceptEvents, confirm, create, getByToken, resend } from './requests'
 import { confirmCode, getRequest, listRequests, requestCode, sendQuote } from './master'
 
 // PROBE: искусственная задержка ответа — имитирует сетевой RTT реального
@@ -41,6 +41,10 @@ export const mockApi: Api = {
   async deletePhoto(id) {
     await delay()
     remove(id)
+  },
+  async sendEvents(input) {
+    await delay()
+    acceptEvents(input)
   },
   async masterRequestCode(input) {
     await delay()

@@ -1,3 +1,5 @@
+import { days, priceRange } from './format'
+
 // Тексты кабинета мебельщика (US-17, US-18, US-19a). Отдельно от текстов
 // заказчицы: у Марата другой язык и другая задача — он на работе, между
 // цехом и замером, и читает экран между делом.
@@ -182,22 +184,6 @@ export const quotePage = {
   clientPhoneLabel: 'Телефон заказчицы',
   callAction: 'Позвонить',
   yourQuoteTitle: 'Что вы отправили',
-  priceRange: (min: number, max: number) =>
-    min === max ? `${kzt(min)} ₸` : `${kzt(min)} – ${kzt(max)} ₸`,
-  leadTime: (days: number) => `${days} ${dayWord(days)}`,
+  priceRange,
+  leadTime: days,
 } as const
-
-/** Разряды пробелом: «1 400 000» читается числом, «1400000» — строкой цифр. */
-export function kzt(value: number): string {
-  return value.toLocaleString('ru-RU').replace(/\u00A0/g, ' ')
-}
-
-/** 1 день · 2–4 дня · 5–20 дней. Падежи согласованы (DESIGN.md § Presence). */
-export function dayWord(count: number): string {
-  const tens = Math.abs(count) % 100
-  if (tens >= 11 && tens <= 14) return 'дней'
-  const ones = Math.abs(count) % 10
-  if (ones === 1) return 'день'
-  if (ones >= 2 && ones <= 4) return 'дня'
-  return 'дней'
-}

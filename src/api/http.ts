@@ -19,6 +19,7 @@ import {
   RequestForMaster,
   RequestForMasterListItem,
   ResendOtpInput,
+  SendEventsInput,
 } from '../contract'
 import { z } from 'zod'
 import { ApiError, validationFailed } from './errors'
@@ -30,6 +31,7 @@ import type {
   MasterCodeInputLike,
   MasterConfirmInputLike,
   ResendOtpInputLike,
+  SendEventsInputLike,
   UploadPhotoInputLike,
 } from './types'
 
@@ -175,6 +177,19 @@ export const httpApi: Api = {
     await call(`/api/photos/${encodeURIComponent(id)}`, {
       method: 'DELETE',
       headers: jsonHeaders,
+    }, PASSTHROUGH)
+  },
+
+  /**
+   * Пачка событий воронки. Тела в ответе нет (202), поэтому схема
+   * пропускающая — разбирать нечего.
+   */
+  async sendEvents(input: SendEventsInputLike) {
+    const payload = parseInput<SendEventsInput>(SendEventsInput, input)
+    await call('/api/events', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
     }, PASSTHROUGH)
   },
 

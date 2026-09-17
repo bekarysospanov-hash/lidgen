@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../api/client'
+import { requestSource, track } from '../../analytics'
 import { isApiError } from '../../api/errors'
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { CloseIcon } from '../../components/icons'
@@ -429,6 +430,9 @@ export default function RequestForm() {
         // Версия текста и время отметки, а не булев флаг: доказывать придётся,
         // с чем именно человек согласился и когда (US-11).
         consent: { policyVersion: POLICY_VERSION, acceptedAt: new Date().toISOString() },
+        // US-26: метки живут в памяти с момента входа — к отправке заявки
+        // их в адресной строке уже нет.
+        source: requestSource(),
         clientRequestId: attemptId.current,
       },
     }
@@ -467,6 +471,11 @@ export default function RequestForm() {
     // Отправлять до выбора категории нечего: ни полей, ни кнопки ещё нет.
     if (!category) return
 
+    // US-25a: нажатие на кнопку — отдельный шаг воронки. Считается и тогда,
+    // когда форма не прошла проверку: «дошёл до отправки, но не отправил» —
+    // самое интересное место в воронке, и терять его нельзя.
+    track('continue_clicked')
+
     const result = build(category)
     if ('errors' in result) {
       setErrors(result.errors)
@@ -474,6 +483,9 @@ export default function RequestForm() {
       focusFirst(result.errors)
       return
     }
+
+    // Обязательный минимум собран — форма прошла проверку целиком.
+    track('required_filled')
 
     setErrors({})
     setSendError(null)
@@ -575,7 +587,12 @@ export default function RequestForm() {
                   <label className={blockRow(category === c.id)}>
                     <input type="radio" name="category" value={c.id} className="sr-only"
                       checked={category === c.id}
-                      onChange={() => { setCategory(c.id); setErrors({}); touched() }} />
+                      onChange={() => {
+                        setCategory(c.id)
+                        setErrors({})
+                        touched()
+                        track('category_selected', { category: c.id })
+                      }} />
                     {/* Иконка несёт содержание, а не украшает: категорию узнают
                         по предмету раньше, чем прочитают слово (§ Иконки). */}
                     <CategoryIcon id={c.id} />
