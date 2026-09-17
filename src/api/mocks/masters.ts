@@ -2,7 +2,12 @@
 // (docs/api-contract.md §2 Master, §10). На проде это карточки, заведённые
 // нами (A2), и их правка — US-20; здесь список константный, а вход проходит
 // по тому же коду 1234, что и у заявки.
-import { MASTER_SESSION_TTL_HOURS, type City, type Master } from '../../contract'
+import {
+  MASTER_SESSION_TTL_HOURS,
+  MasterCardPublic,
+  type City,
+  type Master,
+} from '../../contract'
 import { newId, newToken } from './store'
 
 /**
@@ -21,6 +26,16 @@ const city = (code: 'almaty' | 'astana' | 'shymkent'): City => ({ code, name: nu
 
 const ACCEPTING_FROM = '2026-09-01T00:00:00.000Z'
 
+/**
+ * Карточки каталога у всех семи — null, и это не недоделка (US-02).
+ * Публиковать можно только настоящие мастерские, давшие согласие, со своими
+ * работами на фотографиях: сгенерированные карточки и чужие портфолио
+ * запрещены PRD и контрактом. Здесь их взять неоткуда — карточки приходят
+ * треком A2, из разговоров с живыми мебельщиками.
+ *
+ * Пока согласий нет, каталог законно пуст, и экран это показывает словами.
+ */
+
 const MASTERS: Master[] = [
   {
     id: 'aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
@@ -28,6 +43,7 @@ const MASTERS: Master[] = [
     city: city('almaty'),
     phone: '+77010000001',
     acceptingFrom: ACCEPTING_FROM,
+    card: null,
   },
   {
     id: 'aaaaaaa2-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
@@ -35,6 +51,7 @@ const MASTERS: Master[] = [
     city: city('almaty'),
     phone: '+77010000002',
     acceptingFrom: ACCEPTING_FROM,
+    card: null,
   },
   {
     id: 'aaaaaaa3-aaaa-4aaa-8aaa-aaaaaaaaaaa3',
@@ -42,6 +59,7 @@ const MASTERS: Master[] = [
     city: city('almaty'),
     phone: '+77010000003',
     acceptingFrom: ACCEPTING_FROM,
+    card: null,
   },
   {
     id: 'aaaaaaa4-aaaa-4aaa-8aaa-aaaaaaaaaaa4',
@@ -49,6 +67,7 @@ const MASTERS: Master[] = [
     city: city('astana'),
     phone: '+77010000004',
     acceptingFrom: ACCEPTING_FROM,
+    card: null,
   },
   {
     id: 'aaaaaaa5-aaaa-4aaa-8aaa-aaaaaaaaaaa5',
@@ -56,6 +75,7 @@ const MASTERS: Master[] = [
     city: city('astana'),
     phone: '+77010000005',
     acceptingFrom: ACCEPTING_FROM,
+    card: null,
   },
   {
     id: 'aaaaaaa6-aaaa-4aaa-8aaa-aaaaaaaaaaa6',
@@ -63,6 +83,7 @@ const MASTERS: Master[] = [
     city: city('shymkent'),
     phone: '+77010000006',
     acceptingFrom: ACCEPTING_FROM,
+    card: null,
   },
   {
     id: 'aaaaaaa7-aaaa-4aaa-8aaa-aaaaaaaaaaa7',
@@ -70,6 +91,7 @@ const MASTERS: Master[] = [
     city: city('shymkent'),
     phone: '+77010000007',
     acceptingFrom: ACCEPTING_FROM,
+    card: null,
   },
 ]
 
@@ -127,3 +149,19 @@ export function resetSessions(): void {
 
 /** Идентификатор КП генерируется тем же способом, что и остальные (§10). */
 export const newQuoteId = newId
+
+/**
+ * Каталог (US-02, §5 listMasters): только мастерские с заполненной карточкой.
+ * Пустой список — законный ответ, а не ошибка: пока согласий нет, каталог
+ * пуст, и выдумывать карточки запрещено.
+ */
+export function listCatalogue(): MasterCardPublic[] {
+  return MASTERS.filter((master) => master.card !== null).map((master) =>
+    MasterCardPublic.parse({
+      id: master.id,
+      name: master.name,
+      city: master.city,
+      card: master.card,
+    }),
+  )
+}

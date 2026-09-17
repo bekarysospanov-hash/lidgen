@@ -3,6 +3,7 @@ import type { Api } from '../types'
 import { remove, upload } from './photos'
 import { acceptEvents, confirm, create, getByToken, resend } from './requests'
 import { confirmCode, getRequest, listRequests, requestCode, sendQuote } from './master'
+import { listCatalogue } from './masters'
 
 // PROBE: искусственная задержка ответа — имитирует сетевой RTT реального
 // бэка, чтобы состояния загрузки на экранах проверялись по-настоящему (§10).
@@ -45,6 +46,10 @@ export const mockApi: Api = {
   async sendEvents(input) {
     await delay()
     acceptEvents(input)
+  },
+  async listMasters() {
+    await delay()
+    return listCatalogue()
   },
   async masterRequestCode(input) {
     await delay()

@@ -20,6 +20,34 @@ export const MASTER_SESSION_TTL_HOURS = 12
  * Мебельщик. Заводится нами (A2), самостоятельной регистрации в пробе нет:
  * правка своей карточки — US-20, срез 3.
  */
+/**
+ * Публичная карточка каталога (US-02). Появляется только после согласия
+ * мастерской на публикацию и заполнения карточки нами (трек A2).
+ *
+ * Запрет, вынесенный из PRD в контракт: сгенерированные карточки, спарсенные
+ * чужие портфолио и вымышленные мастерские «для объёма» недопустимы. Заявка
+ * на несуществующее предложение делает CPL неинтерпретируемым, а чужие фото —
+ * это чужое авторское право в среде, где работы узнают мгновенно.
+ */
+export const MasterCard = z.object({
+  about: z.string().trim().min(1).max(600),
+  yearsOnMarket: z.int().min(0),
+  does: z.array(z.string().trim().min(1)).min(1).max(6),
+  /** Свои работы, снятые у своих заказчиков. Ни одной чужой. */
+  photos: z.array(z.string().min(1)).min(1).max(6),
+  publishedAt: Iso,
+})
+export type MasterCard = z.infer<typeof MasterCard>
+
+/** Что видит заказчица в каталоге. Телефона здесь нет: контакт — US-24. */
+export const MasterCardPublic = z.strictObject({
+  id: z.uuid(),
+  name: z.string().min(1),
+  city: City,
+  card: MasterCard,
+})
+export type MasterCardPublic = z.infer<typeof MasterCardPublic>
+
 export const Master = z.object({
   id: z.uuid(),
   name: z.string().trim().min(1).max(200),
@@ -32,6 +60,11 @@ export const Master = z.object({
    * а не угадывать это (§2).
    */
   acceptingFrom: Iso.nullable(),
+  /**
+   * Публичная карточка. null, пока согласия на публикацию нет: мастерская
+   * может принимать заявки и не быть в каталоге — это разные решения.
+   */
+  card: MasterCard.nullable().default(null),
 })
 export type Master = z.infer<typeof Master>
 

@@ -7,6 +7,7 @@ import {
   CreateQuote,
   CreateRequest,
   ErrorEnvelope,
+  MasterCardPublic,
   MasterConfirmCodeInput,
   MasterRequestCodeInput,
   MasterSession,
@@ -124,6 +125,9 @@ const bearer = (token: string) => ({ ...jsonHeaders, Authorization: `Bearer ${to
 /** Список заявок кабинета: массив проекций, а не объект с полем (§5б). */
 const RequestsForMaster = z.array(RequestForMasterListItem)
 
+/** Каталог: массив публичных карточек (§5, listMasters). */
+const Catalogue = z.array(MasterCardPublic)
+
 export const httpApi: Api = {
   async createRequest(input: CreateRequestInput) {
     const payload = parseInput<CreateRequest>(CreateRequest, input)
@@ -191,6 +195,10 @@ export const httpApi: Api = {
       headers: jsonHeaders,
       body: JSON.stringify(payload),
     }, PASSTHROUGH)
+  },
+
+  async listMasters() {
+    return call('/api/masters', { method: 'GET' }, Catalogue)
   },
 
   async masterRequestCode(input: MasterCodeInputLike) {

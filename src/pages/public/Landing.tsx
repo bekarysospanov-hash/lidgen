@@ -7,7 +7,9 @@
 //
 // PROBE: снимки в src/assets/probe — случайные кадры, а не портфолио мастерских.
 // Заменяются реальными работами до GATE 1 (трек A1). См. src/assets/probe/README.md
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { api } from '../../api/client'
 import bedroom from '../../assets/probe/bedroom.jpg'
 import cabinet from '../../assets/probe/cabinet.jpg'
 import kitchen from '../../assets/probe/kitchen.jpg'
@@ -32,6 +34,19 @@ function Shot({ src, alt, ratio }: { src: string; alt: string; ratio: string }) 
 export default function Landing() {
   // PROBE: след последней заявки этой вкладки — см. probe-trail.ts.
   const trail = lastRequest()
+  /**
+   * Сколько карточек в каталоге. Ноль — блок о мастерских не показывается
+   * вовсе (US-02). Отказ операции считается нулём: обещать каталог, которого
+   * не удалось прочитать, хуже, чем промолчать.
+   */
+  const [catalogueSize, setCatalogueSize] = useState(0)
+
+  useEffect(() => {
+    api.listMasters().then(
+      (masters) => setCatalogueSize(masters.length),
+      () => setCatalogueSize(0),
+    )
+  }, [])
 
   return (
     <PageShell>
@@ -115,12 +130,23 @@ export default function Landing() {
         </section>
       )}
 
+      {/* US-02: блок каталога появляется, только когда в каталоге кто-то есть.
+          Пустая сетка и карточки-заглушки запрещены — до первых согласий
+          лендинг о мастерских молчит, а не обещает то, чего нет. */}
+      {catalogueSize > 0 && (
+        <section className="mt-3xl">
+          <h2 className="text-subheading tracking-subheading font-medium">{landing.catalogue.title}</h2>
+          <p className={`mt-sm max-w-[54ch] ${hintText}`}>
+            {landing.catalogue.body}
+          </p>
+          <p className="mt-lg">
+            <Link to="/masters" className={link}>{landing.catalogue.link}</Link>
+          </p>
+        </section>
+      )}
+
       <section className="mt-3xl">
-        <h2 className="text-subheading tracking-subheading font-medium">{landing.catalogue.title}</h2>
-        <p className={`mt-sm max-w-[54ch] ${hintText}`}>
-          {landing.catalogue.body}
-        </p>
-        <div className="mt-xl">
+        <div>
           <Link to="/request" className={buttonFilled}>{landing.cta}</Link>
         </div>
       </section>

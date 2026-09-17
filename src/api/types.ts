@@ -7,6 +7,7 @@ import type {
   CreateRequest,
   MasterConfirmCodeInput,
   MasterRequestCodeInput,
+  MasterCardPublic,
   MasterSession,
   OtpSent,
   SendEventsInput,
@@ -68,6 +69,11 @@ export interface Api {
    * наблюдение не должно ломать продукт.
    */
   sendEvents(input: SendEventsInputLike): Promise<void>
+  /**
+   * GET /api/masters — каталог (US-02). Только мастерские с карточкой
+   * и согласием; пустой список законен и означает «согласий ещё нет».
+   */
+  listMasters(): Promise<MasterCardPublic[]>
 
   // --- Кабинет мебельщика (§5б). masterToken уходит заголовком
   // Authorization: Bearer, а не в пути и не в теле: в URL он попал бы
