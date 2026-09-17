@@ -24,7 +24,10 @@ export function MasterShell({
   return (
     <div className="flex min-h-dvh flex-col bg-surface text-on-surface">
       <header className="mx-auto flex w-full max-w-[1440px] flex-wrap items-baseline justify-between gap-x-xl gap-y-sm px-lg pt-lg pb-xl">
-        <Link to="/master/requests" className={brandLink}>
+        {/* Знак ведёт на главную проекта, как и в публичной зоне: из кабинета
+            иначе нет выхода вовсе. К своим заявкам возвращает ссылка
+            «Все заявки» на карточке и адрес /master/requests. */}
+        <Link to="/" className={brandLink}>
           <BrandMark />
           {shell.brand}
         </Link>
