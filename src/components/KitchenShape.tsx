@@ -6,7 +6,7 @@ const room = 'M2 2 h60 v44 h-60 Z'
 
 export function KitchenShape({ id }: { id: string }) {
   return (
-    <svg viewBox="0 0 64 48" aria-hidden="true" className="h-12 w-16 shrink-0">
+    <svg viewBox="0 0 64 48" aria-hidden="true" className="h-shape-h w-shape-w shrink-0">
       <path d={room} fill="none" stroke="currentColor" strokeWidth="1" opacity="0.35" />
       {id === 'straight' && <rect x="6" y="6" width="52" height="8" fill="currentColor" />}
       {id === 'corner' && (

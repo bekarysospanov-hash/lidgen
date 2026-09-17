@@ -18,7 +18,7 @@ import type { CategoryId } from '../questions/categories'
 
 export function CategoryIcon({ id }: { id: CategoryId }) {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className="size-8 shrink-0"
+    <svg viewBox="0 0 32 32" aria-hidden="true" className="size-icon-lg shrink-0"
       fill="none" stroke="currentColor" strokeWidth="1.75"
       strokeLinecap="round" strokeLinejoin="round">
       {/* Кухня: навесной шкаф, столешница, варочная панель с конфорками. */}

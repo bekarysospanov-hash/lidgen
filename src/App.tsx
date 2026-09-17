@@ -37,7 +37,7 @@ export default function App() {
           вместе со страницей, как только числа выбраны. */}
       <Route path="/ritm" element={<Rhythm />} />
 
-      <Route path="*" element={<main className="p-8">Страница не найдена</main>} />
+      <Route path="*" element={<main className="p-2xl">Страница не найдена</main>} />
     </Routes>
   )
 }

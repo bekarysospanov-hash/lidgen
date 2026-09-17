@@ -39,8 +39,8 @@ export default function RequestSent() {
   if (!state) {
     return (
       <PageShell>
-        <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{sentPage.fallbackTitle}</h1>
-        <p className="mt-lg max-w-[58ch] text-body tracking-body">{sentPage.fallbackBody}</p>
+        <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">{sentPage.fallbackTitle}</h1>
+        <p className="mt-lg max-w-measure text-body tracking-body">{sentPage.fallbackBody}</p>
       </PageShell>
     )
   }
@@ -57,7 +57,7 @@ export default function RequestSent() {
 
   return (
     <PageShell>
-      <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{sentPage.title}</h1>
+      <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">{sentPage.title}</h1>
 
       {/* Номер — настоящее число, по которому заявку найдут на дозвоне.
           Плашка здесь оправдана: подпись, номер и пояснение — одно целое. */}
@@ -67,13 +67,13 @@ export default function RequestSent() {
           <p className="mt-xs text-heading tracking-heading font-semibold tabular-nums">
             {state.number}
           </p>
-          <p className={`mt-md max-w-[58ch] ${hintText}`}>{sentPage.numberNote}</p>
+          <p className={`mt-md max-w-measure ${hintText}`}>{sentPage.numberNote}</p>
         </div>
       </section>
 
       <section className="mt-3xl">
         <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
-        <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
+        <p className="mt-sm max-w-measure text-body tracking-body">{note.body}</p>
       </section>
 
       {/* Заголовок, пояснение и сама строка — одно целое, поэтому плашка
@@ -86,7 +86,7 @@ export default function RequestSent() {
           как карточка с шапкой, а не как раздел под заголовком. */}
       <section className="mt-3xl">
         <h2 className="text-subheading tracking-subheading font-medium">{sentPage.linkTitle}</h2>
-        <p className={`mt-sm max-w-[62ch] ${hintText}`}>{sentPage.linkNote}</p>
+        <p className={`mt-sm max-w-measure ${hintText}`}>{sentPage.linkNote}</p>
         <div className={`mt-lg ${panel}`}>
           <p className={`max-w-full overflow-x-auto text-body-sm tracking-body-sm break-all ${panelNested}`}>
             {absolute}

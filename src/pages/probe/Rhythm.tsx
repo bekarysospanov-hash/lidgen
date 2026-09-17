@@ -49,9 +49,9 @@ export default function Rhythm() {
   const r = now
     ? {
         column: 'max-w-none',
-        title: 'max-w-[24ch]',
-        text: 'max-w-[62ch]',
-        textAlt: 'max-w-[54ch]',
+        title: 'max-w-measure-title',
+        text: 'max-w-measure',
+        textAlt: 'max-w-measure',
         titleToLede: 'mt-lg',
         headingToText: 'mt-md',
         headingToBlock: 'mt-lg',
@@ -61,9 +61,9 @@ export default function Rhythm() {
         // на живой странице, оптимум чтения 66. 62ch дают 71 знак,
         // 54ch — 62: обе цифры внутри нормы, но дальше от оптимума.
         column: 'max-w-[45rem]',
-        title: 'max-w-[20ch]',
-        text: 'max-w-[58ch]',
-        textAlt: 'max-w-[58ch]',
+        title: 'max-w-measure-title',
+        text: 'max-w-measure',
+        textAlt: 'max-w-measure',
         titleToLede: 'mt-lg',
         headingToText: 'mt-sm',
         headingToBlock: 'mt-lg',

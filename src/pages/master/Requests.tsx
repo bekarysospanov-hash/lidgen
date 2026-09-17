@@ -164,7 +164,7 @@ export default function MasterRequests() {
     return (
       <MasterShell masterName={session.master.name}>
         <Title>{network ? requestsPage.networkTitle : requestsPage.failedTitle}</Title>
-        <p className="mt-lg max-w-[58ch] text-body tracking-body">
+        <p className="mt-lg max-w-measure text-body tracking-body">
           {network ? requestsPage.networkBody : view.message}
         </p>
         <button
@@ -195,7 +195,7 @@ export default function MasterRequests() {
           <h2 className="text-subheading tracking-subheading font-medium">
             {requestsPage.emptyTitle}
           </h2>
-          <p className="mt-sm max-w-[62ch] text-body tracking-body">{requestsPage.emptyBody}</p>
+          <p className="mt-sm max-w-measure text-body tracking-body">{requestsPage.emptyBody}</p>
         </section>
       ) : (
         <>

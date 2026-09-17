@@ -116,7 +116,7 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
     return (
       <section className="mt-3xl">
         <h2 className="text-subheading tracking-subheading font-medium">{exit.title}</h2>
-        <p className="mt-sm max-w-[62ch] text-body tracking-body">{exit.body}</p>
+        <p className="mt-sm max-w-measure text-body tracking-body">{exit.body}</p>
         {/* Единственное действие экрана в этом состоянии — значит залитая. */}
         <button type="button" onClick={onRestart}
           className={`mt-xl whitespace-nowrap ${buttonFilled}`}>
@@ -129,7 +129,7 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
   return (
     <section className="mt-3xl">
       <h2 className="text-subheading tracking-subheading font-medium">{otpStep.title}</h2>
-      <p className={`mt-sm max-w-[62ch] ${hintText}`}>
+      <p className={`mt-sm max-w-measure ${hintText}`}>
         {otpStep.lede} {maskPhone(phone)}
       </p>
 
@@ -150,7 +150,7 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
             setCode(event.target.value.replace(/\D/g, '').slice(0, otp.codeLength))
             setError(null)
           }}
-          className={`mt-sm block w-40 tabular-nums ${field(Boolean(error))}`}
+          className={`mt-sm block w-[10rem] tabular-nums ${field(Boolean(error))}`}
         />
 
         {/* Ошибка красным и в тексте, и в границе поля — § Состояния требует
@@ -158,7 +158,7 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
         <div
           id="otp-message"
           role="status"
-          className={`mt-md min-h-[1.5lh] max-w-[58ch] ${error ? errorTextClass : hintText}`}
+          className={`mt-md min-h-[1.5lh] max-w-measure ${error ? errorTextClass : hintText}`}
         >
           {error ?? note ?? otpStep.probeHint}
         </div>

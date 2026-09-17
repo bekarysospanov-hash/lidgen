@@ -8,7 +8,7 @@
 
 export function WardrobeDoors({ id }: { id: string }) {
   return (
-    <svg viewBox="0 0 64 48" aria-hidden="true" className="h-12 w-16 shrink-0">
+    <svg viewBox="0 0 64 48" aria-hidden="true" className="h-shape-h w-shape-w shrink-0">
       {/* Корпус — общий для всех трёх, чтобы отличие читалось сразу. */}
       <path d="M8 2 h48 v44 h-48 Z" fill="none" stroke="currentColor" strokeWidth="1" opacity="0.35" />
 

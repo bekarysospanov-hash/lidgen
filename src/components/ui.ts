@@ -21,7 +21,7 @@
  * Состояния меняют цвет границы, но не её толщину (§ Components).
  */
 export const field = (invalid = false) =>
-  'bg-surface rounded-sm border px-md py-sm text-body tracking-body ' +
+  'bg-surface min-h-target rounded-sm border px-md py-sm text-body tracking-body ' +
   'placeholder:text-on-surface-muted transition-colors duration-100 ' +
   'disabled:cursor-not-allowed disabled:opacity-40 ' +
   (invalid ? 'border-error' : 'border-outline hover:border-on-surface-muted')
@@ -65,7 +65,7 @@ export const blockRowDivider = 'border-b border-outline last:border-b-0'
  * из них: квадратный индикатор глаз проскакивает мимо.
  */
 export const choiceDot = (selected: boolean) =>
-  'ml-auto size-5 shrink-0 rounded-full border-2 transition-colors duration-100 ' +
+  'ml-auto size-icon-sm shrink-0 rounded-full border-2 transition-colors duration-100 ' +
   (selected ? 'border-primary bg-primary' : 'border-outline')
 
 /**
@@ -74,7 +74,7 @@ export const choiceDot = (selected: boolean) =>
  * первого уровня, и чипс на нём иначе сливается с фоном.
  */
 export const chip = (selected: boolean) =>
-  'inline-flex cursor-pointer items-center rounded-full border px-lg py-sm ' +
+  'inline-flex min-h-target cursor-pointer items-center rounded-full border px-lg py-sm ' +
   'text-label tracking-label font-medium transition-colors duration-100 ' +
   'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
   'has-[:focus-visible]:outline-primary has-[:focus-visible]:outline-offset-2 ' +
@@ -89,14 +89,14 @@ export const chip = (selected: boolean) =>
  * непрозрачности на светлом холсте осветляет, а не затемняет.
  */
 export const buttonFilled =
-  'inline-flex items-center justify-center rounded-sm bg-primary px-xl py-md ' +
+  'inline-flex min-h-target items-center justify-center rounded-sm bg-primary px-xl py-md ' +
   'text-label tracking-label font-medium text-on-primary ' +
   'transition-[filter,opacity] duration-100 hover:brightness-92 active:brightness-88 ' +
   'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100'
 
 /** button-text — зелёная надпись без заливки, второстепенное действие рядом с главным. */
 export const buttonText =
-  'inline-flex items-center justify-center rounded-sm px-sm py-sm ' +
+  'inline-flex min-h-target items-center justify-center rounded-sm px-sm py-sm ' +
   'text-label tracking-label font-medium text-primary underline-offset-4 ' +
   'transition-opacity duration-100 hover:underline ' +
   'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:no-underline'

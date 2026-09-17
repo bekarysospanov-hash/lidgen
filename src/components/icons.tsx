@@ -14,7 +14,7 @@
  */
 export function BrandMark() {
   return (
-    <svg viewBox="0 0 32 32" aria-hidden="true" className="size-8 shrink-0">
+    <svg viewBox="0 0 32 32" aria-hidden="true" className="size-icon-lg shrink-0">
       {/* Шерсть — единственное место системы, где живёт коричневый
           (DESIGN.md § Colors, brand-fur). Уши круглые и маленькие, посажены
           высоко и близко: у капибары они именно такие, и по ним её отличают
@@ -58,7 +58,7 @@ export function BrandMark() {
  */
 export function RequestIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 shrink-0"
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
       fill="none" stroke="currentColor" strokeWidth="1.5"
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 3h12v18H6z" />
@@ -76,7 +76,7 @@ export function RequestIcon() {
  */
 export function MastersIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 shrink-0"
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
       fill="none" stroke="currentColor" strokeWidth="1.5"
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 7l1.5-3h15L21 7" />
@@ -94,7 +94,7 @@ export function MastersIcon() {
  */
 export function CloseIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-4 shrink-0"
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
       fill="none" stroke="currentColor" strokeWidth="2"
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M6 6l12 12" />
@@ -109,7 +109,7 @@ export function CloseIcon() {
  */
 export function CheckIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 shrink-0 text-primary"
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0 text-primary"
       fill="none" stroke="currentColor" strokeWidth="2"
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 12.5l5 5L20 6.5" />
@@ -125,7 +125,7 @@ export function CheckIcon() {
  */
 export function ChevronIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-5 shrink-0"
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
       fill="none" stroke="currentColor" strokeWidth="1.5"
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 5l7 7-7 7" />

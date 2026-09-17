@@ -11,7 +11,7 @@ import { buttonText, hintText } from './ui'
 import { clearSession } from '../pages/master/session'
 
 const brandLink =
-  'flex items-center gap-sm whitespace-nowrap text-subheading tracking-subheading ' +
+  'flex min-h-target items-center gap-sm whitespace-nowrap text-subheading tracking-subheading ' +
   'font-medium text-on-surface underline-offset-4 hover:underline'
 
 export function MasterShell({
@@ -55,7 +55,11 @@ export function MasterShell({
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[1440px] flex-1 px-lg">{children}</main>
+      {/* Страница — до 1440 (рама, шапка и подвал), содержимое — колонка 720
+          (§ Layout). Пока это было одним числом, на широком экране плашки
+          растягивались во всю раму, а текст внутри обрывался на своей мере
+          и висел слева в пустоте. */}
+      <main className="mx-auto w-full max-w-column flex-1 px-lg">{children}</main>
 
       <footer className="mx-auto w-full max-w-[1440px] px-lg">
         <p className="mt-3xl border-t border-outline pt-lg pb-xl text-body-sm tracking-body-sm text-on-surface-muted">

@@ -12,7 +12,7 @@ import { POLICY_VERSION, privacyPage } from '../../texts/privacy'
 export default function Privacy() {
   return (
     <PageShell>
-      <h1 className="max-w-[24ch] text-heading tracking-heading font-semibold">
+      <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">
         {privacyPage.title}
       </h1>
       <p className={`mt-sm ${hintText}`}>{privacyPage.version(POLICY_VERSION)}</p>
@@ -21,14 +21,14 @@ export default function Privacy() {
           Предупреждение видно человеку, а не только в комментарии кода:
           документ, выданный за готовый, хуже отсутствующего. Снимается
           вместе с настоящим текстом от юриста. */}
-      <p className="mt-lg max-w-[62ch] text-body tracking-body text-error">
+      <p className="mt-lg max-w-measure text-body tracking-body text-error">
         {privacyPage.draftWarning}
       </p>
 
       {privacyPage.sections.map((section) => (
         <section key={section.title} className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{section.title}</h2>
-          <p className="mt-sm max-w-[62ch] text-body tracking-body">{section.body}</p>
+          <p className="mt-sm max-w-measure text-body tracking-body">{section.body}</p>
         </section>
       ))}
     </PageShell>

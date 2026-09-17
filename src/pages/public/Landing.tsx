@@ -54,17 +54,17 @@ export default function Landing() {
       {/* Обещание и кнопка — выше сгиба, до всякой прокрутки (US-01) */}
       <section className="pt-lg pb-2xl">
         {/* Единственный display на странице — так велит шкала (§ Typography). */}
-        <h1 className="max-w-[16ch] text-display tracking-display font-semibold text-balance">
+        <h1 className="max-w-measure-title text-display tracking-display font-semibold text-balance">
           {landing.promise}
         </h1>
-        <p className="mt-lg max-w-[54ch] text-body tracking-body">{landing.lede}</p>
+        <p className="mt-lg max-w-measure text-body tracking-body">{landing.lede}</p>
         <div className="mt-xl">
           {/* US-01: переход к форме — шаг воронки. Считается один раз
               за сессию: интересен факт перехода, а не число нажатий. */}
           <Link to="/request" className={buttonFilled} onClick={() => track('continue_clicked')}>
             {landing.cta}
           </Link>
-          <p className={`mt-md max-w-[44ch] ${hintText}`}>
+          <p className={`mt-md max-w-measure ${hintText}`}>
             {landing.ctaNote}
           </p>
         </div>
@@ -86,7 +86,7 @@ export default function Landing() {
               {/* Номер шага — не украшение: порядок здесь несёт смысл */}
               <p className={`tabular-nums ${hintText}`}>{step.n}</p>
               <h3 className="mt-xs text-body tracking-body font-medium text-balance">{step.title}</h3>
-              <p className={`mt-sm max-w-[38ch] ${hintText}`}>{step.body}</p>
+              <p className={`mt-sm max-w-measure ${hintText}`}>{step.body}</p>
             </li>
           ))}
         </ol>
@@ -94,7 +94,7 @@ export default function Landing() {
 
       <section className="mt-3xl">
         <h2 className="text-subheading tracking-subheading font-medium">{landing.works.title}</h2>
-        <p className={`mt-sm max-w-[54ch] ${hintText}`}>
+        <p className={`mt-sm max-w-measure ${hintText}`}>
           {landing.works.note}
         </p>
         <div className="mt-xl grid grid-cols-1 gap-md sm:grid-cols-2">
@@ -111,7 +111,7 @@ export default function Landing() {
       {probeVisible && (
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{probePanel.title}</h2>
-          <p className="mt-sm max-w-[54ch] text-body tracking-body">{probePanel.body}</p>
+          <p className="mt-sm max-w-measure text-body tracking-body">{probePanel.body}</p>
           <div className={`mt-lg ${panel}`}>
             <div className="flex flex-col gap-md">
               <Link to="/request" className={link}>{probePanel.toRequest}</Link>
@@ -141,7 +141,7 @@ export default function Landing() {
       {catalogueSize > 0 && (
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{landing.catalogue.title}</h2>
-          <p className={`mt-sm max-w-[54ch] ${hintText}`}>
+          <p className={`mt-sm max-w-measure ${hintText}`}>
             {landing.catalogue.body}
           </p>
           <p className="mt-lg">

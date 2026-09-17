@@ -1,3 +1,3 @@
 export default function MasterProfile() {
-  return <main className="p-8">Карточка мастерской — US-03</main>
+  return <main className="p-2xl">Карточка мастерской — US-03</main>
 }

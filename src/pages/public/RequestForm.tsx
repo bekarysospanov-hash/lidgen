@@ -87,7 +87,7 @@ function Ask({ title, hint, plain = false, children }: {
       <h2 className="text-subheading tracking-subheading font-medium text-balance">
         {title}
       </h2>
-      {hint && <p className={`mt-xs max-w-[62ch] ${hintText}`}>{hint}</p>}
+      {hint && <p className={`mt-xs max-w-measure ${hintText}`}>{hint}</p>}
       <div className={plain ? 'mt-md' : `${stepPanel} mt-md`}>{children}</div>
     </>
   )
@@ -125,7 +125,7 @@ function Note({ id, error, hint }: { id: string; error?: string; hint?: string }
   // но сдвинет внутри блока, а не разъедет всю страницу.
   if (!error && !hint) return null
   return (
-    <div className="mt-md max-w-[58ch]">
+    <div className="mt-md max-w-measure">
       {error
         ? <p id={id} role="alert" className={errorTextClass}>{error}</p>
         : <p id={id} className={hintText}>{hint}</p>}
@@ -159,7 +159,7 @@ function Summary({ rows }: { rows: [string, string][] }) {
       <dl className="mt-md text-body-sm tracking-body-sm">
         {rows.map(([k, v]) => (
           <div key={k} className="mt-sm flex gap-md">
-            <dt className={`w-40 shrink-0 ${hintText}`}>{k}</dt>
+            <dt className={`w-[10rem] shrink-0 ${hintText}`}>{k}</dt>
             <dd className="min-w-0 tabular-nums">{v}</dd>
           </div>
         ))}
@@ -531,11 +531,11 @@ export default function RequestForm() {
           отделяется от него провалом. */}
       <header className="pt-sm pb-2xl">
         <p className={hintText}>{screen.eyebrow}</p>
-        <h1 className="mt-xs max-w-[20ch] text-heading tracking-heading font-semibold text-balance">
+        <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold text-balance">
           {screen.title}
         </h1>
         {stage === 'form' && (
-          <p className="mt-sm max-w-[54ch] text-body tracking-body text-on-surface-muted">
+          <p className="mt-sm max-w-measure text-body tracking-body text-on-surface-muted">
             {screen.lede}
           </p>
         )}
@@ -625,7 +625,7 @@ export default function RequestForm() {
                     aria-invalid={Boolean(errors.size)}
                     aria-describedby="size-note"
                     onChange={(e) => { setSize(e.target.value); setErrors({ ...errors, size: undefined }); touched() }}
-                    className={`w-40 tabular-nums ${field(Boolean(errors.size))}`} />
+                    className={`w-[10rem] tabular-nums ${field(Boolean(errors.size))}`} />
                   {/* Подпись единицы склоняется по введённому: «3,2 метра». */}
                   <span className={hintText}>{metersUnit(size)}</span>
                 </div>
@@ -737,7 +737,7 @@ export default function RequestForm() {
                   aria-invalid={Boolean(errors.description)}
                   aria-describedby="description-note"
                   onChange={(e) => { setText(e.target.value); setErrors({ ...errors, description: undefined }); touched() }}
-                  className={`block w-full max-w-[62ch] resize-y ${field(Boolean(errors.description))}`} />
+                  className={`block w-full max-w-measure resize-y ${field(Boolean(errors.description))}`} />
                 <Note id="description-note" error={errors.description} />
               </Ask>
             </Section>
@@ -830,7 +830,7 @@ export default function RequestForm() {
                     <input id="deadline-date" value={deadlineDate}
                       placeholder={deadlineAsk.datePlaceholder}
                       onChange={(e) => { setDeadlineDate(e.target.value); touched() }}
-                      className={`mt-sm block w-full max-w-[32ch] ${field()}`} />
+                      className={`mt-sm block w-full max-w-[20rem] ${field()}`} />
                   </div>
                 )}
               </Ask>
@@ -858,7 +858,7 @@ export default function RequestForm() {
                       aria-invalid={Boolean(errors.cityName)}
                       aria-describedby="city-note"
                       onChange={(e) => { setCityName(e.target.value); setErrors({ ...errors, cityName: undefined }); touched() }}
-                      className={`mt-sm block w-full max-w-[32ch] ${field(Boolean(errors.cityName))}`} />
+                      className={`mt-sm block w-full max-w-[20rem] ${field(Boolean(errors.cityName))}`} />
                   </div>
                 )}
                 {/* ЖК или район. Отправку не блокирует, но по нему проверяется
@@ -872,7 +872,7 @@ export default function RequestForm() {
                     placeholder={districtAsk.placeholder}
                     aria-describedby="district-note"
                     onChange={(e) => { setDistrict(e.target.value); touched() }}
-                    className={`mt-sm block w-full max-w-[36ch] ${field()}`} />
+                    className={`mt-sm block w-full max-w-[20rem] ${field()}`} />
                   <p id="district-note" className={`mt-sm ${hintText}`}>{districtAsk.hint}</p>
                 </div>
                 <Note id="city-note" error={errors.city ?? errors.cityName} />
@@ -935,7 +935,7 @@ export default function RequestForm() {
                       ? screen.submitIn(cooldown)
                       : screen.submit}
                 </button>
-                <div className="mt-md max-w-[40ch]">
+                <div className="mt-md max-w-measure">
                   {sendError && <p role="alert" className={errorTextClass}>{sendError}</p>}
                   {!sendError && <p className={hintText}>{screen.submitHint}</p>}
                   {sizeUnknown && <p className={`mt-sm ${hintText}`}>{screen.incompleteNote}</p>}

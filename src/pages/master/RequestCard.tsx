@@ -156,7 +156,7 @@ export default function RequestCard() {
     return (
       <MasterShell masterName={session.master.name}>
         <Title>{foreign ? quotePage.foreignTitle : quotePage.failedTitle}</Title>
-        <p className="mt-lg max-w-[58ch] text-body tracking-body">
+        <p className="mt-lg max-w-measure text-body tracking-body">
           {foreign ? quotePage.foreignBody : view.message}
         </p>
         <p className="mt-xl">
@@ -296,7 +296,7 @@ export default function RequestCard() {
         <h2 className="text-subheading tracking-subheading font-medium">
           {quotePage.describedTitle}
         </h2>
-        <p className="mt-sm max-w-[62ch] text-body tracking-body">{request.description}</p>
+        <p className="mt-sm max-w-measure text-body tracking-body">{request.description}</p>
       </section>
 
       <section className="mt-3xl">
@@ -315,7 +315,7 @@ export default function RequestCard() {
           {quotePage.photosTitle}
         </h2>
         {request.photos.length === 0 ? (
-          <p className={`mt-sm max-w-[62ch] ${hintText}`}>{quotePage.noPhotos}</p>
+          <p className={`mt-sm max-w-measure ${hintText}`}>{quotePage.noPhotos}</p>
         ) : (
           // Радиус 0: скруглённый угол на снимке отрезает предмет и уводит
           // масштаб (DESIGN.md § Shapes).
@@ -334,7 +334,7 @@ export default function RequestCard() {
           <h2 className="text-subheading tracking-subheading font-medium">
             {quotePage.sentTitle}
           </h2>
-          <p className="mt-sm max-w-[62ch] text-body tracking-body">{quotePage.sentBody}</p>
+          <p className="mt-sm max-w-measure text-body tracking-body">{quotePage.sentBody}</p>
 
           <div className={`mt-lg ${panel}`}>
             <p className={fieldLabel}>{quotePage.clientPhoneLabel}</p>
@@ -395,7 +395,7 @@ export default function RequestCard() {
           <h2 className="text-subheading tracking-subheading font-medium">
             {revising ? quotePage.reviseTitle : quotePage.formTitle}
           </h2>
-          <p className={`mt-sm max-w-[62ch] ${hintText}`}>
+          <p className={`mt-sm max-w-measure ${hintText}`}>
             {revising ? quotePage.reviseHint : quotePage.formHint}
           </p>
 
@@ -449,7 +449,7 @@ export default function RequestCard() {
                       setDraft((current) => ({ ...current, priceFrom: digits(event.target.value) }))
                     }
                     aria-invalid={errors.priceFrom !== undefined}
-                    className={`w-40 tabular-nums ${field(errors.priceFrom !== undefined)}`}
+                    className={`w-[10rem] tabular-nums ${field(errors.priceFrom !== undefined)}`}
                   />
                 </label>
                 <label className="flex items-center gap-sm" htmlFor="priceTo">
@@ -462,7 +462,7 @@ export default function RequestCard() {
                       setDraft((current) => ({ ...current, priceTo: digits(event.target.value) }))
                     }
                     aria-invalid={errors.priceFrom !== undefined}
-                    className={`w-40 tabular-nums ${field(errors.priceFrom !== undefined)}`}
+                    className={`w-[10rem] tabular-nums ${field(errors.priceFrom !== undefined)}`}
                   />
                 </label>
               </div>
@@ -486,7 +486,7 @@ export default function RequestCard() {
                   }))
                 }
                 aria-invalid={errors.leadTimeDays !== undefined}
-                className={`mt-sm block w-40 tabular-nums ${field(errors.leadTimeDays !== undefined)}`}
+                className={`mt-sm block w-[10rem] tabular-nums ${field(errors.leadTimeDays !== undefined)}`}
               />
             </label>
             {errors.leadTimeDays && (

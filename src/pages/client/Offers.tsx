@@ -34,7 +34,7 @@ function toView(caught: unknown): View {
 
 /** Заголовок экрана: крупно, обычным регистром, вес 600 (§ Typography). */
 function Title({ children }: { children: React.ReactNode }) {
-  return <h1 className="max-w-[20ch] text-heading tracking-heading font-semibold">{children}</h1>
+  return <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">{children}</h1>
 }
 
 /**
@@ -75,10 +75,10 @@ function QuoteCard({
       </div>
 
       <p className={`mt-xl ${fieldLabel}`}>{offersPage.quoteWhat}</p>
-      <p className="mt-xs max-w-[62ch] text-body tracking-body">{quote.composition}</p>
+      <p className="mt-xs max-w-measure text-body tracking-body">{quote.composition}</p>
 
       <p className={`mt-lg ${fieldLabel}`}>{offersPage.quoteMaterials}</p>
-      <p className="mt-xs max-w-[62ch] text-body tracking-body">{quote.materials}</p>
+      <p className="mt-xs max-w-measure text-body tracking-body">{quote.materials}</p>
 
       <div className="mt-xl">
         {contactShown ? (
@@ -89,7 +89,7 @@ function QuoteCard({
                 {quote.master.phone}
               </a>
             </p>
-            <p className={`mt-sm max-w-[54ch] ${hintText}`}>{offersPage.contactNote}</p>
+            <p className={`mt-sm max-w-measure ${hintText}`}>{offersPage.contactNote}</p>
             <p className={`mt-xs ${hintText}`}>
               {offersPage.numberLabel} {requestNumber}
             </p>
@@ -221,9 +221,9 @@ export default function Offers() {
     return (
       <PageShell>
         <Title>{offersPage.invalidTitle}</Title>
-        <p className="mt-lg max-w-[58ch] text-body tracking-body">{offersPage.invalidBody}</p>
+        <p className="mt-lg max-w-measure text-body tracking-body">{offersPage.invalidBody}</p>
         {probeVisible && (
-          <p className={`mt-lg max-w-[58ch] ${hintText}`}>{offersPage.probeInvalidNote}</p>
+          <p className={`mt-lg max-w-measure ${hintText}`}>{offersPage.probeInvalidNote}</p>
         )}
       </PageShell>
     )
@@ -242,7 +242,7 @@ export default function Offers() {
     return (
       <PageShell>
         <Title>{network ? offersPage.networkTitle : offersPage.failedTitle}</Title>
-        <p className="mt-lg max-w-[58ch] text-body tracking-body">
+        <p className="mt-lg max-w-measure text-body tracking-body">
           {network ? offersPage.networkBody : view.message}
         </p>
         <button type="button" onClick={retry}
@@ -273,7 +273,7 @@ export default function Offers() {
           {/* Плашки нет: заголовок и абзац самостоятельны, а плашка вокруг
               самостоятельного элемента — шум (DESIGN.md § Elevation). */}
           <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
-          <p className="mt-sm max-w-[62ch] text-body tracking-body">{note.body}</p>
+          <p className="mt-sm max-w-measure text-body tracking-body">{note.body}</p>
         </section>
       )}
 
@@ -282,7 +282,7 @@ export default function Offers() {
           <>
             {/* Пустое состояние говорит словами, а не серым прямоугольником. */}
             <h2 className="text-subheading tracking-subheading font-medium">{offersPage.emptyTitle}</h2>
-            <p className="mt-sm max-w-[62ch] text-body tracking-body">{offersPage.emptyBody}</p>
+            <p className="mt-sm max-w-measure text-body tracking-body">{offersPage.emptyBody}</p>
           </>
         ) : (
           <>
@@ -309,7 +309,7 @@ export default function Offers() {
       {request.quotes.length >= 2 && (
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{offersPage.compareTitle}</h2>
-          <p className={`mt-sm max-w-[62ch] ${hintText}`}>{offersPage.compareNote}</p>
+          <p className={`mt-sm max-w-measure ${hintText}`}>{offersPage.compareNote}</p>
           <Compare quotes={[...request.quotes].sort((a, b) => a.sentAt.localeCompare(b.sentAt))} />
         </section>
       )}
@@ -317,7 +317,7 @@ export default function Offers() {
       {request.quotes.length > 0 && (
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{offersPage.nextTitle}</h2>
-          <p className="mt-sm max-w-[62ch] text-body tracking-body">{offersPage.nextBody}</p>
+          <p className="mt-sm max-w-measure text-body tracking-body">{offersPage.nextBody}</p>
         </section>
       )}
     </PageShell>

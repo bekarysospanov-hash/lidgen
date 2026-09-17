@@ -132,11 +132,11 @@ export default function MasterLogin() {
     return (
       <MasterShell>
         <h1 className="text-heading tracking-heading font-semibold">{loginPage.notFoundTitle}</h1>
-        <p className="mt-lg max-w-[58ch] text-body tracking-body">{loginPage.notFoundBody}</p>
+        <p className="mt-lg max-w-measure text-body tracking-body">{loginPage.notFoundBody}</p>
         {/* Тупик обязан говорить, что подходит: без этого на пробе человек
             упирается в «нет в списке» и не знает, каким номером войти. */}
         {probeVisible && (
-          <p className={`mt-lg max-w-[58ch] ${hintText}`}>
+          <p className={`mt-lg max-w-measure ${hintText}`}>
             {probeHint.phones} {probeHint.phonesMore}
           </p>
         )}
@@ -171,7 +171,7 @@ export default function MasterLogin() {
             onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
             placeholder="0000"
             aria-invalid={error?.scope === 'code'}
-            className={`mt-sm block w-40 tabular-nums ${field(error?.scope === 'code')}`}
+            className={`mt-sm block w-[10rem] tabular-nums ${field(error?.scope === 'code')}`}
           />
         </label>
         {error ? (
@@ -207,7 +207,7 @@ export default function MasterLogin() {
   return (
     <MasterShell>
       <h1 className="text-heading tracking-heading font-semibold">{loginPage.title}</h1>
-      <p className="mt-lg max-w-[58ch] text-body tracking-body">{loginPage.body}</p>
+      <p className="mt-lg max-w-measure text-body tracking-body">{loginPage.body}</p>
 
       <label className="mt-xl block" htmlFor="phone">
         <span className={fieldLabel}>{loginPage.phoneLabel}</span>
@@ -224,7 +224,7 @@ export default function MasterLogin() {
         <p className={`mt-xs ${errorTextClass}`}>{error.text}</p>
       ) : (
         probeVisible && (
-          <p className={`mt-xs max-w-[58ch] ${hintText}`}>
+          <p className={`mt-xs max-w-measure ${hintText}`}>
             {probeHint.phones} {probeHint.phonesMore}
           </p>
         )

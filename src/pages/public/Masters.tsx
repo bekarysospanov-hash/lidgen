@@ -30,7 +30,7 @@ function MasterCardView({ master }: { master: MasterCardPublic }) {
       <p className={`mt-xs ${hintText}`}>
         {master.city.name ?? ''} · {mastersPage.yearsLabel(master.card.yearsOnMarket)}
       </p>
-      <p className="mt-lg max-w-[62ch] text-body tracking-body">{master.card.about}</p>
+      <p className="mt-lg max-w-measure text-body tracking-body">{master.card.about}</p>
 
       <p className={`mt-lg ${hintText}`}>{mastersPage.doesLabel}</p>
       <p className="mt-xs text-body tracking-body">{master.card.does.join(' · ')}</p>
@@ -82,7 +82,7 @@ export default function Masters() {
     return (
       <PageShell>
         <Title>{mastersPage.emptyTitle}</Title>
-        <p className="mt-lg max-w-[62ch] text-body tracking-body">{mastersPage.emptyBody}</p>
+        <p className="mt-lg max-w-measure text-body tracking-body">{mastersPage.emptyBody}</p>
         <Link to="/request" className={`mt-xl inline-flex ${buttonFilled}`}>
           {mastersPage.toRequest}
         </Link>
@@ -93,7 +93,7 @@ export default function Masters() {
   return (
     <PageShell>
       <Title>{mastersPage.title}</Title>
-      <p className="mt-lg max-w-[62ch] text-body tracking-body">{mastersPage.lede}</p>
+      <p className="mt-lg max-w-measure text-body tracking-body">{mastersPage.lede}</p>
 
       <ul className="mt-3xl flex flex-col gap-xl">
         {view.masters.map((master) => (
