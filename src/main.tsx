@@ -4,7 +4,7 @@ import { BrowserRouter, HashRouter } from 'react-router-dom'
 import './index.css'
 import App from './App'
 import { HASH_ROUTER } from './router-mode'
-import { track } from './analytics'
+import { trackVisit } from './analytics'
 
 // PROBE: превью-сборка для телефона. На статическом хостинге нет сервера,
 // который отдаст index.html на произвольный путь, поэтому там роутер работает
@@ -22,7 +22,7 @@ if (import.meta.env.VITE_USE_MOCKS !== 'false') {
 
 // US-25a: первое событие воронки. Пишется до рендера — человек уже пришёл,
 // независимо от того, что и как быстро нарисуется.
-track('visit')
+trackVisit()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

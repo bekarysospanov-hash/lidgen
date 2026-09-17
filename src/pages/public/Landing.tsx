@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api/client'
+import { track } from '../../analytics'
 import bedroom from '../../assets/probe/bedroom.jpg'
 import cabinet from '../../assets/probe/cabinet.jpg'
 import kitchen from '../../assets/probe/kitchen.jpg'
@@ -58,7 +59,11 @@ export default function Landing() {
         </h1>
         <p className="mt-lg max-w-[54ch] text-body tracking-body">{landing.lede}</p>
         <div className="mt-xl">
-          <Link to="/request" className={buttonFilled}>{landing.cta}</Link>
+          {/* US-01: переход к форме — шаг воронки. Считается один раз
+              за сессию: интересен факт перехода, а не число нажатий. */}
+          <Link to="/request" className={buttonFilled} onClick={() => track('continue_clicked')}>
+            {landing.cta}
+          </Link>
           <p className={`mt-md max-w-[44ch] ${hintText}`}>
             {landing.ctaNote}
           </p>
@@ -147,7 +152,9 @@ export default function Landing() {
 
       <section className="mt-3xl">
         <div>
-          <Link to="/request" className={buttonFilled}>{landing.cta}</Link>
+          <Link to="/request" className={buttonFilled} onClick={() => track('continue_clicked')}>
+            {landing.cta}
+          </Link>
         </div>
       </section>
     </PageShell>
