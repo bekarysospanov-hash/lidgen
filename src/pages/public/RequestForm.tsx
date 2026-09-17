@@ -615,7 +615,12 @@ export default function RequestForm() {
             <Section>
               <Ask plain title={mainSizeAsk(category).question} hint={mainSizeAsk(category).hint}>
                 <div className="flex items-baseline gap-sm">
+                  {/* Заголовок вопроса стоит над блоком и служит меткой
+                      глазами, но программно с полем не связан: диктор прочёл бы
+                      «поле ввода» без имени. aria-label повторяет вопрос —
+                      подпись остаётся одна, слышимая и видимая. */}
                   <input id="main-size" inputMode="decimal" autoComplete="off"
+                    aria-label={mainSizeAsk(category).question}
                     value={size} disabled={sizeUnknown} placeholder={mainSize.placeholder}
                     aria-invalid={Boolean(errors.size)}
                     aria-describedby="size-note"
@@ -727,6 +732,7 @@ export default function RequestForm() {
             <Section>
               <Ask plain title={descriptionAsk.question} hint={descriptionAsk.hint}>
                 <textarea id="description" rows={5} value={text}
+                  aria-label={descriptionAsk.question}
                   placeholder={descriptionAsk.placeholder}
                   aria-invalid={Boolean(errors.description)}
                   aria-describedby="description-note"
@@ -875,7 +881,7 @@ export default function RequestForm() {
 
             <Section>
               <Ask plain title={phoneAsk.question} hint={phoneAsk.hint}>
-                <PhoneInput id="phone" value={phoneDigits}
+                <PhoneInput id="phone" value={phoneDigits} label={phoneAsk.question}
                   invalid={Boolean(errors.phone)} describedBy="phone-note"
                   onChange={(digits) => { setPhoneDigits(digits); setErrors({ ...errors, phone: undefined }); touched() }} />
                 <Note id="phone-note" error={errors.phone} />

@@ -27,3 +27,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright: отчёты и снимки — результат прогона, а не исходник
+/test-results/
+/playwright-report/
+/e2e/shots/

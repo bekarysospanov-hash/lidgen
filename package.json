@@ -13,7 +13,9 @@
     "design:lint": "design.md lint DESIGN.md",
     "design:tokens": "design.md export DESIGN.md --format css-tailwind > src/design-tokens.css",
     "design:spec": "design.md spec --rules > docs/reference/design-md-spec.md",
-    "design:check": "node scripts/design-check.mjs"
+    "design:check": "node scripts/design-check.mjs",
+    "e2e": "playwright test",
+    "e2e:shots": "playwright test --grep @shots"
   },
   "dependencies": {
     "react": "^19.2.8",
@@ -23,6 +25,7 @@
   },
   "devDependencies": {
     "@google/design.md": "^0.4.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",

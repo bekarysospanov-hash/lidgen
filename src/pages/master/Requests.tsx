@@ -64,9 +64,12 @@ function RequestRow({ item }: { item: RequestForMasterListItem }) {
 
   return (
     <div className={blockRowDivider}>
+      {/* Метка повторяет суть строки, а не только номер: aria-label
+          перекрывает текст внутри ссылки, и без категории с размером диктор
+          читал бы «открыть заявку 2609-004» — какую именно, неизвестно. */}
       <Link
         to={`/master/requests/${item.id}`}
-        aria-label={`${requestsPage.openRequest} ${item.number}`}
+        aria-label={`${categoryLabel(item.category)}, ${size} — ${requestsPage.openRequest} ${item.number}`}
         className={blockRow(false)}
       >
         {/* Колонка иконок — каркас блока (§ Components). У строки с двумя

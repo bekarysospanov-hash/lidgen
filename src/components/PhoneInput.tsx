@@ -8,6 +8,11 @@ import { field } from './ui'
 
 export interface PhoneInputProps {
   id?: string
+  /**
+   * Что читает диктор. Визуальной меткой служит заголовок вопроса над блоком,
+   * но программно он с полем не связан — без этого поле остаётся безымянным.
+   */
+  label?: string
   /** Десять национальных цифр, без кода страны. */
   value: string
   onChange: (digits: string) => void
@@ -18,6 +23,7 @@ export interface PhoneInputProps {
 
 export function PhoneInput({
   id,
+  label,
   value,
   onChange,
   invalid = false,
@@ -28,6 +34,7 @@ export function PhoneInput({
     <input
       id={id}
       type="tel"
+      aria-label={label}
       inputMode="tel"
       autoComplete="tel"
       value={format(value)}
