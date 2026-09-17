@@ -39,8 +39,11 @@ function readSource(): Source {
   if (utmCampaign) value.utmCampaign = utmCampaign
   if (utmContent) value.utmContent = utmContent
   // Реферер нужен, когда метки не проставили: «пришёл из Instagram» лучше,
-  // чем «неизвестно», хотя и грубее.
-  if (document.referrer) value.referrer = document.referrer
+  // чем «неизвестно», хотя и грубее. Свой же адрес отбрасывается: страница
+  // предложений содержит в пути токен, а токен — секрет доступа к заявке
+  // (контракт §3), и ему нечего делать в журнале событий.
+  const referrer = document.referrer
+  if (referrer && !referrer.startsWith(window.location.origin)) value.referrer = referrer
   return value
 }
 
@@ -76,6 +79,11 @@ function flush(): void {
   void api.sendEvents({ events }).catch(() => {})
 }
 
+function enqueue(event: EventInput): void {
+  queue.push(event)
+  if (timer === null) timer = setTimeout(flush, 800)
+}
+
 /**
  * Записать событие воронки. Каждое — один раз за сессию: «выбрал категорию»
  * интересно как факт прохождения шага, а не как счётчик кликов по вариантам.
@@ -84,13 +92,46 @@ export function track(type: EventType, payload?: Record<string, unknown>): void 
   if (sent.has(type)) return
   sent.add(type)
 
-  queue.push({
+  enqueue({
     type,
     requestId: null,
     actor: { role: 'client' },
     sessionId,
     ...(payload ? { payload } : {}),
   })
+}
 
-  if (timer === null) timer = setTimeout(flush, 800)
+/**
+ * Событие, привязанное к заявке: «вышел на контакт» (US-24) и подобные.
+ * Дедупа по типу здесь нет и быть не может — заказчица выходит на контакт
+ * с несколькими мебельщиками, и «к скольким из трёх обратились» это и есть
+ * содержание звена 4. requestId обязателен: без него событие не с чем
+ * сопоставить (контракт §2, Event).
+ */
+export function trackForRequest(
+  type: EventType,
+  requestId: string,
+  payload?: Record<string, unknown>,
+): void {
+  enqueue({
+    type,
+    requestId,
+    actor: { role: 'client' },
+    sessionId,
+    ...(payload ? { payload } : {}),
+  })
+}
+
+/**
+ * #2 из ревью: очередь ждёт 800 мс, а человек может закрыть вкладку раньше —
+ * и теряются ровно те, кто ушёл, не отправив заявку. pagehide срабатывает
+ * и при закрытии, и при уходе в фон на телефоне, где visibilitychange
+ * остаётся единственным надёжным сигналом.
+ */
+if (typeof window !== 'undefined') {
+  const flushNow = () => flush()
+  window.addEventListener('pagehide', flushNow)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushNow()
+  })
 }

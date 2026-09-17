@@ -229,9 +229,12 @@ export default function RequestCard() {
     setSending(true)
     setSendError(null)
     // Правка не создаёт второе КП: у неё своя операция, и quote_sent
-    // она не пишет (контракт §5б, updateQuote).
-    const send = revising ? api.updateQuote : api.createQuote
-    send(session.token, id, {
+    // она не пишет (контракт §5б, updateQuote). Вызов через api, а не через
+    // оторванную ссылку на метод: методу может понадобиться свой объект.
+    const sendQuote = (t: string, requestId: string, body: Record<string, unknown>) =>
+      revising ? api.updateQuote(t, requestId, body) : api.createQuote(t, requestId, body)
+
+    sendQuote(session.token, id, {
         composition: draft.composition.trim(),
         materials: draft.materials.trim(),
         price: { minKzt: Number(draft.priceFrom), maxKzt: Number(draft.priceTo) },

@@ -13,7 +13,7 @@ import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
 import type { Quote, RequestForClient } from '../../contract'
 import { buttonFilled, fieldLabel, hintText, link, panel, panelNested } from '../../components/ui'
-import { track } from '../../analytics'
+import { trackForRequest } from '../../analytics'
 import { probeVisible } from '../../texts/master'
 import { errorText, offersPage, statusNote } from '../../texts/request'
 
@@ -42,7 +42,13 @@ function Title({ children }: { children: React.ReactNode }) {
  * них человек и открывает ссылку, и это те самые «настоящие числа и имена»,
  * которые дают ощущение присутствия, а не заглушки (DESIGN.md § Presence).
  */
-function QuoteCard({ quote, requestNumber }: { quote: Quote; requestNumber: string }) {
+function QuoteCard({
+  quote,
+  requestNumber,
+}: {
+  quote: Quote
+  requestNumber: string
+}) {
   /**
    * US-24. Телефон показывается по нажатию, а не сразу: пока заказчица
    * не выбрала, к кому идти, три номера на экране — не помощь, а давление.
@@ -94,7 +100,9 @@ function QuoteCard({ quote, requestNumber }: { quote: Quote; requestNumber: stri
             className={buttonFilled}
             onClick={() => {
               setContactShown(true)
-              track('contact_made', { masterId: quote.master.id })
+              // С привязкой к заявке и без дедупа по типу: обратиться можно
+              // к нескольким мебельщикам, и каждый раз это отдельный факт.
+              trackForRequest('contact_made', quote.requestId, { masterId: quote.master.id })
             }}
           >
             {offersPage.contactAction}
