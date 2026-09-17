@@ -16,6 +16,7 @@ import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { buttonFilled, chip, hintText, link } from '../../components/ui'
 import type { MasterCardPublic } from '../../contract'
+import { z } from 'zod'
 import { cityName } from '../../questions/categories'
 import { masterCardPage, mastersPage } from '../../texts/masters'
 
@@ -27,16 +28,21 @@ type View =
 
 export default function MasterProfile() {
   const { id } = useParams()
-  // Пустой адрес — не состояние загрузки: сходить всё равно не за чем.
+  /**
+   * Идентификатор из адреса — чужой ввод, и проверяется он до вызова, как
+   * токен на странице предложений. Ответ на мусор всё равно был бы
+   * MASTER_NOT_FOUND, но гонять заведомо негодную строку на сервер незачем.
+   */
+  const valid = id !== undefined && z.uuid().safeParse(id).success
+
+  // Негодный адрес — не состояние загрузки: сходить всё равно не за чем.
   // Выводится при инициализации, а не в эффекте: иначе первый кадр обещает
   // загрузку, которой не будет.
-  const [view, setView] = useState<View>(() =>
-    id === undefined ? { kind: 'missing' } : { kind: 'loading' },
-  )
+  const [view, setView] = useState<View>(() => (valid ? { kind: 'loading' } : { kind: 'missing' }))
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
-    if (id === undefined) return
+    if (!valid || id === undefined) return
     api.getMasterCard(id).then(
       (master) => setView({ kind: 'ready', master }),
       (error: unknown) =>
@@ -46,7 +52,7 @@ export default function MasterProfile() {
             : { kind: 'failed' },
         ),
     )
-  }, [id, attempt])
+  }, [id, valid, attempt])
 
   if (view.kind === 'loading') {
     return (

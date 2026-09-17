@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { isApiError } from '../api/errors'
 import type { OtpSent, RequestConfirmed } from '../contract'
+import { probeText } from '../texts/probe'
 import { errorText, otpDeadEnd, otpStep } from '../texts/request'
 import { buttonFilled, buttonText, errorTextClass, field, fieldLabel, hintText } from './ui'
 
@@ -160,7 +161,7 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
           role="status"
           className={`mt-md min-h-[1.5lh] max-w-measure ${error ? errorTextClass : hintText}`}
         >
-          {error ?? note ?? otpStep.probeHint}
+          {error ?? note ?? probeText?.code}
         </div>
 
         <div className="mt-lg flex flex-col gap-md sm:flex-row sm:items-center">

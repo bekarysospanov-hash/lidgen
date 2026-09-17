@@ -17,7 +17,7 @@ import kitchen from '../../assets/probe/kitchen.jpg'
 import { PageShell } from '../../components/PageShell'
 import { buttonFilled, hintText, link, panel } from '../../components/ui'
 import { landing, probePanel } from '../../texts/landing'
-import { probeVisible } from '../../texts/master'
+import { probeText } from '../../texts/probe'
 import { lastRequest } from '../../probe-trail'
 
 /**
@@ -108,7 +108,7 @@ export default function Landing() {
       {/* PROBE: две двери для того, кто смотрит пробу. Без этого блока
           кабинет мебельщика открывается только правкой адреса руками —
           с телефона это невозможно. Исчезает вместе с моками. */}
-      {probeVisible && (
+      {probeText !== null && (
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{probePanel.title}</h2>
           <p className="mt-sm max-w-measure text-body tracking-body">{probePanel.body}</p>

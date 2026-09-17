@@ -23,7 +23,7 @@ import type { LinkResent } from '../../contract'
 import { Phone } from '../../contract'
 import { phone as phoneAsk } from '../../questions/categories'
 import { errorText, lostLinkPage } from '../../texts/request'
-import { probeVisible } from '../../texts/master'
+import { probeText } from '../../texts/probe'
 
 type Sent = { result: LinkResent; phone: string }
 
@@ -69,7 +69,7 @@ export default function LostLink() {
   if (sent !== null) {
     // PROBE: мессенджера в пробе нет, и ссылку иначе никак не получить.
     // Снимается вместе с моками — probeVisible завязан на VITE_USE_MOCKS.
-    const probeLink = probeVisible ? probeLinkFor(sent.phone) : null
+    const probeLink = probeText !== null ? probeLinkFor(sent.phone) : null
 
     return (
       <PageShell>
@@ -80,19 +80,19 @@ export default function LostLink() {
         <p className="mt-lg max-w-measure text-body tracking-body">
           {lostLinkPage.sentBody(
             lostLinkPage.channelName[sent.result.channel],
-            format(digits),
+            format(sent.phone.replace(PHONE_PREFIX, '')),
           )}
         </p>
 
-        {probeVisible && (
+        {probeText !== null && (
           <div className={`mt-xl ${panel}`}>
             <p className={`max-w-measure ${hintText}`}>
-              {probeLink === null ? lostLinkPage.probeNone : lostLinkPage.probeNote}
+              {probeLink === null ? probeText.linkNone : probeText.linkHere}
             </p>
             {probeLink !== null && (
               <p className="mt-sm">
                 <Link to={probeLink} className={link}>
-                  {lostLinkPage.probeOpen}
+                  {probeText.linkOpen}
                 </Link>
               </p>
             )}

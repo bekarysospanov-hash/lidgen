@@ -15,7 +15,7 @@ import type { Quote, QuoteItem, RequestForClient } from '../../contract'
 import { compositionLabels } from '../../questions/composition'
 import { buttonFilled, fieldLabel, hintText, link, panel, panelNested } from '../../components/ui'
 import { trackForRequest } from '../../analytics'
-import { probeVisible } from '../../texts/master'
+import { probeText } from '../../texts/probe'
 import { errorText, offersPage, statusNote } from '../../texts/request'
 
 type View =
@@ -270,8 +270,8 @@ export default function Offers() {
         <Link to="/link" className={`mt-xl inline-flex ${buttonFilled}`}>
           {offersPage.lostLinkAction}
         </Link>
-        {probeVisible && (
-          <p className={`mt-lg max-w-measure ${hintText}`}>{offersPage.probeInvalidNote}</p>
+        {probeText !== null && (
+          <p className={`mt-lg max-w-measure ${hintText}`}>{probeText.invalidLink}</p>
         )}
       </PageShell>
     )

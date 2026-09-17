@@ -22,5 +22,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Сверка путей читает файлы с диска и живёт в Node, а не в браузере:
+  // давать всему приложению node-типы значило бы стереть границу, из-за
+  // которой фронт и не знает про файловую систему.
+  "exclude": ["src/api/paths.test.ts"]
 }

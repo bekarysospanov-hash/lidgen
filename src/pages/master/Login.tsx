@@ -22,7 +22,8 @@ import {
 } from '../../components/ui'
 import type { OtpSent } from '../../contract'
 import { errorText } from '../../texts/request'
-import { loginPage, probeHint, probeVisible } from '../../texts/master'
+import { loginPage } from '../../texts/master'
+import { probeText } from '../../texts/probe'
 import { readSession, writeSession } from './session'
 
 type Stage =
@@ -135,9 +136,9 @@ export default function MasterLogin() {
         <p className="mt-lg max-w-measure text-body tracking-body">{loginPage.notFoundBody}</p>
         {/* Тупик обязан говорить, что подходит: без этого на пробе человек
             упирается в «нет в списке» и не знает, каким номером войти. */}
-        {probeVisible && (
+        {probeText !== null && (
           <p className={`mt-lg max-w-measure ${hintText}`}>
-            {probeHint.phones} {probeHint.phonesMore}
+            {probeText.phones} {probeText.phonesMore}
           </p>
         )}
         <button
@@ -177,7 +178,7 @@ export default function MasterLogin() {
         {error ? (
           <p className={`mt-xs ${errorTextClass}`}>{error.text}</p>
         ) : (
-          probeVisible && <p className={`mt-xs ${hintText}`}>{probeHint.code}</p>
+          probeText !== null && <p className={`mt-xs ${hintText}`}>{probeText.code}</p>
         )}
 
         <button type="button" onClick={submit} disabled={busy} className={`mt-xl block ${buttonFilled}`}>
@@ -223,9 +224,9 @@ export default function MasterLogin() {
       {error ? (
         <p className={`mt-xs ${errorTextClass}`}>{error.text}</p>
       ) : (
-        probeVisible && (
+        probeText !== null && (
           <p className={`mt-xs max-w-measure ${hintText}`}>
-            {probeHint.phones} {probeHint.phonesMore}
+            {probeText.phones} {probeText.phonesMore}
           </p>
         )
       )}
