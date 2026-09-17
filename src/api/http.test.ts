@@ -539,4 +539,72 @@ describe('кабинет мебельщика (§5б)', () => {
     ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED')
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it('своя карточка читается GET на /api/master/card с токеном', async () => {
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse(200, { name: 'Цех 12', city: { code: 'almaty', name: null }, card: null }),
+    )
+
+    const mine = await httpApi.getMyCard(MASTER_TOKEN)
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toBe('/api/master/card')
+    expect(options?.method).toBe('GET')
+    expect(headersOf(0).Authorization).toBe(`Bearer ${MASTER_TOKEN}`)
+    expect(mine.card).toBeNull()
+  })
+
+  it('правка карточки уходит PUT, фотографии в тело не попадают', async () => {
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse(200, {
+        name: 'Цех 12',
+        city: { code: 'almaty', name: null },
+        card: {
+          about: 'Кухни на заказ',
+          yearsOnMarket: 15,
+          does: ['кухни'],
+          photos: ['/work-1.jpg'],
+          publishedAt: '2026-09-01T00:00:00.000Z',
+        },
+      }),
+    )
+
+    await httpApi.updateMyCard(MASTER_TOKEN, {
+      about: 'Кухни на заказ',
+      yearsOnMarket: 15,
+      does: ['кухни'],
+      photos: ['/chuzhoe.jpg'],
+    })
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toBe('/api/master/card')
+    expect(options?.method).toBe('PUT')
+    // Схема входа фотографии не знает: лишнее поле отсекается до отправки,
+    // и чужой снимок физически не доезжает до сервера.
+    expect(String(options?.body)).not.toContain('chuzhoe')
+  })
+
+  it('карточка каталога читается GET на /api/masters/{id}, без токена', async () => {
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse(200, {
+        id: '11111111-1111-4111-8111-111111111111',
+        name: 'Цех 12',
+        city: { code: 'almaty', name: null },
+        card: {
+          about: 'Кухни на заказ',
+          yearsOnMarket: 15,
+          does: ['кухни'],
+          photos: ['/work-1.jpg'],
+          publishedAt: '2026-09-01T00:00:00.000Z',
+        },
+      }),
+    )
+
+    const card = await httpApi.getMasterCard('11111111-1111-4111-8111-111111111111')
+
+    const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
+    expect(String(url)).toBe('/api/masters/11111111-1111-4111-8111-111111111111')
+    expect(options?.method).toBe('GET')
+    expect(card.card.does).toEqual(['кухни'])
+  })
 })

@@ -9,6 +9,7 @@ import MasterProfile from './pages/public/MasterProfile'
 import Masters from './pages/public/Masters'
 import RequestForm from './pages/public/RequestForm'
 import Privacy from './pages/public/Privacy'
+import LostLink from './pages/public/LostLink'
 import RequestSent from './pages/public/RequestSent'
 
 export default function App() {
@@ -22,6 +23,8 @@ export default function App() {
       <Route path="/request/sent" element={<RequestSent />} />
       {/* US-11: политика открывается отдельной вкладкой, форма не теряется. */}
       <Route path="/privacy" element={<Privacy />} />
+      {/* US-21 — вход для потерявшей ссылку: заявка есть, дойти до неё нечем. */}
+      <Route path="/link" element={<LostLink />} />
 
       {/* Заказчица — по токену из ссылки, без регистрации (US-21) */}
       <Route path="/offers/:token" element={<Offers />} />

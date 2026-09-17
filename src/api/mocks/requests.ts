@@ -9,22 +9,32 @@ import {
   RequestCreated,
   RequestForClient,
   ResendOtpInput,
+  ResendLinkInput,
+  LinkResent,
   OtpSent,
 } from '../../contract'
 import type { RequestStatus } from '../../contract'
 import type {
   ConfirmOtpInputLike,
   CreateRequestInput,
+  ResendLinkInputLike,
   ResendOtpInputLike,
 } from '../types'
 import { ApiError, validationFailed } from '../errors'
 import { covered } from './coverage'
 import { routeRequest } from './routing'
-import { OTP_CHANNEL, OTP_CODE_LENGTH, isOtpValid, resendRetryAfterSec } from './otp'
+import {
+  OTP_CHANNEL,
+  OTP_CODE_LENGTH,
+  OTP_RESEND_COOLDOWN_SEC,
+  isOtpValid,
+  resendRetryAfterSec,
+} from './otp'
 import {
   addEvent,
   findByClientRequestId,
   findByToken,
+  findLatestConfirmedByPhone,
   getRequestRecord,
   newId,
   newToken,
@@ -140,6 +150,37 @@ export function create(input: CreateRequestInput): RequestCreated {
   addEvent('otp_requested', record.id, 'system', { channel: OTP_CHANNEL })
 
   return createdBody(record, now)
+}
+
+/**
+ * US-21 — прислать ссылку заново. Ответ одинаков независимо от того, есть
+ * заявка по номеру или нет: иначе форма становится проверкой «оставлял ли
+ * этот человек заявку», то есть перечислением по номеру телефона (§5).
+ *
+ * Само сообщение отправляет сервер; у фронта такой операции нет и не будет.
+ * В пробе мессенджера нет вовсе — поэтому мок только пишет событие, а ссылку
+ * экран показывает на месте под меткой PROBE.
+ */
+export function resendLink(input: ResendLinkInputLike): LinkResent {
+  const parsed = ResendLinkInput.safeParse(input)
+  if (!parsed.success) throw validationFailed(parsed.error)
+
+  const record = findLatestConfirmedByPhone(parsed.data.phone)
+  // Событие пишется только когда отправлять действительно есть что: иначе
+  // в воронке появились бы «отправки» несуществующих ссылок.
+  if (record) addEvent('link_resent', record.id, 'client', { channel: OTP_CHANNEL })
+
+  return { channel: OTP_CHANNEL, retryAfterSec: OTP_RESEND_COOLDOWN_SEC }
+}
+
+/**
+ * PROBE: мессенджера в пробе нет, и ссылку иначе никак не получить. Экран
+ * показывает её на месте — при VITE_USE_MOCKS=false этой функции не остаётся
+ * вместе со всеми моками.
+ */
+export function probeLinkFor(phone: string): string | null {
+  const record = findLatestConfirmedByPhone(phone)
+  return record ? `/offers/${record.token}` : null
 }
 
 export function resend(input: ResendOtpInputLike): OtpSent {

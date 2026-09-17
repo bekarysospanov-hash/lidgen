@@ -7,7 +7,11 @@ import {
   CreateQuote,
   CreateRequest,
   ErrorEnvelope,
+  LinkResent,
   MasterCardPublic,
+  ResendLinkInput,
+  MyCard,
+  UpdateMyCard,
   MasterConfirmCodeInput,
   MasterRequestCodeInput,
   MasterSession,
@@ -28,6 +32,8 @@ import type {
   Api,
   ConfirmOtpInputLike,
   CreateQuoteInputLike,
+  ResendLinkInputLike,
+  UpdateMyCardInputLike,
   CreateRequestInput,
   MasterCodeInputLike,
   MasterConfirmInputLike,
@@ -197,8 +203,21 @@ export const httpApi: Api = {
     }, PASSTHROUGH)
   },
 
+  async resendLink(input: ResendLinkInputLike) {
+    const payload = parseInput<ResendLinkInput>(ResendLinkInput, input)
+    return call('/api/client/link-resend', {
+      method: 'POST',
+      headers: jsonHeaders,
+      body: JSON.stringify(payload),
+    }, LinkResent)
+  },
+
   async listMasters() {
     return call('/api/masters', { method: 'GET' }, Catalogue)
+  },
+
+  async getMasterCard(id: string) {
+    return call(`/api/masters/${encodeURIComponent(id)}`, { method: 'GET' }, MasterCardPublic)
   },
 
   async masterRequestCode(input: MasterCodeInputLike) {
@@ -240,6 +259,19 @@ export const httpApi: Api = {
       headers: bearer(token),
       body: JSON.stringify(payload),
     }, Quote)
+  },
+
+  async getMyCard(token: string) {
+    return call('/api/master/card', { method: 'GET', headers: bearer(token) }, MyCard)
+  },
+
+  async updateMyCard(token: string, input: UpdateMyCardInputLike) {
+    const payload = parseInput<UpdateMyCard>(UpdateMyCard, input)
+    return call('/api/master/card', {
+      method: 'PUT',
+      headers: bearer(token),
+      body: JSON.stringify(payload),
+    }, MyCard)
   },
 
   async createQuote(token: string, id: string, input: CreateQuoteInputLike) {

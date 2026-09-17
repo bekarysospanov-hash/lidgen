@@ -10,7 +10,7 @@ import { absoluteUrl } from '../../router-mode'
 import { rememberRequest } from '../../probe-trail'
 import { RequestNumber, RequestStatus, Token } from '../../contract'
 import type { RequestStatus as RequestStatusValue } from '../../contract'
-import { buttonFilled, hintText, panel, panelNested } from '../../components/ui'
+import { buttonFilled, hintText, link, panel, panelNested } from '../../components/ui'
 import { sentPage, statusNote } from '../../texts/request'
 
 interface SentState {
@@ -96,6 +96,15 @@ export default function RequestSent() {
         <Link to={path} className={`mt-xl whitespace-nowrap ${buttonFilled}`}>
           {sentPage.linkOpen}
         </Link>
+
+        {/* US-21: адрес выше — единственный вход, и теряется он именно здесь,
+            вместе с закрытой вкладкой. Второстепенное действие рядом с главным:
+            ссылкой, а не кнопкой, чтобы не спорить с «Открыть предложения». */}
+        <p className="mt-xl">
+          <Link to="/link" className={link}>
+            {sentPage.lostLink}
+          </Link>
+        </p>
       </section>
     </PageShell>
   )

@@ -7,7 +7,10 @@ import type {
   CreateRequest,
   MasterConfirmCodeInput,
   MasterRequestCodeInput,
+  LinkResent,
   MasterCardPublic,
+  MyCard,
+  UpdateMyCard,
   MasterSession,
   OtpSent,
   SendEventsInput,
@@ -18,6 +21,7 @@ import type {
   RequestForClient,
   RequestForMaster,
   RequestForMasterListItem,
+  ResendLinkInput,
 } from '../contract'
 
 /**
@@ -40,6 +44,8 @@ export type UploadPhotoInputLike = File
 export type MasterCodeInputLike = MasterRequestCodeInput | Record<string, unknown>
 export type MasterConfirmInputLike = MasterConfirmCodeInput | Record<string, unknown>
 export type CreateQuoteInputLike = CreateQuote | Record<string, unknown>
+export type UpdateMyCardInputLike = UpdateMyCard | Record<string, unknown>
+export type ResendLinkInputLike = ResendLinkInput | Record<string, unknown>
 export type SendEventsInputLike = SendEventsInput | Record<string, unknown>
 
 /**
@@ -73,7 +79,11 @@ export interface Api {
    * GET /api/masters — каталог (US-02). Только мастерские с карточкой
    * и согласием; пустой список законен и означает «согласий ещё нет».
    */
+  /** US-21 — прислать ссылку на предложения заново (§5). */
+  resendLink(input: ResendLinkInputLike): Promise<LinkResent>
   listMasters(): Promise<MasterCardPublic[]>
+  /** US-03 — карточка одной мастерской (§5). */
+  getMasterCard(id: string): Promise<MasterCardPublic>
 
   // --- Кабинет мебельщика (§5б). masterToken уходит заголовком
   // Authorization: Bearer, а не в пути и не в теле: в URL он попал бы
@@ -91,4 +101,7 @@ export interface Api {
   createQuote(token: string, id: string, input: CreateQuoteInputLike): Promise<Quote>
   /** PUT /api/master/requests/{id}/quote — дополнить своё КП (US-19b). */
   updateQuote(token: string, id: string, input: CreateQuoteInputLike): Promise<Quote>
+  /** US-20 — своя карточка: посмотреть и поправить текст (§5б). */
+  getMyCard(token: string): Promise<MyCard>
+  updateMyCard(token: string, input: UpdateMyCardInputLike): Promise<MyCard>
 }

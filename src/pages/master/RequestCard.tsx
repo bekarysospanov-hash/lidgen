@@ -27,7 +27,7 @@ import type { MasterSession, QuoteItem, RequestForMaster } from '../../contract'
 import { compositionAsk, compositionFor, compositionLabels } from '../../questions/composition'
 import {
   categories,
-  city as cityQuestion,
+  cityName,
   finishLevel,
   wardrobeDoors,
   kitchenAppliances,
@@ -192,10 +192,7 @@ export default function RequestCard() {
   const size = request.mainSize.known
     ? `${String(request.mainSize.meters).replace('.', ',')} ${metersUnit(request.mainSize.meters)}`
     : quotePage.sizeUnknownValue
-  const cityName =
-    request.city.name ??
-    cityQuestion.options.find((option) => option.id === request.city.code)?.label ??
-    ''
+  const city = cityName(request.city)
 
   const details: { label: string; value: string }[] = []
   details.push({ label: quotePage.sizeLabel, value: size })
@@ -222,7 +219,7 @@ export default function RequestCard() {
   }
   details.push({
     label: quotePage.cityLabel,
-    value: [cityName, request.district].filter(Boolean).join(', '),
+    value: [city, request.district].filter(Boolean).join(', '),
   })
   details.push({ label: quotePage.deadlineLabel, value: request.deadline ?? quotePage.notSet })
   // Уровень отделки спрашивается с US-08. Поле необязательное: заказчица

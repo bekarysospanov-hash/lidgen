@@ -484,6 +484,32 @@ describe('события воронки (US-25a)', () => {
   })
 })
 
+describe('потерянная ссылка — US-21', () => {
+  it('ответ одинаков, есть заявка по номеру или нет: иначе это перечисление', async () => {
+    const known = await mockApi.resendLink({ phone: '+77012468024' })
+    const unknown = await mockApi.resendLink({ phone: '+77019999999' })
+    expect(known).toEqual(unknown)
+  })
+
+  it('канал и задержка повтора приходят всегда, а не только при отказе', async () => {
+    const sent = await mockApi.resendLink({ phone: '+77019999999' })
+    expect(sent.channel.length).toBeGreaterThan(0)
+    expect(sent.retryAfterSec).toBeGreaterThanOrEqual(0)
+  })
+
+  it('номер не по формату отвергается до всякой отправки', async () => {
+    await expect(mockApi.resendLink({ phone: '123' })).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'VALIDATION_FAILED',
+    )
+  })
+
+  it('событие пишется только когда ссылку действительно есть кому послать', async () => {
+    const before = listEvents().filter((event) => event.type === 'link_resent').length
+    await mockApi.resendLink({ phone: '+77019999999' })
+    expect(listEvents().filter((event) => event.type === 'link_resent')).toHaveLength(before)
+  })
+})
+
 describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', () => {
   const ALMATY_PHONES = ['+77010000001', '+77010000002', '+77010000003']
   const ASTANA_PHONE = '+77010000004'
@@ -695,6 +721,47 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
       expect(card.myQuote).toBeNull()
       expect(card.clientPhone).toBeNull()
       expect(JSON.stringify(card)).not.toContain('900000')
+    })
+  })
+
+  describe('своя карточка и карточка каталога — US-20, US-03', () => {
+    it('карточки, которой нет, не существует и для чтения каталога', async () => {
+      // Мастерская из списка есть, карточки у неё нет — ответ тот же, что
+      // для несуществующего id: приём заявок и публикация разные решения,
+      // и подтверждать существование мастерской чужому человеку незачем.
+      await expect(mockApi.getMasterCard('aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'MASTER_NOT_FOUND',
+      )
+    })
+
+    it('несуществующая мастерская отвечает так же', async () => {
+      await expect(mockApi.getMasterCard('00000000-0000-4000-8000-000000000000')).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'MASTER_NOT_FOUND',
+      )
+    })
+
+    it('мебельщик видит своё название и город, карточки пока нет', async () => {
+      const session = await login(ALMATY_PHONES[0])
+      const mine = await mockApi.getMyCard(session.token)
+      expect(mine.name.length).toBeGreaterThan(0)
+      expect(mine.card).toBeNull()
+    })
+
+    it('правка до публикации — CARD_NOT_PUBLISHED, а не ошибка ввода', async () => {
+      const session = await login(ALMATY_PHONES[0])
+      await expect(
+        mockApi.updateMyCard(session.token, {
+          about: 'Кухни на заказ',
+          yearsOnMarket: 15,
+          does: ['кухни'],
+        }),
+      ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'CARD_NOT_PUBLISHED')
+    })
+
+    it('чужой токен карточку не отдаёт', async () => {
+      await expect(mockApi.getMyCard('не-токен')).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+      )
     })
   })
 

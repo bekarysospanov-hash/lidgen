@@ -102,6 +102,20 @@ export function findByToken(token: string): RequestRecord | undefined {
   return id ? requests.get(id) : undefined
 }
 
+/**
+ * Последняя подтверждённая заявка этого номера (US-21). Прошлые остаются
+ * доступны по своим ссылкам и не отзываются: человек мог сохранить старую,
+ * и обрывать её значит отнимать уже показанные предложения.
+ */
+export function findLatestConfirmedByPhone(phone: string): RequestRecord | undefined {
+  let latest: RequestRecord | undefined
+  for (const record of requests.values()) {
+    if (record.phone !== phone || record.phoneConfirmedAt === null) continue
+    if (latest === undefined || record.createdAt > latest.createdAt) latest = record
+  }
+  return latest
+}
+
 export function listEvents(): Event[] {
   return [...events]
 }

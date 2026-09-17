@@ -79,6 +79,44 @@ export const MasterProfile = z.strictObject({
 })
 export type MasterProfile = z.infer<typeof MasterProfile>
 
+/**
+ * Что мебельщик видит о себе в кабинете (§5б, getMyCard). US-20.
+ *
+ * `name` и `city` здесь для показа, а не для правки: город определяет, какие
+ * заявки ему придут, и менять его самостоятельно он не может. `acceptingFrom`
+ * не отдаётся вовсе — это наше служебное состояние, и его показ породил бы
+ * вопрос «как включить», ответа на который в пробе нет.
+ *
+ * `card: null` — законное состояние, а не ошибка: мастерская может принимать
+ * заявки и не быть в каталоге, пока согласия на публикацию нет.
+ */
+export const MyCard = z.strictObject({
+  name: z.string().min(1),
+  city: City,
+  card: MasterCard.nullable(),
+})
+export type MyCard = z.infer<typeof MyCard>
+
+/**
+ * Тело updateMyCard (§5б). Правится только текст: чем занимается, сколько лет
+ * на рынке, что умеет.
+ *
+ * Фотографий здесь нет намеренно. `photos` — свои работы, снятые у своих
+ * заказчиков, и запрет на чужие портфолио держится на том, что снимки
+ * собираем и проверяем мы (A2). Загрузка из кабинета потребовала бы
+ * модерации, которой в пробе нет, а без неё первое же чужое фото ломает
+ * обещание «мы отобрали и проверили».
+ *
+ * `publishedAt` тоже не здесь: дата публикации — след согласия, и правка
+ * текста не делает карточку опубликованной заново.
+ */
+export const UpdateMyCard = MasterCard.pick({
+  about: true,
+  yearsOnMarket: true,
+  does: true,
+})
+export type UpdateMyCard = z.infer<typeof UpdateMyCard>
+
 /** Ответ masterConfirmCode: кто вошёл и чем дальше авторизуется (§5б). */
 export const MasterSession = z.object({
   master: MasterProfile,

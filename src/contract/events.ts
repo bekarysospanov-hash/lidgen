@@ -17,6 +17,8 @@ export const EventType = z.enum([
   'contact_made',
   'manual_completion',
   'request_closed',
+  /** US-21: заказчица попросила прислать ссылку заново. */
+  'link_resent',
 ])
 export type EventType = z.infer<typeof EventType>
 

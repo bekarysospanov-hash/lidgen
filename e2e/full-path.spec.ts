@@ -117,6 +117,20 @@ test('заявка доходит от формы до вилки на стра�
   await expect(page.getByText('Заявка у мебельщиков')).toBeVisible()
   await снимок(page, 'заявка-принята')
 
+  // 4б · Потерянная ссылка (US-21). Проверяется переходом внутри приложения,
+  // а не goto: моки держат состояние в памяти вкладки, и перезагрузка стёрла бы
+  // заявку вместе с предложениями — тест мерил бы не то.
+  await page.getByRole('link', { name: 'Потеряете ссылку — пришлём заново' }).click()
+  await page.getByLabel('Куда прислать ответ?').fill('7012468024')
+  await page.getByRole('button', { name: 'Прислать ссылку' }).click()
+  await expect(page.getByRole('heading', { name: 'Отправили' })).toBeVisible()
+  await снимок(page, 'ссылка-отправлена-заново')
+  // PROBE: мессенджера в пробе нет, и ссылка показывается на месте.
+  await page.getByRole('link', { name: 'Открыть предложения' }).click()
+  await expect(page.getByText('Предложений пока нет')).toBeVisible()
+  await page.goBack()
+  await page.goBack()
+
   // 5 · Первый мебельщик отвечает
   await page.getByRole('link', { name: 'Капибара' }).click()
   await черезПробу(page, /Путь мебельщика/)
@@ -140,6 +154,16 @@ test('заявка доходит от формы до вилки на стра�
   // ...и ровно теперь он появился
   await expect(page.getByText('+77012468024')).toBeVisible()
   await снимок(page, 'ответ-отправлен-телефон-открылся')
+
+  // 5б · Своя карточка (US-20). До неё из кабинета не было ссылки вовсе,
+  // и мебельщик не видел, что о нём написано в каталоге. Карточек в моках нет
+  // ни одной — публикуем только настоящие, с согласия (A2), — поэтому здесь
+  // проверяется честное состояние «готовим вашу карточку», а не форма правки.
+  await page.getByRole('link', { name: 'Моя карточка' }).click()
+  await expect(page.getByRole('heading', { name: 'Ваша карточка' })).toBeVisible()
+  await expect(page.getByText('Готовим вашу карточку')).toBeVisible()
+  await снимок(page, 'своя-карточка-мебельщика')
+  await page.goBack()
 
   // 6 · Правка вместо второго КП (US-19b)
   await page.getByRole('button', { name: 'Поправить ответ' }).click()
@@ -196,6 +220,26 @@ test('заявка доходит от формы до вилки на стра�
   await page.getByRole('button', { name: 'Показать телефон' }).first().click()
   await expect(page.getByText('+77010000001')).toBeVisible()
   await снимок(page, 'контакт-раскрыт')
+})
+
+test('нерабочая ссылка больше не тупик: из неё есть выход @shots', async ({ page }) => {
+  // US-21. Раньше экран говорил «ссылка не работает» и заканчивался на этом,
+  // хотя заявка и предложения по ней никуда не делись.
+  await page.goto('/offers/этой-ссылки-нет')
+  await expect(page.getByRole('heading', { name: 'Ссылка не работает' })).toBeVisible()
+  await page.getByRole('link', { name: 'Прислать ссылку заново' }).click()
+  await expect(page.getByRole('heading', { name: 'Пришлём ссылку заново' })).toBeVisible()
+  await снимок(page, 'потерянная-ссылка')
+})
+
+test('карточка мастерской без согласия не существует для внешнего мира @shots', async ({ page }) => {
+  // US-03. Мастерская в списке есть, карточки у неё нет — ответ тот же, что
+  // для несуществующей: приём заявок и публикация разные решения. Человека
+  // при этом нельзя оставлять в тупике, отсюда объяснение и выход на форму.
+  await page.goto('/masters/aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')
+  await expect(page.getByRole('heading', { name: 'Такой мастерской нет в каталоге' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Оставить заявку' })).toBeVisible()
+  await снимок(page, 'мастерской-нет-в-каталоге')
 })
 
 test('каталог пуст и говорит об этом словами @shots', async ({ page }) => {

@@ -10,7 +10,9 @@ import {
   Quote,
   RequestForMaster,
   RequestForMasterListItem,
+  UpdateMyCard,
   type Master,
+  type MyCard,
 } from '../../contract'
 import type { CreateQuoteInputLike, MasterCodeInputLike, MasterConfirmInputLike } from '../types'
 import { ApiError, validationFailed } from '../errors'
@@ -18,8 +20,10 @@ import {
   findMasterByPhone,
   newQuoteId,
   openSession,
+  readMyCard,
   resolveSession,
   resetSessions,
+  writeMyCard,
 } from './masters'
 import { OTP_CHANNEL, OTP_CODE_LENGTH, isOtpValid, resendRetryAfterSec } from './otp'
 import { listRoutedTo, routingFor } from './routing'
@@ -218,6 +222,19 @@ export function sendQuote(token: string, id: string, input: CreateQuoteInputLike
   addEvent('quote_sent', record.id, 'master', { masterId: master.id })
 
   return quote
+}
+
+/** US-20 — своя карточка: посмотреть (§5б, getMyCard). */
+export function myCard(token: string): MyCard {
+  return readMyCard(session(token, new Date()))
+}
+
+/** US-20 — своя карточка: поправить текст (§5б, updateMyCard). */
+export function saveMyCard(token: string, input: unknown): MyCard {
+  const master = session(token, new Date())
+  const parsed = UpdateMyCard.safeParse(input)
+  if (!parsed.success) throw validationFailed(parsed.error)
+  return writeMyCard(master, parsed.data)
 }
 
 onReset(resetMasterState)

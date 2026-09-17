@@ -5,9 +5,12 @@
 import {
   MASTER_SESSION_TTL_HOURS,
   MasterCardPublic,
+  MyCard,
+  UpdateMyCard,
   type City,
   type Master,
 } from '../../contract'
+import { ApiError } from '../errors'
 import { newId, newToken } from './store'
 
 /**
@@ -155,6 +158,48 @@ export const newQuoteId = newId
  * Пустой список — законный ответ, а не ошибка: пока согласий нет, каталог
  * пуст, и выдумывать карточки запрещено.
  */
+/**
+ * US-03 — карточка одной мастерской. Мастерская без опубликованной карточки
+ * отвечает так же, как несуществующая: для внешнего мира её здесь просто нет
+ * (§5, getMasterCard). Приём заявок и публикация — разные решения.
+ */
+export function getCatalogueCard(id: string): MasterCardPublic {
+  const master = MASTERS.find((item) => item.id === id)
+  if (master === undefined || master.card === null) {
+    throw new ApiError('MASTER_NOT_FOUND', 'Такой мастерской нет в каталоге')
+  }
+  return MasterCardPublic.parse({
+    id: master.id,
+    name: master.name,
+    city: master.city,
+    card: master.card,
+  })
+}
+
+/**
+ * US-20 — что мебельщик видит о себе. `card: null` законно: мастерская может
+ * принимать заявки и не быть в каталоге, пока согласия на публикацию нет.
+ */
+export function readMyCard(master: Master): MyCard {
+  return MyCard.parse({ name: master.name, city: master.city, card: master.card })
+}
+
+/**
+ * US-20 — правка своей карточки. Меняется только текст: фотографии собираем
+ * и проверяем мы (A2), а `publishedAt` — след согласия, и правка текста
+ * не делает карточку опубликованной заново.
+ *
+ * Правка до публикации — не ошибка ввода, а несуществующий объект: карточка
+ * не черновик мебельщика, а наша публикация с его согласия (§5б).
+ */
+export function writeMyCard(master: Master, patch: UpdateMyCard): MyCard {
+  if (master.card === null) {
+    throw new ApiError('CARD_NOT_PUBLISHED', 'Карточка ещё не опубликована')
+  }
+  master.card = { ...master.card, ...patch }
+  return readMyCard(master)
+}
+
 export function listCatalogue(): MasterCardPublic[] {
   return MASTERS.filter((master) => master.card !== null).map((master) =>
     MasterCardPublic.parse({

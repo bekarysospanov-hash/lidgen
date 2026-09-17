@@ -1,16 +1,18 @@
 // mockApi реализует тот же интерфейс Api, что и httpApi. Подмена — в client.ts.
 import type { Api } from '../types'
 import { remove, upload } from './photos'
-import { acceptEvents, confirm, create, getByToken, resend } from './requests'
+import { acceptEvents, confirm, create, getByToken, resend, resendLink } from './requests'
 import {
   confirmCode,
   getRequest,
   listRequests,
+  myCard,
   requestCode,
   reviseQuote,
+  saveMyCard,
   sendQuote,
 } from './master'
-import { listCatalogue } from './masters'
+import { getCatalogueCard, listCatalogue } from './masters'
 
 // PROBE: искусственная задержка ответа — имитирует сетевой RTT реального
 // бэка, чтобы состояния загрузки на экранах проверялись по-настоящему (§10).
@@ -54,9 +56,17 @@ export const mockApi: Api = {
     await delay()
     acceptEvents(input)
   },
+  async resendLink(input) {
+    await delay()
+    return resendLink(input)
+  },
   async listMasters() {
     await delay()
     return listCatalogue()
+  },
+  async getMasterCard(id) {
+    await delay()
+    return getCatalogueCard(id)
   },
   async masterRequestCode(input) {
     await delay()
@@ -82,9 +92,19 @@ export const mockApi: Api = {
     await delay()
     return reviseQuote(token, id, input)
   },
+  async getMyCard(token) {
+    await delay()
+    return myCard(token)
+  },
+  async updateMyCard(token, input) {
+    await delay()
+    return saveMyCard(token, input)
+  },
 }
 
 export { reset, listEvents, getRequestRecord } from './store'
 export { resetPhotos } from './photos'
+// PROBE: мессенджера в пробе нет — ссылку показывает экран (US-21).
+export { probeLinkFor } from './requests'
 export { listMasters, findMasterByPhone } from './masters'
 export { routingFor } from './routing'

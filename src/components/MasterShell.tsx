@@ -40,6 +40,14 @@ export function MasterShell({
             и войти другой мастерской нельзя вовсе. */}
         <div className="flex items-baseline gap-lg">
           <p className={hintText}>{masterName ?? masterShell.area}</p>
+          {/* Своя карточка. До US-20 попасть в неё было нельзя вовсе: маршрут
+              существовал, ссылки на него не было ни на одном экране, и
+              мебельщик не видел, что о нём написано в каталоге. */}
+          {masterName !== undefined && (
+            <Link to="/master/profile" className={buttonText}>
+              {masterShell.profile}
+            </Link>
+          )}
           {masterName !== undefined && (
             <button
               type="button"

@@ -6,7 +6,7 @@
 // срез 3). Состояния обязаны быть честными: загрузка, нерабочая ссылка,
 // обрыв связи и пустой список.
 import { useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
@@ -265,6 +265,11 @@ export default function Offers() {
       <PageShell>
         <Title>{offersPage.invalidTitle}</Title>
         <p className="mt-lg max-w-measure text-body tracking-body">{offersPage.invalidBody}</p>
+        {/* US-21: до этого экран был тупиком — ссылка не работает, и всё.
+            Заявка при этом никуда не делась, и предложения по ней тоже. */}
+        <Link to="/link" className={`mt-xl inline-flex ${buttonFilled}`}>
+          {offersPage.lostLinkAction}
+        </Link>
         {probeVisible && (
           <p className={`mt-lg max-w-measure ${hintText}`}>{offersPage.probeInvalidNote}</p>
         )}

@@ -38,6 +38,8 @@ import {
   RequestForMaster,
   RequestForMasterListItem,
   Routing,
+  MyCard,
+  UpdateMyCard,
 } from './index'
 
 // Валидный CreateRequest для кухни — кейсы ниже отличаются одним полем
@@ -521,6 +523,66 @@ describe('Event', () => {
         actor: { role: 'client' },
       }).success,
     ).toBe(false)
+  })
+})
+
+describe('своя карточка мебельщика — US-20', () => {
+  const card = {
+    about: 'Делаем кухни и шкафы на заказ с 2011 года',
+    yearsOnMarket: 15,
+    does: ['кухни', 'шкафы-купе'],
+    photos: ['/work-1.jpg', '/work-2.jpg'],
+    publishedAt: '2026-09-01T00:00:00.000Z',
+  }
+
+  it('карточки может не быть: приём заявок и публикация — разные решения', () => {
+    const empty = { name: 'Цех 12', city: { code: 'almaty', name: null }, card: null }
+    expect(MyCard.safeParse(empty).success).toBe(true)
+  })
+
+  it('опубликованная карточка проходит целиком', () => {
+    const full = { name: 'Цех 12', city: { code: 'almaty', name: null }, card }
+    expect(MyCard.safeParse(full).success).toBe(true)
+  })
+
+  it('телефон и acceptingFrom мебельщику не отдаются — проекция строгая', () => {
+    const extra = {
+      name: 'Цех 12',
+      city: { code: 'almaty', name: null },
+      card: null,
+      phone: '+77010000001',
+    }
+    expect(MyCard.safeParse(extra).success).toBe(false)
+  })
+
+  describe('UpdateMyCard', () => {
+    const valid = { about: 'Кухни на заказ', yearsOnMarket: 15, does: ['кухни'] }
+
+    it('правится только текст', () => {
+      expect(UpdateMyCard.safeParse(valid).success).toBe(true)
+    })
+
+    it('фотографии в теле запроса не принимаются: их собираем и проверяем мы', () => {
+      const withPhotos = { ...valid, photos: ['/chuzhoe.jpg'] }
+      const parsed = UpdateMyCard.safeParse(withPhotos)
+      expect(parsed.success && 'photos' in parsed.data).toBe(false)
+    })
+
+    it('дата публикации не правится: это след согласия, а не поле профиля', () => {
+      const withDate = { ...valid, publishedAt: '2020-01-01T00:00:00.000Z' }
+      const parsed = UpdateMyCard.safeParse(withDate)
+      expect(parsed.success && 'publishedAt' in parsed.data).toBe(false)
+    })
+
+    it('пустое «о себе» не проходит, как и пустой список умений', () => {
+      expect(UpdateMyCard.safeParse({ ...valid, about: '   ' }).success).toBe(false)
+      expect(UpdateMyCard.safeParse({ ...valid, does: [] }).success).toBe(false)
+    })
+
+    it('умений не больше шести: карточка — не прайс-лист', () => {
+      const many = { ...valid, does: ['1', '2', '3', '4', '5', '6', '7'] }
+      expect(UpdateMyCard.safeParse(many).success).toBe(false)
+    })
   })
 })
 
