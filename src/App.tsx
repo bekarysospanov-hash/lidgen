@@ -9,6 +9,7 @@ import MasterProfile from './pages/public/MasterProfile'
 import Masters from './pages/public/Masters'
 import RequestForm from './pages/public/RequestForm'
 import Privacy from './pages/public/Privacy'
+import Rhythm from './pages/probe/Rhythm'
 import RequestSent from './pages/public/RequestSent'
 
 export default function App() {
@@ -31,6 +32,10 @@ export default function App() {
       <Route path="/master/requests" element={<MasterRequests />} />
       <Route path="/master/requests/:id" element={<RequestCard />} />
       <Route path="/master/profile" element={<MasterProfileEdit />} />
+
+      {/* PROBE: эталон ритма для выбора чисел DESIGN.md. Удаляется
+          вместе со страницей, как только числа выбраны. */}
+      <Route path="/ritm" element={<Rhythm />} />
 
       <Route path="*" element={<main className="p-8">Страница не найдена</main>} />
     </Routes>
