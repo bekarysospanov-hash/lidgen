@@ -424,8 +424,10 @@ function validQuote(overrides: Record<string, unknown> = {}) {
     id: '33333333-3333-4333-8333-333333333333',
     requestId: '11111111-1111-4111-8111-111111111111',
     master: { id: '44444444-4444-4444-8444-444444444444', name: 'Мастерская «Дуб»', phone: '+77010000001' },
-    composition: 'Угловая кухня, фасады МДФ, встроенная техника',
-    materials: 'МДФ в плёнке, фурнитура Blum',
+    composition: {
+      items: ['bodies', 'doors', 'countertop', 'appliances'],
+      excluded: 'Техника покупается отдельно',
+    },
     price: { minKzt: 500000, maxKzt: 700000 },
     leadTimeDays: 30,
     photos: [],
@@ -697,8 +699,11 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
 
   describe('CreateQuote', () => {
     const valid = {
-      composition: 'Корпуса, фасады, столешница, мойка',
-      materials: 'ЛДСП корпус, фасады крашеный МДФ',
+      composition: {
+        items: ['bodies', 'doors', 'countertop', 'sink', 'delivery'],
+        extra: 'Столешница с фрезеровкой под сушку',
+        excluded: 'Замер и подъём на этаж без лифта оплачиваются отдельно',
+      },
       price: { minKzt: 900_000, maxKzt: 1_400_000 },
       leadTimeDays: 30,
     }
@@ -722,8 +727,36 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
       expect(CreateQuote.safeParse({ ...valid, leadTimeDays: 0 }).success).toBe(false)
     })
 
-    it('строка из пробелов не проходит как состав решения', () => {
-      expect(CreateQuote.safeParse({ ...valid, composition: '   ' }).success).toBe(false)
+    it('состав без единой позиции не проходит: есть цена и не сказано, за что', () => {
+      const composition = { ...valid.composition, items: [] }
+      expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
+    })
+
+    it('позиция, отмеченная дважды, отклоняется — дубль дал бы две строки в матрице', () => {
+      const composition = { ...valid.composition, items: ['bodies', 'bodies'] }
+      expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
+    })
+
+    it('позиции вне перечня контракта не существует', () => {
+      const composition = { ...valid.composition, items: ['ldsp'] }
+      expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
+    })
+
+    it('«что не входит» обязательно, и строка из пробелов им не считается', () => {
+      const { excluded: _drop, ...withoutExcluded } = valid.composition
+      expect(CreateQuote.safeParse({ ...valid, composition: withoutExcluded }).success).toBe(false)
+      const blank = { ...valid.composition, excluded: '   ' }
+      expect(CreateQuote.safeParse({ ...valid, composition: blank }).success).toBe(false)
+    })
+
+    it('«ещё своими словами» необязательно: перечня хватает', () => {
+      const { extra: _drop, ...composition } = valid.composition
+      expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(true)
+    })
+
+    it('категория позиции не проверяется: замер в заявке на шкаф — не ошибка', () => {
+      const composition = { ...valid.composition, items: ['rails', 'measure'] }
+      expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(true)
     })
 
     it('мебельщика в теле запроса нет — сервер ставит его из сессии', () => {

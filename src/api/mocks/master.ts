@@ -203,7 +203,6 @@ export function sendQuote(token: string, id: string, input: CreateQuoteInputLike
     requestId: record.id,
     master: { id: master.id, name: master.name, phone: master.phone },
     composition: parsed.data.composition,
-    materials: parsed.data.materials,
     price: parsed.data.price,
     leadTimeDays: parsed.data.leadTimeDays,
     photos: parsed.data.photos ?? [],
@@ -246,7 +245,6 @@ export function reviseQuote(
   const revised = ensure(Quote, {
     ...mine,
     composition: parsed.data.composition,
-    materials: parsed.data.materials,
     price: parsed.data.price,
     leadTimeDays: parsed.data.leadTimeDays,
     photos: parsed.data.photos ?? mine.photos,

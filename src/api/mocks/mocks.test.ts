@@ -494,8 +494,10 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
   }
 
   const quotePayload = (overrides: Record<string, unknown> = {}) => ({
-    composition: 'Корпуса, фасады, столешница',
-    materials: 'ЛДСП корпус, крашеный МДФ фасады',
+    composition: {
+      items: ['bodies', 'doors', 'countertop'],
+      excluded: 'Замер оплачивается отдельно',
+    },
     price: { minKzt: 900_000, maxKzt: 1_400_000 },
     leadTimeDays: 30,
     ...overrides,

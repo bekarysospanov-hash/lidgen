@@ -14,6 +14,7 @@ import {
   badge,
   buttonFilled,
   buttonText,
+  chip,
   errorTextClass,
   field,
   fieldLabel,
@@ -22,7 +23,8 @@ import {
   panel,
   panelNested,
 } from '../../components/ui'
-import type { MasterSession, RequestForMaster } from '../../contract'
+import type { MasterSession, QuoteItem, RequestForMaster } from '../../contract'
+import { compositionAsk, compositionFor, compositionLabels } from '../../questions/composition'
 import {
   categories,
   city as cityQuestion,
@@ -43,14 +45,16 @@ type View =
   | { kind: 'failed'; message: string }
 
 interface Draft {
-  composition: string
-  materials: string
+  /** Отмеченные позиции состава. Порядок отметки не важен — важен факт. */
+  items: QuoteItem[]
+  extra: string
+  excluded: string
   priceFrom: string
   priceTo: string
   leadTimeDays: string
 }
 
-const EMPTY: Draft = { composition: '', materials: '', priceFrom: '', priceTo: '', leadTimeDays: '' }
+const EMPTY: Draft = { items: [], extra: '', excluded: '', priceFrom: '', priceTo: '', leadTimeDays: '' }
 
 /** Ввод денег: в состоянии живут только цифры, пробелы — способ показа. */
 /** Девять разрядов — миллиард тенге; больше в вилке за кухню не бывает. */
@@ -170,6 +174,21 @@ export default function RequestCard() {
 
   const { request } = view
   const category = categories.find((item) => item.id === request.details.category)
+  // Набор позиций под категорию заявки. Контракт принимает любую позицию
+  // перечня (§2) — ограничение здесь про форму, а не про договор: показывать
+  // мебельщику штанги для одежды в заявке на кухню незачем.
+  const { parts, services } = compositionFor(request.details.category)
+
+  /** Отметить или снять позицию. Ошибка состава гаснет первой же отметкой. */
+  function toggleItem(item: QuoteItem): void {
+    setDraft((current) => ({
+      ...current,
+      items: current.items.includes(item)
+        ? current.items.filter((chosen) => chosen !== item)
+        : [...current.items, item],
+    }))
+    setErrors((current) => ({ ...current, items: undefined }))
+  }
   const size = request.mainSize.known
     ? `${String(request.mainSize.meters).replace('.', ',')} ${metersUnit(request.mainSize.meters)}`
     : quotePage.sizeUnknownValue
@@ -213,8 +232,8 @@ export default function RequestCard() {
 
   function validate(): boolean {
     const found: Partial<Record<keyof Draft, string>> = {}
-    if (draft.composition.trim() === '') found.composition = quotePage.errorComposition
-    if (draft.materials.trim() === '') found.materials = quotePage.errorMaterials
+    if (draft.items.length === 0) found.items = compositionAsk.errorItemsEmpty
+    if (draft.excluded.trim() === '') found.excluded = compositionAsk.errorExcludedEmpty
     if (draft.priceFrom === '' || draft.priceTo === '') found.priceFrom = quotePage.errorPriceEmpty
     else if (Number(draft.priceTo) < Number(draft.priceFrom))
       found.priceFrom = quotePage.errorPriceOrder
@@ -235,8 +254,13 @@ export default function RequestCard() {
       revising ? api.updateQuote(t, requestId, body) : api.createQuote(t, requestId, body)
 
     sendQuote(session.token, id, {
-        composition: draft.composition.trim(),
-        materials: draft.materials.trim(),
+        composition: {
+          items: draft.items,
+          // Пустое «ещё своими словами» не отправляется вовсе: схема ждёт
+          // либо текст, либо отсутствие поля, а не пустую строку.
+          ...(draft.extra.trim() === '' ? {} : { extra: draft.extra.trim() }),
+          excluded: draft.excluded.trim(),
+        },
         price: { minKzt: Number(draft.priceFrom), maxKzt: Number(draft.priceTo) },
         leadTimeDays: Number(draft.leadTimeDays),
       })
@@ -357,8 +381,17 @@ export default function RequestCard() {
                 )}{' '}
                 · {quotePage.leadTime(request.myQuote.leadTimeDays)}
               </p>
-              <p className="mt-sm text-body-sm tracking-body-sm">{request.myQuote.composition}</p>
-              <p className="mt-xs text-body-sm tracking-body-sm">{request.myQuote.materials}</p>
+              <p className="mt-sm max-w-measure text-body-sm tracking-body-sm">
+                {request.myQuote.composition.items.map((item) => compositionLabels[item]).join(' · ')}
+              </p>
+              {request.myQuote.composition.extra !== undefined && (
+                <p className="mt-xs max-w-measure text-body-sm tracking-body-sm">
+                  {request.myQuote.composition.extra}
+                </p>
+              )}
+              <p className={`mt-xs max-w-measure ${hintText}`}>
+                {compositionAsk.excludedLabel}: {request.myQuote.composition.excluded}
+              </p>
               {request.myQuote.updatedAt !== null && (
                 <p className={`mt-sm ${hintText}`}>
                   {quotePage.revisedNote(routedAtLabel(request.myQuote.updatedAt))}
@@ -376,8 +409,9 @@ export default function RequestCard() {
             onClick={() => {
               const mine = request.myQuote!
               setDraft({
-                composition: mine.composition,
-                materials: mine.materials,
+                items: [...mine.composition.items],
+                extra: mine.composition.extra ?? '',
+                excluded: mine.composition.excluded,
                 priceFrom: String(mine.price.minKzt),
                 priceTo: String(mine.price.maxKzt),
                 leadTimeDays: String(mine.leadTimeDays),
@@ -400,40 +434,84 @@ export default function RequestCard() {
           </p>
 
           <div className={`mt-lg ${panel}`}>
-            <label className="block" htmlFor="composition">
-              <span className={fieldLabel}>{quotePage.compositionLabel}</span>
-              <textarea
-                id="composition"
-                rows={3}
-                value={draft.composition}
-                onChange={(event) =>
-                  setDraft((current) => ({ ...current, composition: event.target.value }))
-                }
-                placeholder={quotePage.compositionPlaceholder}
-                aria-invalid={errors.composition !== undefined}
-                className={`mt-sm block w-full ${field(errors.composition !== undefined)}`}
-              />
-            </label>
-            {errors.composition && <p className={`mt-xs ${errorTextClass}`}>{errors.composition}</p>}
+            {/* Состав отмечается, а не пишется (контракт §2, решение 17.09):
+                два свободных текста рядом сравнить нельзя — сравнивалась бы
+                многословность. Части предмета и работы разведены нарочно:
+                разница в цене чаще лежит во второй группе, и пока она стояла
+                вперемешку с фасадами, про неё просто не писали. */}
+            <fieldset>
+              <legend className={fieldLabel}>{compositionAsk.partsQuestion}</legend>
+              <p className={`mt-xs max-w-measure ${hintText}`}>{compositionAsk.partsHint}</p>
+              <div className="mt-md flex flex-wrap gap-sm">
+                {parts.map((item) => (
+                  <label key={item} className={chip(draft.items.includes(item))}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={draft.items.includes(item)}
+                      onChange={() => toggleItem(item)}
+                    />
+                    <span>{compositionLabels[item]}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
-            <label className="mt-xl block" htmlFor="materials">
-              <span className={fieldLabel}>{quotePage.materialsLabel}</span>
+            <fieldset className="mt-xl">
+              <legend className={fieldLabel}>{compositionAsk.servicesQuestion}</legend>
+              <p className={`mt-xs max-w-measure ${hintText}`}>{compositionAsk.servicesHint}</p>
+              <div className="mt-md flex flex-wrap gap-sm">
+                {services.map((item) => (
+                  <label key={item} className={chip(draft.items.includes(item))}>
+                    <input
+                      type="checkbox"
+                      className="sr-only"
+                      checked={draft.items.includes(item)}
+                      onChange={() => toggleItem(item)}
+                    />
+                    <span>{compositionLabels[item]}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            {errors.items && <p className={`mt-md ${errorTextClass}`}>{errors.items}</p>}
+
+            <label className="mt-xl block" htmlFor="extra">
+              <span className={fieldLabel}>{compositionAsk.extraLabel}</span>
               <textarea
-                id="materials"
-                rows={3}
-                value={draft.materials}
+                id="extra"
+                rows={2}
+                value={draft.extra}
                 onChange={(event) =>
-                  setDraft((current) => ({ ...current, materials: event.target.value }))
+                  setDraft((current) => ({ ...current, extra: event.target.value }))
                 }
-                placeholder={quotePage.materialsPlaceholder}
-                aria-invalid={errors.materials !== undefined}
-                className={`mt-sm block w-full ${field(errors.materials !== undefined)}`}
+                placeholder={compositionAsk.extraPlaceholder}
+                className={`mt-sm block w-full ${field(false)}`}
               />
             </label>
-            {errors.materials ? (
-              <p className={`mt-xs ${errorTextClass}`}>{errors.materials}</p>
+            <p className={`mt-xs ${hintText}`}>{compositionAsk.extraHint}</p>
+
+            {/* Обязательное поле, и это главное в затее: замер, доставка
+                и подъём у одного внутри вилки, у другого сверху. Пока про это
+                не спрашивали, заказчица узнавала разницу на дозвоне. */}
+            <label className="mt-xl block" htmlFor="excluded">
+              <span className={fieldLabel}>{compositionAsk.excludedLabel}</span>
+              <textarea
+                id="excluded"
+                rows={2}
+                value={draft.excluded}
+                onChange={(event) =>
+                  setDraft((current) => ({ ...current, excluded: event.target.value }))
+                }
+                placeholder={compositionAsk.excludedPlaceholder}
+                aria-invalid={errors.excluded !== undefined}
+                className={`mt-sm block w-full ${field(errors.excluded !== undefined)}`}
+              />
+            </label>
+            {errors.excluded ? (
+              <p className={`mt-xs ${errorTextClass}`}>{errors.excluded}</p>
             ) : (
-              <p className={`mt-xs ${hintText}`}>{quotePage.materialsHint}</p>
+              <p className={`mt-xs max-w-measure ${hintText}`}>{compositionAsk.excludedHint}</p>
             )}
 
             <fieldset className="mt-xl">

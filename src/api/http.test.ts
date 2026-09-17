@@ -424,8 +424,10 @@ describe('кабинет мебельщика (§5б)', () => {
     id: '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e01',
     requestId: REQUEST_ID,
     master: { id: MASTER_ID, name: 'Мастерская на Сайране', phone: '+77010000001' },
-    composition: 'Корпуса, фасады, столешница',
-    materials: 'ЛДСП корпус, крашеный МДФ фасады',
+    composition: {
+      items: ['bodies', 'doors', 'countertop'],
+      excluded: 'Замер оплачивается отдельно',
+    },
     price: { minKzt: 900_000, maxKzt: 1_400_000 },
     leadTimeDays: 30,
     photos: [],
@@ -512,8 +514,10 @@ describe('кабинет мебельщика (§5б)', () => {
     fetchMock.mockResolvedValueOnce(fakeResponse(201, quoteBody()))
 
     const quote = await httpApi.createQuote(MASTER_TOKEN, REQUEST_ID, {
-      composition: 'Корпуса, фасады, столешница',
-      materials: 'ЛДСП корпус, крашеный МДФ фасады',
+      composition: {
+        items: ['bodies', 'doors', 'countertop'],
+        excluded: 'Замер оплачивается отдельно',
+      },
       price: { minKzt: 900_000, maxKzt: 1_400_000 },
       leadTimeDays: 30,
     })
@@ -528,8 +532,7 @@ describe('кабинет мебельщика (§5б)', () => {
   it('перевёрнутая вилка не уходит на сервер вовсе', async () => {
     await expect(
       httpApi.createQuote(MASTER_TOKEN, REQUEST_ID, {
-        composition: 'Корпуса',
-        materials: 'ЛДСП',
+        composition: { items: ['bodies'], excluded: 'Всё остальное отдельно' },
         price: { minKzt: 1_400_000, maxKzt: 900_000 },
         leadTimeDays: 30,
       }),

@@ -11,7 +11,8 @@ import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
-import type { Quote, RequestForClient } from '../../contract'
+import type { Quote, QuoteItem, RequestForClient } from '../../contract'
+import { compositionLabels } from '../../questions/composition'
 import { buttonFilled, fieldLabel, hintText, link, panel, panelNested } from '../../components/ui'
 import { trackForRequest } from '../../analytics'
 import { probeVisible } from '../../texts/master'
@@ -74,11 +75,29 @@ function QuoteCard({
         </p>
       </div>
 
+      {/* Отмеченное перечисляется строками, неотмеченное не показывается:
+          перечислять отсутствующее по одному предложению незачем — для этого
+          есть таблица ниже, где «нет» имеет смысл рядом с чужим «есть».
+          Строки, а не чипсы: чипс в системе несёт выбор, а выбирать здесь
+          нечего, и некликабельное не должно притворяться (§ Affordance). */}
       <p className={`mt-xl ${fieldLabel}`}>{offersPage.quoteWhat}</p>
-      <p className="mt-xs max-w-measure text-body tracking-body">{quote.composition}</p>
+      <ul className="mt-xs max-w-measure">
+        {quote.composition.items.map((item) => (
+          <li key={item} className="mt-xs text-body tracking-body first:mt-0">
+            {compositionLabels[item]}
+          </li>
+        ))}
+      </ul>
 
-      <p className={`mt-lg ${fieldLabel}`}>{offersPage.quoteMaterials}</p>
-      <p className="mt-xs max-w-measure text-body tracking-body">{quote.materials}</p>
+      {quote.composition.extra !== undefined && (
+        <>
+          <p className={`mt-lg ${fieldLabel}`}>{offersPage.quoteExtra}</p>
+          <p className="mt-xs max-w-measure text-body tracking-body">{quote.composition.extra}</p>
+        </>
+      )}
+
+      <p className={`mt-lg ${fieldLabel}`}>{offersPage.quoteExcluded}</p>
+      <p className="mt-xs max-w-measure text-body tracking-body">{quote.composition.excluded}</p>
 
       <div className="mt-xl">
         {contactShown ? (
@@ -132,11 +151,35 @@ function arrivedAt(iso: string): string {
  * в своём контейнере с горизонтальной прокруткой (DESIGN.md § Layout).
  */
 function Compare({ quotes }: { quotes: Quote[] }) {
+  // Позиции, отмеченные хотя бы кем-то. Порядок — как в перечне системы,
+  // а не как отмечал первый ответивший: иначе таблица меняла бы расположение
+  // строк от заявки к заявке, и сравнивать её глазами стало бы труднее.
+  const order = Object.keys(compositionLabels) as QuoteItem[]
+  const mentioned = order.filter((item) => quotes.some((q) => q.composition.items.includes(item)))
+
   const rows: [string, (quote: Quote) => string][] = [
     [offersPage.compareRows.price, (q) => offersPage.quotePrice(q.price.minKzt, q.price.maxKzt)],
     [offersPage.compareRows.lead, (q) => offersPage.quoteLeadValue(q.leadTimeDays)],
-    [offersPage.compareRows.composition, (q) => q.composition || offersPage.compareEmpty],
-    [offersPage.compareRows.materials, (q) => q.materials || offersPage.compareEmpty],
+    // Матрица «у кого что есть» (US-23). Слово, а не значок: галочку и точку
+    // разные люди читают по-разному, «есть» и «нет» — одинаково все, а эмодзи
+    // система запрещает прямо (DESIGN.md § Иконки).
+    ...mentioned.map(
+      (item): [string, (quote: Quote) => string] => [
+        compositionLabels[item],
+        (q) => (q.composition.items.includes(item) ? offersPage.compareIncluded : offersPage.compareMissing),
+      ],
+    ),
+    // Строка «Дополнительно» показывается, только если её кто-то заполнил:
+    // строка, где у всех «не указано», ничего не сравнивает и лишь удлиняет
+    // таблицу, которую и так приходится листать вбок (§ Content — коротко
+    // и по делу). «Что не входит» обязательно у всех, поэтому стоит всегда.
+    ...(quotes.some((q) => q.composition.extra !== undefined)
+      ? ([[offersPage.compareRows.extra, (q) => q.composition.extra ?? offersPage.compareEmpty]] as [
+          string,
+          (quote: Quote) => string,
+        ][])
+      : []),
+    [offersPage.compareRows.excluded, (q) => q.composition.excluded],
   ]
 
   return (
