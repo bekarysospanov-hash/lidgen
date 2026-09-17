@@ -89,4 +89,6 @@ export interface Api {
   getRequestForMaster(token: string, id: string): Promise<RequestForMaster>
   /** POST /api/master/requests/{id}/quote — одно КП на заявку (US-19a). */
   createQuote(token: string, id: string, input: CreateQuoteInputLike): Promise<Quote>
+  /** PUT /api/master/requests/{id}/quote — дополнить своё КП (US-19b). */
+  updateQuote(token: string, id: string, input: CreateQuoteInputLike): Promise<Quote>
 }

@@ -12,7 +12,8 @@ import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
 import type { Quote, RequestForClient } from '../../contract'
-import { buttonFilled, fieldLabel, hintText, panel, panelNested } from '../../components/ui'
+import { buttonFilled, fieldLabel, hintText, link, panel, panelNested } from '../../components/ui'
+import { track } from '../../analytics'
 import { probeVisible } from '../../texts/master'
 import { errorText, offersPage, statusNote } from '../../texts/request'
 
@@ -41,10 +42,22 @@ function Title({ children }: { children: React.ReactNode }) {
  * них человек и открывает ссылку, и это те самые «настоящие числа и имена»,
  * которые дают ощущение присутствия, а не заглушки (DESIGN.md § Presence).
  */
-function QuoteCard({ quote }: { quote: Quote }) {
+function QuoteCard({ quote, requestNumber }: { quote: Quote; requestNumber: string }) {
+  /**
+   * US-24. Телефон показывается по нажатию, а не сразу: пока заказчица
+   * не выбрала, к кому идти, три номера на экране — не помощь, а давление.
+   * Нажатие пишет событие «вышел на контакт» — нижнюю границу метрики:
+   * позвонить можно и мимо продукта, и об этом честно сказано в PRD.
+   */
+  const [contactShown, setContactShown] = useState(false)
+
   return (
     <div className={panel}>
       <p className="text-subheading tracking-subheading font-medium">{quote.master.name}</p>
+      <p className={`mt-xs ${hintText}`}>
+        {offersPage.quoteArrived} {arrivedAt(quote.sentAt)}
+        {quote.updatedAt !== null && ` · ${offersPage.quoteRevised} ${arrivedAt(quote.updatedAt)}`}
+      </p>
 
       <div className={`mt-lg ${panelNested}`}>
         <p className="text-subheading tracking-subheading font-medium tabular-nums">
@@ -60,6 +73,92 @@ function QuoteCard({ quote }: { quote: Quote }) {
 
       <p className={`mt-lg ${fieldLabel}`}>{offersPage.quoteMaterials}</p>
       <p className="mt-xs max-w-[62ch] text-body tracking-body">{quote.materials}</p>
+
+      <div className="mt-xl">
+        {contactShown ? (
+          <>
+            <p className={fieldLabel}>{offersPage.contactTitle}</p>
+            <p className="mt-xs text-subheading tracking-subheading font-medium">
+              <a href={`tel:${quote.master.phone}`} className={link}>
+                {quote.master.phone}
+              </a>
+            </p>
+            <p className={`mt-sm max-w-[54ch] ${hintText}`}>{offersPage.contactNote}</p>
+            <p className={`mt-xs ${hintText}`}>
+              {offersPage.numberLabel} {requestNumber}
+            </p>
+          </>
+        ) : (
+          <button
+            type="button"
+            className={buttonFilled}
+            onClick={() => {
+              setContactShown(true)
+              track('contact_made', { masterId: quote.master.id })
+            }}
+          >
+            {offersPage.contactAction}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** «сегодня, 14:20» — человек смотрит страницу по нескольку раз в день. */
+function arrivedAt(iso: string): string {
+  const at = new Date(iso)
+  const time = at.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+  const today = new Date().toDateString() === at.toDateString()
+  return today
+    ? `сегодня, ${time}`
+    : at.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+}
+
+/**
+ * US-23 — сравнение включается от двух предложений и раньше не нужно:
+ * сравнивать одно КП не с чем. Строки одинаковые у всех, пустая говорит
+ * «не указано», а не прочерком — прочерк читается как «мебельщик не работает».
+ *
+ * Таблица — единственное, чему система разрешает быть шире колонки, и то
+ * в своём контейнере с горизонтальной прокруткой (DESIGN.md § Layout).
+ */
+function Compare({ quotes }: { quotes: Quote[] }) {
+  const rows: [string, (quote: Quote) => string][] = [
+    [offersPage.compareRows.price, (q) => offersPage.quotePrice(q.price.minKzt, q.price.maxKzt)],
+    [offersPage.compareRows.lead, (q) => offersPage.quoteLeadValue(q.leadTimeDays)],
+    [offersPage.compareRows.composition, (q) => q.composition || offersPage.compareEmpty],
+    [offersPage.compareRows.materials, (q) => q.materials || offersPage.compareEmpty],
+  ]
+
+  return (
+    <div className="mt-lg overflow-x-auto">
+      <table className="w-full min-w-[32rem] border-collapse text-left">
+        <thead>
+          <tr>
+            <th className={`py-md pr-lg align-top ${hintText}`} />
+            {quotes.map((quote) => (
+              <th key={quote.id} className="py-md pr-lg align-top text-body tracking-body font-medium">
+                {quote.master.name}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([label, value]) => (
+            <tr key={label} className="border-t border-outline">
+              <th scope="row" className={`py-md pr-lg align-top font-normal ${hintText}`}>
+                {label}
+              </th>
+              {quotes.map((quote) => (
+                <td key={quote.id} className="py-md pr-lg align-top text-body tracking-body">
+                  {value(quote)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -184,16 +283,28 @@ export default function Offers() {
                 «это одно целое», ради которого плашка и существует.
                 Интерфейса сравнения нет — он включается от двух предложений
                 и живёт в US-22, срез 3 (PRD, US-21). */}
+            {/* Порядок поступления, а не по цене: сортировка по цене —
+                уже наш совет, кого выбрать, а мы этого не решаем (US-22). */}
             <ul className="mt-lg flex flex-col gap-xl">
-              {request.quotes.map((quote) => (
-                <li key={quote.id}>
-                  <QuoteCard quote={quote} />
-                </li>
-              ))}
+              {[...request.quotes]
+                .sort((a, b) => a.sentAt.localeCompare(b.sentAt))
+                .map((quote) => (
+                  <li key={quote.id}>
+                    <QuoteCard quote={quote} requestNumber={request.number} />
+                  </li>
+                ))}
             </ul>
           </>
         )}
       </section>
+
+      {request.quotes.length >= 2 && (
+        <section className="mt-3xl">
+          <h2 className="text-subheading tracking-subheading font-medium">{offersPage.compareTitle}</h2>
+          <p className={`mt-sm max-w-[62ch] ${hintText}`}>{offersPage.compareNote}</p>
+          <Compare quotes={[...request.quotes].sort((a, b) => a.sentAt.localeCompare(b.sentAt))} />
+        </section>
+      )}
 
       {request.quotes.length > 0 && (
         <section className="mt-3xl">

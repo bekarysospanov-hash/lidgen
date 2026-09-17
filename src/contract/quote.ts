@@ -1,6 +1,6 @@
 // Коммерческое предложение (docs/api-contract.md §2, Quote).
 import { z } from 'zod'
-import { Iso, RequestId } from './primitives'
+import { Iso, Phone, RequestId } from './primitives'
 
 /** Только вилка: одиночное число не принимается (US-19a). */
 export const QuotePrice = z
@@ -14,7 +14,16 @@ export const QuotePrice = z
   })
 export type QuotePrice = z.infer<typeof QuotePrice>
 
-export const QuoteMaster = z.object({ id: z.uuid(), name: z.string().min(1) })
+/**
+ * Кто ответил. Телефон здесь не утечка, а смысл предложения (US-24):
+ * мастерская сама написала этой заказчице и знает, что по ответу позвонят.
+ * В каталоге (§5, listMasters) телефона нет — там её никто не выбирал.
+ */
+export const QuoteMaster = z.object({
+  id: z.uuid(),
+  name: z.string().min(1),
+  phone: Phone,
+})
 export type QuoteMaster = z.infer<typeof QuoteMaster>
 
 /**

@@ -2,7 +2,14 @@
 import type { Api } from '../types'
 import { remove, upload } from './photos'
 import { acceptEvents, confirm, create, getByToken, resend } from './requests'
-import { confirmCode, getRequest, listRequests, requestCode, sendQuote } from './master'
+import {
+  confirmCode,
+  getRequest,
+  listRequests,
+  requestCode,
+  reviseQuote,
+  sendQuote,
+} from './master'
 import { listCatalogue } from './masters'
 
 // PROBE: искусственная задержка ответа — имитирует сетевой RTT реального
@@ -70,6 +77,10 @@ export const mockApi: Api = {
   async createQuote(token, id, input) {
     await delay()
     return sendQuote(token, id, input)
+  },
+  async updateQuote(token, id, input) {
+    await delay()
+    return reviseQuote(token, id, input)
   },
 }
 

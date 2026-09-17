@@ -13,6 +13,7 @@ import { CategoryIcon } from '../../components/CategoryIcon'
 import {
   badge,
   buttonFilled,
+  buttonText,
   errorTextClass,
   field,
   fieldLabel,
@@ -87,6 +88,11 @@ export default function RequestCard() {
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({})
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+  /**
+   * US-19b. Правка — режим того же экрана, а не второй экран: мебельщик
+   * поправляет вилку между делом, и лишний переход теряет исправление.
+   */
+  const [revising, setRevising] = useState(false)
 
   /**
    * Под StrictMode эффект в деве исполняется дважды. Без этой отметки
@@ -222,8 +228,10 @@ export default function RequestCard() {
     if (!validate() || session === null || id === undefined) return
     setSending(true)
     setSendError(null)
-    api
-      .createQuote(session.token, id, {
+    // Правка не создаёт второе КП: у неё своя операция, и quote_sent
+    // она не пишет (контракт §5б, updateQuote).
+    const send = revising ? api.updateQuote : api.createQuote
+    send(session.token, id, {
         composition: draft.composition.trim(),
         materials: draft.materials.trim(),
         price: { minKzt: Number(draft.priceFrom), maxKzt: Number(draft.priceTo) },
@@ -235,6 +243,7 @@ export default function RequestCard() {
           // с КП открывается телефон заказчицы, и источник у него один — сервер.
           setSending(false)
           setDraft(EMPTY)
+          setRevising(false)
           // Отметка сбрасывается: это осознанный повторный запрос, а не
           // повторный монтаж, и пропустить его нельзя — вместе с ответом
           // приходит телефон заказчицы.
@@ -317,7 +326,7 @@ export default function RequestCard() {
         )}
       </section>
 
-      {request.myQuote ? (
+      {request.myQuote && !revising ? (
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">
             {quotePage.sentTitle}
@@ -347,13 +356,45 @@ export default function RequestCard() {
               </p>
               <p className="mt-sm text-body-sm tracking-body-sm">{request.myQuote.composition}</p>
               <p className="mt-xs text-body-sm tracking-body-sm">{request.myQuote.materials}</p>
+              {request.myQuote.updatedAt !== null && (
+                <p className={`mt-sm ${hintText}`}>
+                  {quotePage.revisedNote(routedAtLabel(request.myQuote.updatedAt))}
+                </p>
+              )}
             </div>
           </div>
+
+          {/* US-19b: правка вместо второго КП. Отправив второе предложение,
+              мебельщик оставил бы заказчице две своих цены без правила,
+              какая настоящая. */}
+          <button
+            type="button"
+            className={`mt-xl ${buttonText}`}
+            onClick={() => {
+              const mine = request.myQuote!
+              setDraft({
+                composition: mine.composition,
+                materials: mine.materials,
+                priceFrom: String(mine.price.minKzt),
+                priceTo: String(mine.price.maxKzt),
+                leadTimeDays: String(mine.leadTimeDays),
+              })
+              setErrors({})
+              setSendError(null)
+              setRevising(true)
+            }}
+          >
+            {quotePage.revise}
+          </button>
         </section>
       ) : (
         <section className="mt-3xl">
-          <h2 className="text-subheading tracking-subheading font-medium">{quotePage.formTitle}</h2>
-          <p className={`mt-sm max-w-[62ch] ${hintText}`}>{quotePage.formHint}</p>
+          <h2 className="text-subheading tracking-subheading font-medium">
+            {revising ? quotePage.reviseTitle : quotePage.formTitle}
+          </h2>
+          <p className={`mt-sm max-w-[62ch] ${hintText}`}>
+            {revising ? quotePage.reviseHint : quotePage.formHint}
+          </p>
 
           <div className={`mt-lg ${panel}`}>
             <label className="block" htmlFor="composition">
@@ -450,9 +491,28 @@ export default function RequestCard() {
             )}
           </div>
 
-          <button type="button" onClick={send} disabled={sending} className={`mt-xl ${buttonFilled}`}>
-            {sending ? quotePage.submitting : quotePage.submit}
-          </button>
+          <div className="mt-xl flex flex-wrap items-center gap-md">
+            <button type="button" onClick={send} disabled={sending} className={buttonFilled}>
+              {sending
+                ? quotePage.submitting
+                : revising
+                  ? quotePage.reviseSubmit
+                  : quotePage.submit}
+            </button>
+            {revising && (
+              <button
+                type="button"
+                className={buttonText}
+                onClick={() => {
+                  setRevising(false)
+                  setDraft(EMPTY)
+                  setErrors({})
+                }}
+              >
+                {quotePage.reviseCancel}
+              </button>
+            )}
+          </div>
           {sendError && <p className={`mt-lg ${errorTextClass}`}>{sendError}</p>}
         </section>
       )}

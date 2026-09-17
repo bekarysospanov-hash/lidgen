@@ -201,7 +201,7 @@ export function sendQuote(token: string, id: string, input: CreateQuoteInputLike
   const quote = ensure(Quote, {
     id: newQuoteId(),
     requestId: record.id,
-    master: { id: master.id, name: master.name },
+    master: { id: master.id, name: master.name, phone: master.phone },
     composition: parsed.data.composition,
     materials: parsed.data.materials,
     price: parsed.data.price,
@@ -222,3 +222,40 @@ export function sendQuote(token: string, id: string, input: CreateQuoteInputLike
 }
 
 onReset(resetMasterState)
+
+/**
+ * US-19b — дополнить своё КП. Правится существующее, а не создаётся новое:
+ * id и sentAt остаются прежними, двигается только updatedAt. Иначе правка
+ * считалась бы вторым предложением, и «сколько КП пришло» врало бы.
+ */
+export function reviseQuote(
+  token: string,
+  id: string,
+  input: CreateQuoteInputLike,
+): Quote {
+  const now = new Date()
+  const master = session(token, now)
+
+  const { record } = routedRecord(id, master.id)
+  const mine = myQuote(record, master.id)
+  if (!mine) throw new ApiError('QUOTE_NOT_FOUND', 'Предложение не найдено')
+
+  const parsed = CreateQuote.safeParse(input)
+  if (!parsed.success) throw validationFailed(parsed.error)
+
+  const revised = ensure(Quote, {
+    ...mine,
+    composition: parsed.data.composition,
+    materials: parsed.data.materials,
+    price: parsed.data.price,
+    leadTimeDays: parsed.data.leadTimeDays,
+    photos: parsed.data.photos ?? mine.photos,
+    updatedAt: now.toISOString(),
+  })
+
+  record.quotes = record.quotes.map((quote) => (quote.id === revised.id ? revised : quote))
+  putRequest(record)
+  // Событие quote_sent не пишется: КП не новое, и в метрике оно уже учтено.
+
+  return revised
+}

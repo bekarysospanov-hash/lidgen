@@ -599,6 +599,64 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
     })
   })
 
+  describe('дополнение КП (US-19b)', () => {
+    it('правка меняет цену, но остаётся тем же предложением', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+      const first = await mockApi.createQuote(token, created.id, quotePayload())
+
+      const revised = await mockApi.updateQuote(
+        token,
+        created.id,
+        quotePayload({ price: { minKzt: 1_000_000, maxKzt: 1_500_000 } }),
+      )
+
+      expect(revised.id).toBe(first.id)
+      expect(revised.sentAt).toBe(first.sentAt)
+      expect(revised.updatedAt).not.toBeNull()
+      expect(revised.price.minKzt).toBe(1_000_000)
+    })
+
+    it('у заказчицы остаётся одно предложение, а не два', async () => {
+      const { created, confirmed } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+      await mockApi.createQuote(token, created.id, quotePayload())
+      await mockApi.updateQuote(token, created.id, quotePayload({ leadTimeDays: 45 }))
+
+      const seen = await mockApi.getRequestByToken(confirmed.token)
+      expect(seen.quotes).toHaveLength(1)
+      expect(seen.quotes[0].leadTimeDays).toBe(45)
+    })
+
+    it('правка не пишет второе quote_sent — в метрике КП одно', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+      await mockApi.createQuote(token, created.id, quotePayload())
+      await mockApi.updateQuote(token, created.id, quotePayload({ leadTimeDays: 45 }))
+
+      expect(listEvents().filter((event) => event.type === 'quote_sent')).toHaveLength(1)
+    })
+
+    it('править нечего, пока КП не отправлено', async () => {
+      const { created } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+
+      await expect(mockApi.updateQuote(token, created.id, quotePayload())).rejects.toSatisfy(
+        (e: unknown) => isApiError(e) && e.code === 'QUOTE_NOT_FOUND',
+      )
+    })
+
+    it('чужое КП не правится', async () => {
+      const { created } = await createAndConfirm()
+      const first = await login(ALMATY_PHONES[0])
+      const second = await login(ALMATY_PHONES[1])
+      await mockApi.createQuote(first.token, created.id, quotePayload())
+
+      await expect(
+        mockApi.updateQuote(second.token, created.id, quotePayload()),
+      ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'QUOTE_NOT_FOUND')
+    })
+  })
   describe('карточка заявки (US-18)', () => {
     it('несуществующая и чужая заявка отвечают одинаково', async () => {
       const { created } = await createAndConfirm()
@@ -651,6 +709,14 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
       expect(card.myQuote?.id).toBe(quote.id)
     })
 
+    it('заказчица получает телефон мастерской вместе с КП (US-24)', async () => {
+      const { created, confirmed } = await createAndConfirm()
+      const { token } = await login(ALMATY_PHONES[0])
+      await mockApi.createQuote(token, created.id, quotePayload())
+
+      const seen = await mockApi.getRequestByToken(confirmed.token)
+      expect(seen.quotes[0].master.phone).toBe(ALMATY_PHONES[0])
+    })
     it('первое КП переводит заявку в quoted и видно заказчице по токену', async () => {
       const { created, confirmed } = await createAndConfirm()
       const { token } = await login(ALMATY_PHONES[0])

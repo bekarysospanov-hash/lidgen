@@ -17,6 +17,7 @@ export const ErrorCode = z.enum([
   'MASTER_UNAUTHORIZED',
   'NOT_ROUTED_TO_YOU',
   'QUOTE_ALREADY_SENT',
+  'QUOTE_NOT_FOUND',
 ])
 export type ErrorCode = z.infer<typeof ErrorCode>
 
@@ -58,6 +59,8 @@ export const ApiErrorBody = z.discriminatedUnion('code', [
   /** Чужая заявка и несуществующая отвечают одинаково — иначе id перебирается. */
   z.object({ code: z.literal('NOT_ROUTED_TO_YOU'), message }),
   z.object({ code: z.literal('QUOTE_ALREADY_SENT'), message }),
+  /** US-19b: правится только существующее своё КП. */
+  z.object({ code: z.literal('QUOTE_NOT_FOUND'), message }),
 ])
 export type ApiErrorBody = z.infer<typeof ApiErrorBody>
 

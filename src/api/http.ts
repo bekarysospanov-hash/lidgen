@@ -233,6 +233,15 @@ export const httpApi: Api = {
     }, RequestForMaster)
   },
 
+  async updateQuote(token: string, id: string, input: CreateQuoteInputLike) {
+    const payload = parseInput<CreateQuote>(CreateQuote, input)
+    return call(`/api/master/requests/${encodeURIComponent(id)}/quote`, {
+      method: 'PUT',
+      headers: bearer(token),
+      body: JSON.stringify(payload),
+    }, Quote)
+  },
+
   async createQuote(token: string, id: string, input: CreateQuoteInputLike) {
     const payload = parseInput<CreateQuote>(CreateQuote, input)
     return call(`/api/master/requests/${encodeURIComponent(id)}/quote`, {

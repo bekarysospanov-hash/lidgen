@@ -423,7 +423,7 @@ describe('кабинет мебельщика (§5б)', () => {
   const quoteBody = () => ({
     id: '3f1b8a2e-8c4d-4a6b-9f2e-1a2b3c4d5e01',
     requestId: REQUEST_ID,
-    master: { id: MASTER_ID, name: 'Мастерская на Сайране' },
+    master: { id: MASTER_ID, name: 'Мастерская на Сайране', phone: '+77010000001' },
     composition: 'Корпуса, фасады, столешница',
     materials: 'ЛДСП корпус, крашеный МДФ фасады',
     price: { minKzt: 900_000, maxKzt: 1_400_000 },
