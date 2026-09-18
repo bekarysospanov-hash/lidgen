@@ -13,27 +13,30 @@
 import type { QuoteItem } from '../contract'
 import type { CategoryId } from './categories'
 
-/** Подпись позиции. Показывается и мебельщику в форме, и заказчице в КП. */
+/**
+ * Подпись позиции. Показывается и мебельщику в форме, и заказчику в КП.
+ *
+ * Части предмета отсюда убраны 18.09 (решение PM). Корпуса, полки, дверцы,
+ * двери, ящики, штанги — мебель без них не бывает, продать их отдельно
+ * нельзя, и отметить их мог только каждый. Позиция, которую отмечают все,
+ * в сравнении не участвует: в матрице она даёт строку одинаковых «есть».
+ *
+ * Осталось то, что у одного в цене, а у другого нет.
+ */
 export const compositionLabels: Record<QuoteItem, string> = {
-  bodies: 'Корпуса и полки',
-  doors: 'Дверцы',
-  wardrobeDoors: 'Двери',
   countertop: 'Столешница',
-  drawers: 'Выдвижные ящики',
   sink: 'Мойка и смеситель',
   appliances: 'Встроенная техника',
-  softClose: 'Плавное закрывание дверец',
-  lighting: 'Подсветка рабочей зоны',
-  shelfLighting: 'Подсветка',
-  rails: 'Штанги для одежды',
+  softClose: 'Доводчики на дверцах',
+  lighting: 'Подсветка',
   mirror: 'Зеркало',
-  vanity: 'Тумба под раковину',
   basin: 'Раковина',
-  cabinet: 'Пенал или шкафчик',
   measure: 'Замер',
   delivery: 'Доставка',
+  lift: 'Подъём на этаж',
   assembly: 'Сборка и установка',
   removal: 'Вывоз старой мебели',
+  cleanup: 'Уборка и вывоз упаковки',
 }
 
 /**
@@ -44,7 +47,14 @@ export const compositionLabels: Record<QuoteItem, string> = {
  * в фасадах, а в том, что у одного замер и вывоз внутри вилки, а у другого
  * сверху. Пока состав был свободным текстом, про них просто не писали.
  */
-export const compositionServices: QuoteItem[] = ['measure', 'delivery', 'assembly', 'removal']
+export const compositionServices: QuoteItem[] = [
+  'measure',
+  'delivery',
+  'lift',
+  'assembly',
+  'removal',
+  'cleanup',
+]
 
 /**
  * Части предмета по категориям. Порядок — как человек собирает предмет
@@ -55,10 +65,10 @@ export const compositionServices: QuoteItem[] = ['measure', 'delivery', 'assembl
  * на шкаф, ошибки не совершает.
  */
 const partsByCategory: Record<CategoryId, QuoteItem[]> = {
-  kitchen: ['bodies', 'doors', 'countertop', 'drawers', 'sink', 'appliances', 'softClose', 'lighting'],
-  wardrobe: ['bodies', 'wardrobeDoors', 'drawers', 'rails', 'mirror', 'shelfLighting'],
-  bathroom: ['vanity', 'basin', 'countertop', 'mirror', 'cabinet', 'shelfLighting'],
-  other: ['bodies', 'doors', 'countertop', 'drawers'],
+  kitchen: ['countertop', 'sink', 'appliances', 'softClose', 'lighting'],
+  wardrobe: ['mirror', 'lighting', 'softClose'],
+  bathroom: ['countertop', 'basin', 'mirror', 'lighting'],
+  other: ['countertop', 'lighting', 'softClose'],
 }
 
 /** Позиции, предлагаемые в форме: части предмета, затем работы. */
@@ -94,8 +104,8 @@ export function splitComposition(items: readonly QuoteItem[]): {
  * «Что входит в цену?», в готовом предложении вопрос уже отвечен.
  */
 export const compositionShown = {
-  parts: 'В предмете',
-  services: 'Из работ',
+  parts: 'В цене',
+  services: 'Работы в цене',
 } as const
 
 /**
@@ -104,10 +114,12 @@ export const compositionShown = {
  * ценнее остального кода.
  */
 export const compositionAsk = {
-  partsQuestion: 'Что входит в цену?',
-  partsHint: 'Отметьте всё, что входит в названную вилку.',
-  servicesQuestion: 'Что из работ входит в эту же цену?',
-  servicesHint: 'Если замер или доставка оплачиваются отдельно — не отмечайте, напишите об этом ниже.',
+  partsQuestion: 'Что из этого в цене?',
+  partsHint:
+    'Корпуса, фасады и сборку каркаса не спрашиваем — без них мебели не бывает. ' +
+    'Здесь только то, что у одного в цене, а у другого нет.',
+  servicesQuestion: 'Какие работы в той же цене?',
+  servicesHint: 'Не отмечено — значит оплачивается отдельно. Так и прочитает заказчик.',
   extraLabel: 'Что-то ещё своими словами',
   extraHint: 'Необязательно. Сюда то, чего нет в списке выше.',
   extraPlaceholder: 'например, столешница с фрезеровкой под сушку',

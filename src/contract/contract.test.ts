@@ -426,7 +426,7 @@ function validQuote(overrides: Record<string, unknown> = {}) {
     requestId: '11111111-1111-4111-8111-111111111111',
     master: { id: '44444444-4444-4444-8444-444444444444', name: 'Мастерская «Дуб»', phone: '+77010000001' },
     composition: {
-      items: ['bodies', 'doors', 'countertop', 'appliances'],
+      items: ['countertop', 'appliances', 'measure'],
       excluded: 'Техника покупается отдельно',
     },
     price: { minKzt: 500000, maxKzt: 700000 },
@@ -967,7 +967,7 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
   describe('CreateQuote', () => {
     const valid = {
       composition: {
-        items: ['bodies', 'doors', 'countertop', 'sink', 'delivery'],
+        items: ['countertop', 'sink', 'delivery'],
         extra: 'Столешница с фрезеровкой под сушку',
         excluded: 'Замер и подъём на этаж без лифта оплачиваются отдельно',
       },
@@ -1000,7 +1000,7 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
     })
 
     it('позиция, отмеченная дважды, отклоняется — дубль дал бы две строки в матрице', () => {
-      const composition = { ...valid.composition, items: ['bodies', 'bodies'] }
+      const composition = { ...valid.composition, items: ['countertop', 'countertop'] }
       expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
     })
 
@@ -1022,7 +1022,7 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
     })
 
     it('категория позиции не проверяется: замер в заявке на шкаф — не ошибка', () => {
-      const composition = { ...valid.composition, items: ['rails', 'measure'] }
+      const composition = { ...valid.composition, items: ['mirror', 'measure'] }
       expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(true)
     })
 

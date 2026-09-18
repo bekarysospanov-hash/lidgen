@@ -86,7 +86,11 @@ function Works({ photos }: { photos: readonly MasterPhoto[] }) {
           {named && (
             <p className={hintText}>{masterCardPage.worksKind[group.kind]}</p>
           )}
-          <ul className={`grid grid-cols-2 gap-md sm:grid-cols-3 ${named ? 'mt-sm' : ''}`}>
+          {/* На телефоне снимок во всю ширину, а не в половину: в группе
+              часто один кадр, и рядом с ним оставалась пустая колонка —
+              портфолио читалось как обрывки. Две и три колонки появляются
+              там, где для них есть ширина. */}
+          <ul className={`grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3 ${named ? 'mt-sm' : ''}`}>
             {group.items.map((photo) => (
               <li key={photo.url}>
                 {/* Радиус 0: скруглённый угол отрезает предмет и уводит

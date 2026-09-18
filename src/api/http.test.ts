@@ -422,7 +422,7 @@ describe('кабинет мебельщика (§5б)', () => {
     requestId: REQUEST_ID,
     master: { id: MASTER_ID, name: 'Мастерская на Сайране', phone: '+77010000001' },
     composition: {
-      items: ['bodies', 'doors', 'countertop'],
+      items: ['countertop', 'sink', 'measure'],
       excluded: 'Замер оплачивается отдельно',
     },
     price: { minKzt: 900_000, maxKzt: 1_400_000 },
@@ -512,7 +512,7 @@ describe('кабинет мебельщика (§5б)', () => {
 
     const quote = await httpApi.createQuote(MASTER_TOKEN, REQUEST_ID, {
       composition: {
-        items: ['bodies', 'doors', 'countertop'],
+        items: ['countertop', 'sink', 'measure'],
         excluded: 'Замер оплачивается отдельно',
       },
       price: { minKzt: 900_000, maxKzt: 1_400_000 },
@@ -529,7 +529,7 @@ describe('кабинет мебельщика (§5б)', () => {
   it('перевёрнутая вилка не уходит на сервер вовсе', async () => {
     await expect(
       httpApi.createQuote(MASTER_TOKEN, REQUEST_ID, {
-        composition: { items: ['bodies'], excluded: 'Всё остальное отдельно' },
+        composition: { items: ['countertop'], excluded: 'Всё остальное отдельно' },
         price: { minKzt: 1_400_000, maxKzt: 900_000 },
         leadTimeDays: 30,
       }),
