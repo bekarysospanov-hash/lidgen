@@ -4,13 +4,14 @@
 // Точность важна: состояние навигации живёт в history.state, то есть токен
 // переживает перезагрузку этой вкладки — и это нужное поведение, F5 не должен
 // терять единственную ссылку. Телефона в состоянии нет, и это главное.
+import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { PageShell } from '../../components/PageShell'
 import { absoluteUrl } from '../../router-mode'
 import { rememberRequest } from '../../probe-trail'
 import { RequestNumber, RequestStatus, Token } from '../../contract'
 import type { RequestStatus as RequestStatusValue } from '../../contract'
-import { buttonFilled, hintText, link, panel, panelNested } from '../../components/ui'
+import { buttonFilled, buttonText, errorTextClass, hintText, link } from '../../components/ui'
 import { sentPage, statusNote } from '../../texts/request'
 
 interface SentState {
@@ -33,6 +34,20 @@ function readState(raw: unknown): SentState | null {
 export default function RequestSent() {
   const location = useLocation()
   const state = readState(location.state)
+  /**
+   * Тихий успех: подпись кнопки меняется на «Скопировали» и возвращается
+   * сама (DESIGN.md § Отклик — всплывающих сообщений об успехе не заводим).
+   */
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+
+  // Подпись возвращается сама через две секунды: это подтверждение, а не
+  // состояние кнопки — нажать «Скопировать» второй раз должно быть можно.
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [copied])
 
   // Прямой заход по адресу: номера и ссылки взять неоткуда и хранить их
   // было нельзя. Говорим честно, куда ушла ссылка.
@@ -55,22 +70,26 @@ export default function RequestSent() {
   // иначе пересланный адрес открывает пустоту (src/router-mode.ts).
   const absolute = absoluteUrl(path)
 
+  /**
+   * Копирование. Ошибка бывает настоящая: буфер закрыт в приватном окне
+   * и в старых webview, и молчать про неё нельзя — человек нажмёт, ничего
+   * не произойдёт, и он решит, что ссылки у него больше нет.
+   */
+  function copyLink() {
+    setCopyError(false)
+    navigator.clipboard.writeText(absolute).then(
+      () => setCopied(true),
+      () => setCopyError(true),
+    )
+  }
+
   return (
     <PageShell>
       <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">{sentPage.title}</h1>
 
-      {/* Номер — настоящее число, по которому заявку найдут на дозвоне.
-          Плашка здесь оправдана: подпись, номер и пояснение — одно целое. */}
-      <section className="mt-3xl">
-        <div className={panel}>
-          <p className={hintText}>{sentPage.numberLabel}</p>
-          <p className="mt-xs text-heading tracking-heading font-semibold tabular-nums">
-            {state.number}
-          </p>
-          <p className={`mt-md max-w-measure ${hintText}`}>{sentPage.numberNote}</p>
-        </div>
-      </section>
-
+      {/* Первым — что теперь будет. Номер заявки стоял здесь крупнее всего
+          на экране, хотя в эту секунду человек спрашивает не «как меня
+          зовут в системе», а «что дальше». Номер переехал вниз. */}
       <section className="mt-3xl">
         <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
         <p className="mt-sm max-w-measure text-body tracking-body">{note.body}</p>
@@ -87,15 +106,18 @@ export default function RequestSent() {
       <section className="mt-3xl">
         <h2 className="text-subheading tracking-subheading font-medium">{sentPage.linkTitle}</h2>
         <p className={`mt-sm max-w-measure ${hintText}`}>{sentPage.linkNote}</p>
-        <div className={`mt-lg ${panel}`}>
-          <p className={`max-w-full overflow-x-auto text-body-sm tracking-body-sm break-all ${panelNested}`}>
-            {absolute}
-          </p>
+        {/* Адрес на экране не показывается: он и есть ключ к заявке
+            (контракт §3, §7), а открытый во всю ширину читается через плечо
+            и попадает в чужие кадры. Переслать его можно кнопкой. */}
+        <div className="mt-lg flex flex-wrap items-center gap-md">
+          <Link to={path} className={`whitespace-nowrap ${buttonFilled}`}>
+            {sentPage.linkOpen}
+          </Link>
+          <button type="button" className={buttonText} onClick={copyLink}>
+            {copied ? sentPage.linkCopied : sentPage.linkCopy}
+          </button>
         </div>
-        {/* Кнопка на холсте: главное действие принадлежит странице, не плашке. */}
-        <Link to={path} className={`mt-xl whitespace-nowrap ${buttonFilled}`}>
-          {sentPage.linkOpen}
-        </Link>
+        {copyError && <p className={`mt-sm max-w-measure ${errorTextClass}`}>{sentPage.linkCopyFailed}</p>}
 
         {/* US-21: адрес выше — единственный вход, и теряется он именно здесь,
             вместе с закрытой вкладкой. Второстепенное действие рядом с главным:
@@ -105,6 +127,15 @@ export default function RequestSent() {
             {sentPage.lostLink}
           </Link>
         </p>
+      </section>
+
+      {/* Номер — служебное, и стоит там, где его ищут: когда уже говорят
+          с мастерской. Ступень body, а не heading: это не то, ради чего
+          человек открыл экран. */}
+      <section className="mt-3xl">
+        <p className={hintText}>{sentPage.numberLabel}</p>
+        <p className="mt-xs text-body tracking-body font-medium tabular-nums">{state.number}</p>
+        <p className={`mt-xs max-w-measure ${hintText}`}>{sentPage.numberNote}</p>
       </section>
     </PageShell>
   )

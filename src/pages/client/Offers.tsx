@@ -11,7 +11,12 @@ import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
-import type { Quote, QuoteItem, RequestForClient } from '../../contract'
+import type {
+  Quote,
+  QuoteItem,
+  RequestForClient,
+  RequestStatus as RequestStatusValue,
+} from '../../contract'
 import {
   compositionLabels,
   compositionShown,
@@ -151,6 +156,17 @@ function QuoteCard({
     </div>
   )
 }
+
+/**
+ * Статусы, у которых есть что сказать сверх пустого состояния. `routed`
+ * и `qualified` говорят ровно то же самое — «ждём предложения», — и на
+ * экране без предложений это дубль.
+ */
+const STATUS_SPEAKS: readonly RequestStatusValue[] = [
+  'unconfirmed',
+  'out_of_coverage',
+  'closed',
+]
 
 /** «сегодня, 14:20» — человек смотрит страницу по нескольку раз в день. */
 function arrivedAt(iso: string): string {
@@ -325,20 +341,25 @@ export default function Offers() {
 
   return (
     <PageShell>
-      <p className={hintText}>{offersPage.numberLabel}</p>
-      <h1 className="mt-xs text-heading tracking-heading font-semibold tabular-nums">
-        {request.number}
+      {/* Заголовком стоит то, зачем человек открыл страницу. Номер заявки
+          был здесь и крупнее всего на экране — служебное число вместо
+          ответа на вопрос «что мне пришло» (разбор текстов, 18.09). */}
+      <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">
+        {offersPage.pageTitle}
       </h1>
+      <p className={`mt-xs tabular-nums ${hintText}`}>
+        {offersPage.numberLabel} {request.number}
+      </p>
 
-      {/* Статус заявки — «следы процесса»: человек должен видеть, что она
-          движется, а не лежит (DESIGN.md § Presence). Но когда предложения
-          уже пришли, плашка становится лишней: она объявляет «мебельщики
-          ответили, откройте ссылку» тому, кто эту ссылку и открыл. Дальше
-          за статус говорят сами предложения. */}
-      {request.quotes.length === 0 && (
+      {/* Статус показывается только там, где он говорит НЕ то же самое, что
+          пустое состояние ниже. «Заявка у мебельщиков. Ждём предложения» и
+          «Предложений пока нет. Мебельщики ещё не ответили» стояли подряд
+          и повторяли друг друга — человек читал это как две разные вещи
+          и искал между ними разницу (чек-лист DESIGN.md, п. 3).
+          Остались статусы, которые пустое состояние не покрывает: номер
+          не подтверждён, город без мастерских, заявка закрыта. */}
+      {request.quotes.length === 0 && STATUS_SPEAKS.includes(request.status) && (
         <section className="mt-3xl">
-          {/* Плашки нет: заголовок и абзац самостоятельны, а плашка вокруг
-              самостоятельного элемента — шум (DESIGN.md § Elevation). */}
           <h2 className="text-subheading tracking-subheading font-medium">{note.title}</h2>
           <p className="mt-sm max-w-measure text-body tracking-body">{note.body}</p>
         </section>
