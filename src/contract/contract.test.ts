@@ -40,6 +40,7 @@ import {
   Routing,
   MyCard,
   UpdateMyCard,
+  tier,
 } from './index'
 
 // Валидный CreateRequest для кухни — кейсы ниже отличаются одним полем
@@ -376,6 +377,7 @@ function validRequestForClient(overrides: Record<string, unknown> = {}) {
     city: { code: 'almaty', name: null },
     district: null,
     finishLevel: null,
+    readiness: null,
     photos: [],
     quotes: [],
     ...overrides,
@@ -486,7 +488,6 @@ describe('EventType', () => {
     'quote_sent',
     'client_page_opened',
     'contact_made',
-    'manual_completion',
     'request_closed',
   ])('%s — валидный тип события', (type) => {
     expect(EventType.safeParse(type).success).toBe(true)
@@ -705,10 +706,116 @@ describe('Photo и Photos — US-10', () => {
   })
 })
 
+describe('Полный путь заявки — поля 18.09', () => {
+  it('кухня без полного пути валидна: новые поля получают пустые значения', () => {
+    const parsed = Details.parse({ category: 'kitchen' })
+    expect(parsed).toEqual({
+      category: 'kitchen',
+      shape: null,
+      appliances: null,
+      secondWallM: null,
+      thirdWallM: null,
+      ceilingM: null,
+      upper: null,
+      applianceList: [],
+    })
+  })
+
+  it('кухня с размерами стен, потолком, верхом и техникой проходит', () => {
+    const value = {
+      category: 'kitchen',
+      shape: 'u-shape',
+      appliances: 'yes',
+      secondWallM: 2.4,
+      thirdWallM: 1.8,
+      ceilingM: 2.7,
+      upper: 'attic',
+      applianceList: ['oven', 'dishwasher', 'hood'],
+    }
+    expect(Details.safeParse(value).success).toBe(true)
+  })
+
+  it('высота потолка вне 2..4 отклоняется: 27 вместо 2,7 — опечатка, а не дом', () => {
+    expect(Details.safeParse({ category: 'kitchen', ceilingM: 27 }).success).toBe(false)
+    expect(Details.safeParse({ category: 'kitchen', ceilingM: 1.5 }).success).toBe(false)
+  })
+
+  it('повторы в списках отклоняются: «Духовка · Духовка» мебельщику не показать', () => {
+    expect(Details.safeParse({ category: 'kitchen', applianceList: ['oven', 'oven'] }).success).toBe(false)
+    expect(Details.safeParse({ category: 'wardrobe', inside: ['shelves', 'shelves'] }).success).toBe(false)
+    expect(Details.safeParse({ category: 'bathroom', needs: ['mirror', 'mirror'] }).success).toBe(false)
+  })
+
+  it('выдуманная техника отклоняется, а не проглатывается', () => {
+    const value = { category: 'kitchen', applianceList: ['oven', 'блендер'] }
+    expect(Details.safeParse(value).success).toBe(false)
+  })
+
+  it('шкаф: ниша с глубиной и наполнением проходит', () => {
+    const value = {
+      category: 'wardrobe',
+      placement: 'niche',
+      nicheDepthM: 0.6,
+      ceilingM: 2.8,
+      inside: ['shelves', 'rails', 'drawers'],
+    }
+    expect(Details.safeParse(value).success).toBe(true)
+  })
+
+  it('глубина ниши больше двух метров — это уже комната, а не ниша', () => {
+    expect(Details.safeParse({ category: 'wardrobe', nicheDepthM: 2.5 }).success).toBe(false)
+  })
+
+  it('ванная: подвес, раковина и нужды проходят, ветка больше не пустая', () => {
+    const value = {
+      category: 'bathroom',
+      mount: 'wall',
+      basin: 'need',
+      needs: ['vanity', 'mirror'],
+    }
+    expect(Details.safeParse(value).success).toBe(true)
+    expect(Details.parse({ category: 'bathroom' })).toEqual({
+      category: 'bathroom',
+      mount: null,
+      basin: null,
+      needs: [],
+    })
+  })
+
+  it('«Другое» несёт подкатегорию, и «пока не знаю» среди них законно', () => {
+    expect(Details.safeParse({ category: 'other', kind: 'kids' }).success).toBe(true)
+    expect(Details.safeParse({ category: 'other', kind: 'unknown' }).success).toBe(true)
+    expect(Details.safeParse({ category: 'other', kind: 'кухня' }).success).toBe(false)
+    expect(Details.parse({ category: 'other' })).toEqual({ category: 'other', kind: null })
+  })
+})
+
+describe('Полнота заявки — вычисляемое правило, а не поле', () => {
+  it('есть размер — измеренная, снимки роли не играют', () => {
+    expect(tier({ mainSize: { known: true, meters: 3.2 }, photosCount: 0 })).toBe('measured')
+  })
+
+  it('размера нет, но есть снимки — оценочная: вилка шире, но она будет', () => {
+    expect(tier({ mainSize: { known: false }, photosCount: 2 })).toBe('estimated')
+  })
+
+  it('ни размера, ни снимков — слепая: у мебельщика только описание', () => {
+    expect(tier({ mainSize: { known: false }, photosCount: 0 })).toBe('blind')
+  })
+})
+
 describe('Details — шкаф (US-06)', () => {
   it('двери и высота необязательны: заявка без них валидна', () => {
     const parsed = Details.parse({ category: 'wardrobe' })
-    expect(parsed).toEqual({ category: 'wardrobe', doors: null, toCeiling: null })
+    expect(parsed).toEqual({
+      category: 'wardrobe',
+      doors: null,
+      toCeiling: null,
+      placement: null,
+      nicheDepthM: null,
+      ceilingM: null,
+      inside: [],
+    })
   })
 
   it('купе и «до потолка» проходят', () => {
@@ -836,6 +943,7 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
       city: { code: 'almaty', name: null },
       district: null,
       photosCount: 3,
+      readiness: 'planning',
       quotedByMe: false,
     }
 
@@ -870,6 +978,7 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
       city: listItem.city,
       district: null,
       finishLevel: null,
+      readiness: null,
       photos: [],
       myQuote: null,
       clientPhone: null,

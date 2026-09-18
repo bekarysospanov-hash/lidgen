@@ -43,6 +43,7 @@ function validClientRequestBody(extra: Record<string, unknown> = {}) {
     city: { code: 'almaty', name: null },
     district: null,
     finishLevel: null,
+    readiness: null,
     photos: [],
     quotes: [],
     ...extra,
@@ -126,6 +127,7 @@ describe('confirmOtp', () => {
           city: { code: 'almaty', name: null },
           district: null,
           finishLevel: null,
+          readiness: null,
           photos: [],
           quotes: [],
         },
@@ -156,6 +158,7 @@ describe('getRequestByToken', () => {
         city: { code: 'almaty', name: null },
         district: null,
         finishLevel: null,
+        readiness: null,
         photos: [],
         quotes: [],
       }),
@@ -410,6 +413,7 @@ describe('кабинет мебельщика (§5б)', () => {
     city: { code: 'almaty', name: null },
     district: null,
     photosCount: 0,
+    readiness: null,
     quotedByMe: false,
   })
 

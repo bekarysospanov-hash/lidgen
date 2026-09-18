@@ -131,6 +131,7 @@ function toListItem(record: RequestRecord, masterId: string, routedAt: string) {
     city: record.city,
     district: record.district,
     photosCount: record.photos.length,
+    readiness: record.readiness,
     quotedByMe: myQuote(record, masterId) !== undefined,
   })
 }
@@ -178,6 +179,7 @@ export function getRequest(token: string, id: string): RequestForMaster {
     city: record.city,
     district: record.district,
     finishLevel: record.finishLevel,
+    readiness: record.readiness,
     photos: record.photos,
     myQuote: mine ?? null,
     // Требование ПДн, а не деталь экрана: до своего КП телефон не уходит

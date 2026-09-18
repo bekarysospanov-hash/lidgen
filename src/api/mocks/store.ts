@@ -11,6 +11,7 @@ import type {
   MainSize,
   Photo,
   Quote,
+  Readiness,
   RequestStatus,
   Source,
 } from '../../contract'
@@ -32,6 +33,7 @@ export interface RequestRecord {
   city: City
   district: string | null
   finishLevel: FinishLevel | null
+  readiness: Readiness | null
   phone: string
   consent: Consent | null
   source: Source | null

@@ -6,6 +6,14 @@ export const EventType = z.enum([
   'visit',
   'continue_clicked',
   'category_selected',
+  /**
+   * Ответ на вопрос о размере. Между выбором категории и заполнением
+   * обязательного было пусто, а развилка короткого и полного пути
+   * проходит именно здесь (18.09). Без события отвал «нажал „пока
+   * не знаю“ и ушёл» неотличим от «испугался числа и ушёл» — а это
+   * разные диагнозы: первый про аудиторию, второй про форму.
+   */
+  'size_answered',
   'required_filled',
   'request_submitted',
   'otp_requested',
@@ -15,7 +23,6 @@ export const EventType = z.enum([
   'quote_sent',
   'client_page_opened',
   'contact_made',
-  'manual_completion',
   'request_closed',
   /** US-21: заказчица попросила прислать ссылку заново. */
   'link_resent',
@@ -46,6 +53,7 @@ export const FUNNEL_EVENTS = [
   'visit',
   'continue_clicked',
   'category_selected',
+  'size_answered',
   'required_filled',
 ] as const satisfies readonly EventType[]
 

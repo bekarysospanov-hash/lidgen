@@ -66,6 +66,7 @@ function toClientProjection(record: RequestRecord) {
     city: record.city,
     district: record.district,
     finishLevel: record.finishLevel,
+    readiness: record.readiness,
     photos: record.photos,
     quotes: record.quotes,
   })
@@ -128,6 +129,7 @@ export function create(input: CreateRequestInput): RequestCreated {
     city: payload.city,
     district: payload.district ?? null,
     finishLevel: payload.finishLevel ?? null,
+    readiness: payload.readiness ?? null,
     phone: payload.phone,
     consent: payload.consent ?? null,
     source: payload.source ?? null,

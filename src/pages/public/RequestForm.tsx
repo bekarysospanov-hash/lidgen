@@ -388,12 +388,34 @@ export default function RequestForm() {
       return { errors: next }
     }
 
+    // Поля полного пути (18.09) заполняются следующим шагом — вопросы к ним
+    // ещё не выведены на экран. Пустые значения законны: ветка расширена
+    // nullable-полями именно затем, чтобы короткий путь остался коротким.
     const details: Details =
       chosen === 'kitchen'
-        ? { category: 'kitchen', shape, appliances }
+        ? {
+            category: 'kitchen',
+            shape,
+            appliances,
+            secondWallM: null,
+            thirdWallM: null,
+            ceilingM: null,
+            upper: null,
+            applianceList: [],
+          }
         : chosen === 'wardrobe'
-          ? { category: 'wardrobe', doors, toCeiling }
-          : { category: chosen }
+          ? {
+              category: 'wardrobe',
+              doors,
+              toCeiling,
+              placement: null,
+              nicheDepthM: null,
+              ceilingM: null,
+              inside: [],
+            }
+          : chosen === 'bathroom'
+            ? { category: 'bathroom', mount: null, basin: null, needs: [] }
+            : { category: 'other', kind: null }
 
     if (!attemptId.current) attemptId.current = crypto.randomUUID()
 
