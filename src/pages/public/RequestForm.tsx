@@ -645,6 +645,12 @@ export default function RequestForm() {
     // самое интересное место в воронке, и терять его нельзя.
     track('continue_clicked')
 
+    // Ответ о размере висел только на уходе фокуса: человек, вписавший число
+    // и сразу нажавший «Продолжить», события не порождал, и часть воронки
+    // терялась (долг с 18.09). Повтор безопасен — `track` считает события
+    // воронки один раз за сессию.
+    answeredSize(!sizeUnknown && size.trim().length > 0)
+
     const result = build(category)
     if ('errors' in result) {
       setErrors(result.errors)

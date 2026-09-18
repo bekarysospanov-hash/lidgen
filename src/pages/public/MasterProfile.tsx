@@ -51,7 +51,7 @@ function InfoRow({ icon, title, note }: {
       <div className="flex items-start gap-md px-md py-md">
         <span className="mt-xs text-on-surface-muted">{icon}</span>
         <span className="min-w-0">
-          <span className="block text-body tracking-body">{title}</span>
+          <span className="block text-body tracking-body tabular-nums">{title}</span>
           {note !== undefined && note !== '' && (
             <span className={`mt-xs block ${hintText}`}>{note}</span>
           )}
@@ -232,7 +232,7 @@ export default function MasterProfile() {
 
       {/* Шапка экрана: метка → заголовок → лид (§ Шапка экрана). Метка —
           роль, город и стаж: место мастерской в мире заказчика. */}
-      <p className={`mt-lg ${hintText}`}>
+      <p className={`mt-lg tabular-nums ${hintText}`}>
         {roleText(card.role).label} · {cityName(master.city)} ·{' '}
         {mastersPage.yearsLabel(card.yearsOnMarket)}
       </p>

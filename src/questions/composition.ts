@@ -67,6 +67,38 @@ export function compositionFor(category: CategoryId): { parts: QuoteItem[]; serv
 }
 
 /**
+ * Отмеченный состав, разложенный на две группы — то, из чего состоит предмет,
+ * и работы. Порядок внутри групп берётся из перечня системы, а не из того,
+ * как отмечал мебельщик: иначе один и тот же состав читался бы по-разному
+ * в двух предложениях, и сравнить их глазами стало бы труднее.
+ *
+ * Группы нужны не для красоты: позиций до девятнадцати, а список длиннее
+ * восьми строк DESIGN.md запрещает — линии сливаются в штриховку, и глазу
+ * не за что зацепиться. Обе группы в пределе: частей не больше восьми,
+ * работ четыре.
+ */
+export function splitComposition(items: readonly QuoteItem[]): {
+  parts: QuoteItem[]
+  services: QuoteItem[]
+} {
+  const order = Object.keys(compositionLabels) as QuoteItem[]
+  const chosen = order.filter((item) => items.includes(item))
+  return {
+    parts: chosen.filter((item) => !compositionServices.includes(item)),
+    services: chosen.filter((item) => compositionServices.includes(item)),
+  }
+}
+
+/**
+ * Подписи групп при показе — короткие, не вопросы. В форме мебельщик читает
+ * «Что входит в цену?», в готовом предложении вопрос уже отвечен.
+ */
+export const compositionShown = {
+  parts: 'В предмете',
+  services: 'Из работ',
+} as const
+
+/**
  * Тексты формы состава. Здесь, а не в `src/texts`, по той же причине, что
  * и вопросы: это формулировки, которые правятся по итогам дозвонов, и они
  * ценнее остального кода.

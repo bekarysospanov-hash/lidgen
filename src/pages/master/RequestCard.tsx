@@ -28,7 +28,13 @@ import {
   stepPanel,
 } from '../../components/ui'
 import type { MasterSession, QuoteItem, RequestForMaster } from '../../contract'
-import { compositionAsk, compositionFor, compositionLabels } from '../../questions/composition'
+import {
+  compositionAsk,
+  compositionFor,
+  compositionLabels,
+  compositionShown,
+  splitComposition,
+} from '../../questions/composition'
 import {
   applianceList,
   bathroomMount,
@@ -527,9 +533,31 @@ export default function RequestCard() {
                 )}{' '}
                 · {quotePage.leadTime(request.myQuote.leadTimeDays)}
               </p>
-              <p className="mt-sm max-w-measure text-body-sm tracking-body-sm">
-                {request.myQuote.composition.items.map((item) => compositionLabels[item]).join(' · ')}
-              </p>
+              {/* Двумя группами, а не строкой через « · »: позиций до
+                  девятнадцати, и одной строкой они читаются как простыня,
+                  в которой не найти, входит ли замер (DESIGN.md, список
+                  длиннее восьми строк — другой компонент). */}
+              {(() => {
+                const shown = splitComposition(request.myQuote.composition.items)
+                return (
+                  <div className="mt-sm max-w-measure">
+                    {([['parts', shown.parts], ['services', shown.services]] as const)
+                      .filter(([, list]) => list.length > 0)
+                      .map(([group, list]) => (
+                        <div key={group} className="mt-md first:mt-0">
+                          <p className={hintText}>{compositionShown[group]}</p>
+                          <ul className="mt-xs">
+                            {list.map((item) => (
+                              <li key={item} className="mt-xs text-body-sm tracking-body-sm first:mt-0">
+                                {compositionLabels[item]}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                  </div>
+                )
+              })()}
               {request.myQuote.composition.extra !== undefined && (
                 <p className="mt-xs max-w-measure text-body-sm tracking-body-sm">
                   {request.myQuote.composition.extra}

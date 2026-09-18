@@ -60,7 +60,9 @@ export function MasterListCard({ master, asPreview = false }: {
       )}
 
       <p className="text-subheading tracking-subheading font-medium">{master.name}</p>
-      <p className={`mt-xs ${hintText}`}>
+      {/* tabular-nums: карточки идут столбцом, и годы со сроками читаются
+          по вертикали — без него «12 лет» и «4 года» гуляют по ширине. */}
+      <p className={`mt-xs tabular-nums ${hintText}`}>
         {roleText(card.role).label} · {cityName(master.city)} ·{' '}
         {mastersPage.yearsLabel(card.yearsOnMarket)}
       </p>
@@ -103,7 +105,9 @@ export function MasterListCard({ master, asPreview = false }: {
         </ul>
       )}
 
-      {terms.length > 0 && <p className={`mt-sm ${hintText}`}>{terms.join(' · ')}</p>}
+      {terms.length > 0 && (
+        <p className={`mt-sm tabular-nums ${hintText}`}>{terms.join(' · ')}</p>
+      )}
 
       {!asPreview && (
         <p className="mt-lg">

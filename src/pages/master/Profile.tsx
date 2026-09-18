@@ -31,7 +31,6 @@ import {
   fieldLabel,
   hintText,
   panel,
-  panelNested,
 } from '../../components/ui'
 import {
   CARD_LIMITS,
@@ -611,16 +610,10 @@ export default function MasterProfileEdit() {
                 ))}
             </ul>
 
-            {/* Как это прочтётся в каталоге — тем же чипсом, каким показано там. */}
-            {parseDoes(draft.does).length > 0 && (
-              <div className={`mt-lg ${panelNested}`}>
-                <ul className="flex flex-wrap gap-sm">
-                  {parseDoes(draft.does).map((item) => (
-                    <li key={item} className={chip(false)}>{item}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* Показ «как это прочтётся в каталоге» отсюда убран: ниже стоит
+                предпросмотр всей карточки, и направления в нём уже видно.
+                Одно и то же, сказанное дважды, человек читает как две разные
+                вещи и ищет между ними разницу (чек-лист, п. 3). */}
           </Part>
 
           {/* Кто перед заказчиком. Стоит до услуг: «цех» и «производство» —

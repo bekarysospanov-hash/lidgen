@@ -12,7 +12,11 @@ import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { Token } from '../../contract'
 import type { Quote, QuoteItem, RequestForClient } from '../../contract'
-import { compositionLabels } from '../../questions/composition'
+import {
+  compositionLabels,
+  compositionShown,
+  splitComposition,
+} from '../../questions/composition'
 import { buttonFilled, fieldLabel, hintText, link, panel, panelNested } from '../../components/ui'
 import { trackForRequest } from '../../analytics'
 import { probeText } from '../../texts/probe'
@@ -57,6 +61,8 @@ function QuoteCard({
    * позвонить можно и мимо продукта, и об этом честно сказано в PRD.
    */
   const [contactShown, setContactShown] = useState(false)
+  /** Части предмета и работы порознь: разница в цене чаще лежит во вторых. */
+  const shown = splitComposition(quote.composition.items)
 
   return (
     <div className={panel}>
@@ -81,13 +87,24 @@ function QuoteCard({
           Строки, а не чипсы: чипс в системе несёт выбор, а выбирать здесь
           нечего, и некликабельное не должно притворяться (§ Affordance). */}
       <p className={`mt-xl ${fieldLabel}`}>{offersPage.quoteWhat}</p>
-      <ul className="mt-xs max-w-measure">
-        {quote.composition.items.map((item) => (
-          <li key={item} className="mt-xs text-body tracking-body first:mt-0">
-            {compositionLabels[item]}
-          </li>
+      {/* Двумя группами: позиций бывает до девятнадцати, а список длиннее
+          восьми строк система запрещает — линии сливаются в штриховку.
+          Работы отделены от частей предмета намеренно: разница в цене чаще
+          лежит в том, входит ли замер, а не в фасадах. */}
+      {([['parts', shown.parts], ['services', shown.services]] as const)
+        .filter(([, list]) => list.length > 0)
+        .map(([group, list]) => (
+          <div key={group} className="mt-md first:mt-xs">
+            <p className={hintText}>{compositionShown[group]}</p>
+            <ul className="mt-xs max-w-measure">
+              {list.map((item) => (
+                <li key={item} className="mt-xs text-body tracking-body first:mt-0">
+                  {compositionLabels[item]}
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
 
       {quote.composition.extra !== undefined && (
         <>
