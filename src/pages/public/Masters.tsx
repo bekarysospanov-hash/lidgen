@@ -8,10 +8,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../../api/client'
+import { MasterListCard } from '../../components/MasterListCard'
 import { PageShell } from '../../components/PageShell'
-import { buttonFilled, hintText, link, panel } from '../../components/ui'
+import { buttonFilled } from '../../components/ui'
 import type { MasterCardPublic } from '../../contract'
-import { cityName } from '../../questions/categories'
 import { mastersPage } from '../../texts/masters'
 
 type View =
@@ -21,38 +21,6 @@ type View =
 
 function Title({ children }: { children: React.ReactNode }) {
   return <h1 className="text-heading tracking-heading font-semibold">{children}</h1>
-}
-
-/**
- * Карточка в списке — краткая: что умеет вместо цены (US-02) и один снимок.
- * Полностью карточка раскрывается по ссылке (US-03): семь мастерских по шесть
- * фотографий и шестьсот знаков текста превращают каталог в ленту, которую
- * никто не дочитывает, а витрина доверия должна читаться за один экран.
- */
-function MasterCardView({ master }: { master: MasterCardPublic }) {
-  return (
-    <div className={panel}>
-      <p className="text-subheading tracking-subheading font-medium">{master.name}</p>
-      <p className={`mt-xs ${hintText}`}>
-        {cityName(master.city)} · {mastersPage.yearsLabel(master.card.yearsOnMarket)}
-      </p>
-
-      <p className={`mt-lg ${hintText}`}>{mastersPage.doesLabel}</p>
-      <p className="mt-xs text-body tracking-body">{master.card.does.join(' · ')}</p>
-
-      {/* Первый снимок — радиус 0, своя работа (§ Shapes, US-02). Остальные
-          в карточке: список показывает, что мастерская живая, а не всё о ней. */}
-      {master.card.photos[0] !== undefined && (
-        <img src={master.card.photos[0]} alt="" className="mt-lg aspect-[3/2] w-full object-cover" />
-      )}
-
-      <p className="mt-lg">
-        <Link to={`/masters/${master.id}`} className={link}>
-          {mastersPage.openCard}
-        </Link>
-      </p>
-    </div>
-  )
 }
 
 export default function Masters() {
@@ -106,7 +74,7 @@ export default function Masters() {
       <ul className="mt-3xl flex flex-col gap-xl">
         {view.masters.map((master) => (
           <li key={master.id}>
-            <MasterCardView master={master} />
+            <MasterListCard master={master} />
           </li>
         ))}
       </ul>

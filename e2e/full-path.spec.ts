@@ -238,30 +238,98 @@ test('карточка мастерской без согласия не сущ�
   // US-03. Мастерская в списке есть, карточки у неё нет — ответ тот же, что
   // для несуществующей: приём заявок и публикация разные решения. Человека
   // при этом нельзя оставлять в тупике, отсюда объяснение и выход на форму.
-  await page.goto('/masters/aaaaaaa2-aaaa-4aaa-8aaa-aaaaaaaaaaa2')
+  // Третья: у первых двух с 18.09 лежат демонстрационные карточки (PROBE).
+  await page.goto('/masters/aaaaaaa3-aaaa-4aaa-8aaa-aaaaaaaaaaa3')
   await expect(page.getByRole('heading', { name: 'Такой мастерской нет в каталоге' })).toBeVisible()
   await expect(page.getByRole('link', { name: 'Оставить заявку' })).toBeVisible()
   await снимок(page, 'мастерской-нет-в-каталоге')
 })
 
 test('опубликованная карточка открывается целиком — US-03 @shots', async ({ page }) => {
-  // Первая мастерская — единственная с карточкой (PROBE, 18.09). До неё
-  // экран с данными не проверялся ни разу: только пустые состояния.
+  // Первая мастерская — заполненная карточка (PROBE, 18.09). Проверяется
+  // не только заголовок: карточка обязана показать, что входит в работу,
+  // сроки и разбитые по виду работы снимки — ради этого её и открывают.
   await page.goto('/masters/aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')
   await expect(page.getByRole('heading', { name: 'Мастерская на Сайране' })).toBeVisible()
-  await expect(page.getByText('Кухни', { exact: true })).toBeVisible()
+  await expect(page.getByText('Кухни', { exact: true }).first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Что входит в работу' })).toBeVisible()
+  await expect(page.getByText('Замер на месте')).toBeVisible()
+  await expect(page.getByText('от 25 до 35 дней')).toBeVisible()
+  await expect(page.getByText('Шкафы и гардеробные')).toBeVisible()
+  // Телефона в каталоге нет, и причина названа словами (US-24).
+  await expect(page.getByText('Телефон мастерская пришлёт')).toBeVisible()
   await expect(page.locator('img').first()).toBeVisible()
   await снимок(page, 'карточка-мастерской-заполненная')
 })
 
 test('каталог показывает опубликованную карточку @shots', async ({ page }) => {
   // Пустой каталог со словами «Каталог ещё собирается» проверялся до 18.09,
-  // пока карточек не было ни одной. Теперь одна есть (PROBE), и проверяется
-  // обратное: витрина показывает то, что опубликовано, и ведёт в карточку.
+  // пока карточек не было ни одной. Теперь их три (PROBE), и проверяется
+  // обратное: витрина показывает опубликованное и ведёт в карточку.
   await page.goto('/masters')
   await expect(page.getByText('Мастерская на Сайране')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Смотреть работы' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Смотреть работы' }).first()).toBeVisible()
+  // Каталог сравнивает мастерские по тому, что входит в работу (US-02).
+  await expect(page.getByText('Замер на месте').first()).toBeVisible()
+  // Скупо заполненная карточка стоит рядом и не выглядит сломанной:
+  // гарантия названа коротким сроком, отличий своими словами нет вовсе.
+  await expect(page.getByText('Гарантия год')).toBeVisible()
   await page.screenshot({ path: `${ПАПКА}/09-каталог.png`, fullPage: true })
+})
+
+/**
+ * US-20 — запись, а не чтение. До 18.09 каталог проверялся только на чтение:
+ * шесть сценариев открывали карточку, и ни один не проверял, что правка
+ * мебельщика до неё доезжает. Это самый новый экран сессии, и держался он
+ * на одних скриншотах.
+ *
+ * Страница не перезагружается: мок-сессии живут в памяти вкладки, и переход
+ * в каталог идёт ссылкой шапки, как у человека.
+ */
+test('мебельщик правит карточку — и правка видна в каталоге @shots', async ({ page }) => {
+  await page.goto('/master')
+  await войти(page, МАСТЕР_ОДИН)
+  await page.getByRole('link', { name: 'Моя карточка' }).click()
+
+  // Предпросмотр показывает то же, что каталог: мебельщик видит себя
+  // глазами заказчика до сохранения.
+  await expect(page.getByRole('heading', { name: 'Так вас видят в каталоге' })).toBeVisible()
+
+  const отличие = 'Работаем по субботам без наценки'
+  await page.getByRole('button', { name: 'Добавить пункт' }).click()
+  await page.getByLabel('Чем отличаетесь, 3').fill(отличие)
+
+  // Условие услуги — то, ради чего услуги вообще стали объектами: «в цене»
+  // и «отдельно» должны доезжать до каталога по отдельности (контракт §2).
+  await page.locator('label', { hasText: 'Разбираю и вывожу старую' }).first().click()
+  // Условие ищется внутри группы своей услуги: чипсов «Отдельно» на экране
+  // столько же, сколько отмеченных услуг, и «последний» — не признак.
+  await page
+    .getByRole('group', { name: 'Разбираю и вывожу старую' })
+    .locator('label', { hasText: 'Отдельно' })
+    .click()
+
+  await page.getByRole('button', { name: 'Сохранить карточку' }).click()
+  await expect(page.getByText('Сохранили. В каталоге это появится сразу.')).toBeVisible()
+  await снимок(page, 'карточка-мебельщика-сохранена')
+
+  // В кабинете своя шапка, публичной навигации в ней нет — выходим знаком
+  // сервиса, как это делает человек: он жмёт на логотип и попадает домой.
+  await page.getByRole('link', { name: 'Капибара' }).click()
+  await черезПробу(page, 'Мастерские')
+  await page.waitForURL('**/masters')
+  // Имя мастерской встречается и на лендинге — в панели пробы, — поэтому
+  // здесь проверяется заголовок карточки списка, а не текст где угодно.
+  await expect(page.getByRole('heading', { name: 'Мастерские' })).toBeVisible()
+  await page.getByRole('link', { name: 'Смотреть работы' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Мастерская на Сайране' })).toBeVisible()
+  await expect(page.getByText(отличие)).toBeVisible()
+  await expect(page.getByText('Уберёт старую мебель — за отдельную плату')).toBeVisible()
+
+  // Телефон мастерской в каталог не уходит вовсе (контракт §2): он вырезан
+  // схемой, а не спрятан показом, и в теле ответа его тоже нет.
+  await expect(page.getByText('+7701')).toHaveCount(0)
+  await снимок(page, 'правка-доехала-до-каталога')
 })
 
 test('политика открывается и честно помечена черновиком @shots', async ({ page }) => {
