@@ -102,12 +102,12 @@ test('заявка доходит от формы до вилки на стра�
   await page.getByLabel('Куда прислать ответ?').fill('7012468024')
 
   // 3 · Без согласия отправки нет (US-11) — проверка до того, как отметим
-  await page.getByRole('button', { name: 'Продолжить' }).click()
+  await page.getByRole('button', { name: 'Отправить заявку' }).click()
   await expect(page.getByText('Без согласия заявку отправить нельзя')).toBeVisible()
 
   await снимок(page, 'форма-заполнена')
   await page.getByText('Согласен на обработку своих данных').click()
-  await page.getByRole('button', { name: 'Продолжить' }).click()
+  await page.getByRole('button', { name: 'Отправить заявку' }).click()
 
   // 4 · Код
   await expect(page.getByRole('heading', { name: 'Подтвердите номер' })).toBeVisible()
