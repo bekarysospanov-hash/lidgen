@@ -107,10 +107,10 @@ export function CloseIcon() {
  * Галочка для строк-обещаний в шапке экрана. Зелёная: в системе зелёный —
  * действие, успех и выбор (§ Colors), и «так будет» относится к успеху.
  */
-export function CheckIcon() {
+export function CheckMark() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0 text-primary"
-      fill="none" stroke="currentColor" strokeWidth="2"
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-md" fill="none"
+      stroke="currentColor" strokeWidth="3"
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M4 12.5l5 5L20 6.5" />
     </svg>

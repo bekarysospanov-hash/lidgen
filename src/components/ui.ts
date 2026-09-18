@@ -6,8 +6,8 @@
 // системы превращалась в шесть правок, три из которых забывались.
 //
 // Здесь не заводится ничего сверх DESIGN.md: это ровно input · block-row ·
-// chip · choice-dot · button-filled · button-text · panel · panel-nested ·
-// link из раздела Components.
+// chip · choice-dot · choice-box · button-filled · button-text · panel ·
+// panel-nested · link из раздела Components.
 //
 // И ничего сверх ПРИМЕНЁННОГО: `badge` описан в системе, но ни на одном
 // экране пока не стоит, поэтому строки под него здесь нет. Заводить впрок
@@ -61,17 +61,41 @@ export const blockRowDivider = 'border-b border-outline last:border-b-0'
 
 /**
  * choice-dot — круг 20 с границей `outline`; отмеченный заливается зелёным
- * (§ Components). Круглое в системе разрешено ровно двум вещам, и это одна
- * из них: квадратный индикатор глаз проскакивает мимо.
+ * (§ Components). Означает «одно из»: отметив второе, человек снимает первое.
+ * Круглое в системе разрешено двум вещам — точке и чипсу, — и здесь круг
+ * не просто разрешён, а обязателен: квадрат в единичном выборе глаз
+ * проскакивает мимо. Множественный выбор носит квадрат, см. `choiceBox`.
  */
 export const choiceDot = (selected: boolean) =>
   'ml-auto size-icon-sm shrink-0 rounded-full border-2 transition-colors duration-100 ' +
   (selected ? 'border-primary bg-primary' : 'border-outline')
 
 /**
+ * choice-box — квадрат 20 с радиусом 4 и границей `outline`; отмеченный
+ * заливается зелёным, внутри белая галочка (§ Components).
+ *
+ * Единственная квадратная отметка системы, и форма здесь несёт смысл: круг
+ * точки означает «одно из», квадрат — «отметь сколько нужно». Квадрат
+ * в единичном выборе система запрещает по-прежнему — там он не добавляет
+ * к кругу ничего и глаз проскакивает его мимо (§ Shapes).
+ *
+ * Галочка обязательна: заливка без неё отличается от невыбранного состояния
+ * только цветом, а § Состояния требует трёх каналов сразу — тон, контур,
+ * отметка.
+ */
+export const choiceBox = (selected: boolean) =>
+  'ml-auto flex size-icon-sm shrink-0 items-center justify-center rounded-sm border-2 ' +
+  'transition-colors duration-100 ' +
+  (selected ? 'border-primary bg-primary text-on-primary' : 'border-outline')
+
+/**
  * chip — короткое значение пилюлей: город, «да / нет», «пока не знаю».
  * Внутри блока невыбранный чипс берёт второй уровень, а не первый: блок сам
  * первого уровня, и чипс на нём иначе сливается с фоном.
+ *
+ * Границы применимости — два условия сразу (§ Components): значений в группе
+ * не больше пяти и самое длинное не длиннее 22 знаков. Не проходит хотя бы
+ * по одному — это строки с `choiceBox`, а не чипсы.
  */
 export const chip = (selected: boolean) =>
   'inline-flex min-h-target cursor-pointer items-center rounded-full border px-lg py-sm ' +

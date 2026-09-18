@@ -135,12 +135,15 @@ describe('confirmOtp', () => {
     expect(events.some((event) => event.type === 'otp_confirmed')).toBe(true)
   })
 
-  it('mainSize.known:false, almaty → incomplete', async () => {
+  // Размер на статус больше не влияет (решение PM 18.09): дозвона в пробе
+  // нет, и заявка без метража уходит мебельщикам как есть — иначе она
+  // оставалась бы ждать звонка, которого никто не сделает.
+  it('mainSize.known:false, almaty → routed: размер заявку не задерживает', async () => {
     const { confirmed } = await createAndConfirm({ mainSize: { known: false } })
-    expect(confirmed.request.status).toBe('incomplete')
+    expect(confirmed.request.status).toBe('routed')
   })
 
-  it("city.code:'other' и mainSize.known:false → out_of_coverage (приоритет над incomplete)", async () => {
+  it("city.code:'other' и mainSize.known:false → out_of_coverage: решает покрытие", async () => {
     const { confirmed } = await createAndConfirm({
       city: { code: 'other', name: 'Талдыкорган' },
       mainSize: { known: false },
@@ -601,13 +604,15 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
       expect(await mockApi.listRequestsForMaster(token)).toEqual([])
     })
 
-    it('incomplete не маршрутизируется — сначала дозвон', async () => {
+    it('заявка без размера маршрутизируется — мебельщик решает сам', async () => {
       const { confirmed } = await createAndConfirm({ mainSize: { known: false } })
-      expect(confirmed.request.status).toBe('incomplete')
-      expect(confirmed.request.routedAt).toBeNull()
+      expect(confirmed.request.status).toBe('routed')
+      expect(confirmed.request.routedAt).not.toBeNull()
 
       const { token } = await login(ALMATY_PHONES[0])
-      expect(await mockApi.listRequestsForMaster(token)).toEqual([])
+      const list = await mockApi.listRequestsForMaster(token)
+      expect(list).toHaveLength(1)
+      expect(list[0].mainSize.known).toBe(false)
     })
 
     it('вне покрытия не маршрутизируется — передавать некому', async () => {
@@ -729,9 +734,19 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
       // Мастерская из списка есть, карточки у неё нет — ответ тот же, что
       // для несуществующего id: приём заявок и публикация разные решения,
       // и подтверждать существование мастерской чужому человеку незачем.
-      await expect(mockApi.getMasterCard('aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')).rejects.toSatisfy(
+      // Берётся вторая: у первой с 18.09 лежит демонстрационная карточка
+      // (PROBE), иначе три экрана нельзя посмотреть с данными.
+      await expect(mockApi.getMasterCard('aaaaaaa2-aaaa-4aaa-8aaa-aaaaaaaaaaa2')).rejects.toSatisfy(
         (e: unknown) => isApiError(e) && e.code === 'MASTER_NOT_FOUND',
       )
+    })
+
+    it('опубликованная карточка отдаётся целиком — US-03', async () => {
+      const card = await mockApi.getMasterCard('aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')
+      expect(card.name).toBe('Мастерская на Сайране')
+      expect(card.card.about.length).toBeGreaterThan(0)
+      expect(card.card.does.length).toBeGreaterThan(0)
+      expect(card.card.photos.length).toBeGreaterThan(0)
     })
 
     it('несуществующая мастерская отвечает так же', async () => {
@@ -741,14 +756,26 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
     })
 
     it('мебельщик видит своё название и город, карточки пока нет', async () => {
-      const session = await login(ALMATY_PHONES[0])
+      const session = await login(ALMATY_PHONES[1])
       const mine = await mockApi.getMyCard(session.token)
       expect(mine.name.length).toBeGreaterThan(0)
       expect(mine.card).toBeNull()
     })
 
-    it('правка до публикации — CARD_NOT_PUBLISHED, а не ошибка ввода', async () => {
+    it('у кого карточка опубликована — тот видит её и правит текст', async () => {
       const session = await login(ALMATY_PHONES[0])
+      const saved = await mockApi.updateMyCard(session.token, {
+        about: 'Кухни и шкафы на заказ, монтаж свой',
+        yearsOnMarket: 13,
+        does: ['Кухни', 'Шкафы-купе'],
+      })
+      expect(saved.card?.about).toBe('Кухни и шкафы на заказ, монтаж свой')
+      // Снимки правкой текста не трогаются: их собираем мы (A2, §5б).
+      expect(saved.card?.photos.length).toBeGreaterThan(0)
+    })
+
+    it('правка до публикации — CARD_NOT_PUBLISHED, а не ошибка ввода', async () => {
+      const session = await login(ALMATY_PHONES[1])
       await expect(
         mockApi.updateMyCard(session.token, {
           about: 'Кухни на заказ',

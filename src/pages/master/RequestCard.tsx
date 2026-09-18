@@ -10,11 +10,14 @@ import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { MasterShell } from '../../components/MasterShell'
 import { CategoryIcon } from '../../components/CategoryIcon'
+import { CheckMark } from '../../components/icons'
 import {
   badge,
+  blockRow,
+  blockRowDivider,
   buttonFilled,
   buttonText,
-  chip,
+  choiceBox,
   errorTextClass,
   field,
   fieldLabel,
@@ -22,6 +25,7 @@ import {
   link,
   panel,
   panelNested,
+  stepPanel,
 } from '../../components/ui'
 import type { MasterSession, QuoteItem, RequestForMaster } from '../../contract'
 import { compositionAsk, compositionFor, compositionLabels } from '../../questions/composition'
@@ -75,6 +79,72 @@ function Title({ children }: { children: React.ReactNode }) {
  * один край на любой ширине, а расстояние между ними — 4, как между строкой
  * и её подписью (DESIGN.md § Layout).
  */
+/**
+ * Список позиций состава — строки блока с отметкой множественного выбора.
+ *
+ * Чипсами это не собирается (§ Components, 18.09): подписи здесь по 15–25
+ * знаков, а чипс держит до 22 и не больше пяти значений в группе. Восемь
+ * частей кухни пилюлями встают столбиком с рваным краем — `flex-wrap` при
+ * этом стоит и формально соблюдён, переносить просто нечего.
+ *
+ * Иконки слева нет: нарисовать предметный контур для «Плавного закрывания
+ * дверец» нечем, а значок ради значка система запрещает. Каркас держит
+ * колонка отметок справа, и длина подписи её не двигает.
+ *
+ * Вопрос стоит НАД плашкой, а не внутри: плашка держит однородное — сами
+ * строки, — а заголовок называет её снаружи (чек-лист экрана, п.1).
+ *
+ * Ступень вопроса — 22, как у разделов экрана: меткой 14 он был мельче
+ * собственной подсказки на 15, и глаз читал пояснение раньше вопроса.
+ *
+ * Ширина списка — мера текста: на широком экране во всю колонку между
+ * подписью «Дверцы» и отметкой оставалось 600px пустоты, и связь между
+ * ними приходилось искать. Четвёртой ширины в системе нет, поэтому мера
+ * текста, а не «сколько-нибудь поуже».
+ */
+function ItemList({ question, hint, items, chosen, onToggle, className }: {
+  question: string
+  hint: string
+  items: QuoteItem[]
+  chosen: QuoteItem[]
+  onToggle: (item: QuoteItem) => void
+  className: string
+}) {
+  return (
+    <fieldset className={className}>
+      <legend className="text-subheading tracking-subheading font-medium text-balance">
+        {question}
+      </legend>
+      <p className={`mt-sm max-w-measure ${hintText}`}>{hint}</p>
+      <div className={`mt-lg max-w-measure ${stepPanel}`}>
+        {/* Отрицательный отступ по бокам — чтобы фон выбранной строки доходил
+            до краёв плашки, а не висел внутри неё вторым прямоугольником. */}
+        <div className="-mx-md">
+          {items.map((item) => {
+            const on = chosen.includes(item)
+            return (
+              <div key={item} className={blockRowDivider}>
+                <label className={blockRow(on)}>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={on}
+                    onChange={() => onToggle(item)}
+                  />
+                  <span className="min-w-0">{compositionLabels[item]}</span>
+                  <span aria-hidden="true" className={choiceBox(on)}>
+                    {on && <CheckMark />}
+                  </span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </fieldset>
+  )
+}
+
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="border-b border-outline py-md last:border-b-0">
@@ -221,9 +291,8 @@ export default function RequestCard() {
     label: quotePage.cityLabel,
     value: [city, request.district].filter(Boolean).join(', '),
   })
-  details.push({ label: quotePage.deadlineLabel, value: request.deadline ?? quotePage.notSet })
-  // Уровень отделки спрашивается с US-08. Поле необязательное: заказчица
-  // могла его пропустить — тогда честное «не указан», а не прочерк.
+  // Уровень отделки спрашивается с US-08. Поле необязательное: его могли
+  // пропустить в форме — тогда честное «не указан», а не прочерк.
   const finish = finishLevel.options.find((option) => option.id === request.finishLevel)
   details.push({ label: quotePage.finishLabel, value: finish?.label ?? quotePage.notSet })
 
@@ -423,57 +492,49 @@ export default function RequestCard() {
         </section>
       ) : (
         <section className="mt-3xl">
-          <h2 className="text-subheading tracking-subheading font-medium">
-            {revising ? quotePage.reviseTitle : quotePage.formTitle}
-          </h2>
-          <p className={`mt-sm max-w-measure ${hintText}`}>
+          {/* Своего заголовка у блока ответа нет, и это решение PM 18.09:
+              вопросы набраны той же ступенью 22, что «Что просят» и
+              «Подробности», то есть каждый вопрос — раздел экрана. Заголовок
+              «Ваш ответ» встал бы над ними третьим ярусом, а ступени между
+              22 и 17 в системе не существует.
+
+              Предупреждение остаётся и стоит ПЕРЕД вопросами: «главное
+              в конце» относится к действию, а предупреждение о том, что
+              ответ один, работает только до того, как человек начал
+              отвечать (§ Порядок важнее полноты). */}
+          <p className={`max-w-measure ${hintText}`}>
             {revising ? quotePage.reviseHint : quotePage.formHint}
           </p>
 
-          <div className={`mt-lg ${panel}`}>
-            {/* Состав отмечается, а не пишется (контракт §2, решение 17.09):
-                два свободных текста рядом сравнить нельзя — сравнивалась бы
-                многословность. Части предмета и работы разведены нарочно:
-                разница в цене чаще лежит во второй группе, и пока она стояла
-                вперемешку с фасадами, про неё просто не писали. */}
-            <fieldset>
-              <legend className={fieldLabel}>{compositionAsk.partsQuestion}</legend>
-              <p className={`mt-xs max-w-measure ${hintText}`}>{compositionAsk.partsHint}</p>
-              <div className="mt-md flex flex-wrap gap-sm">
-                {parts.map((item) => (
-                  <label key={item} className={chip(draft.items.includes(item))}>
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={draft.items.includes(item)}
-                      onChange={() => toggleItem(item)}
-                    />
-                    <span>{compositionLabels[item]}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
+          {/* Состав отмечается, а не пишется (контракт §2, решение 17.09):
+              два свободных текста рядом сравнить нельзя — сравнивалась бы
+              многословность. Части предмета и работы разведены нарочно:
+              разница в цене чаще лежит во второй группе, и пока она стояла
+              вперемешку с фасадами, про неё просто не писали. */}
+          <ItemList
+            className="mt-3xl"
+            question={compositionAsk.partsQuestion}
+            hint={compositionAsk.partsHint}
+            items={parts}
+            chosen={draft.items}
+            onToggle={toggleItem}
+          />
+          <ItemList
+            className="mt-3xl"
+            question={compositionAsk.servicesQuestion}
+            hint={compositionAsk.servicesHint}
+            items={services}
+            chosen={draft.items}
+            onToggle={toggleItem}
+          />
+          {errors.items && <p className={`mt-md ${errorTextClass}`}>{errors.items}</p>}
 
-            <fieldset className="mt-xl">
-              <legend className={fieldLabel}>{compositionAsk.servicesQuestion}</legend>
-              <p className={`mt-xs max-w-measure ${hintText}`}>{compositionAsk.servicesHint}</p>
-              <div className="mt-md flex flex-wrap gap-sm">
-                {services.map((item) => (
-                  <label key={item} className={chip(draft.items.includes(item))}>
-                    <input
-                      type="checkbox"
-                      className="sr-only"
-                      checked={draft.items.includes(item)}
-                      onChange={() => toggleItem(item)}
-                    />
-                    <span>{compositionLabels[item]}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            {errors.items && <p className={`mt-md ${errorTextClass}`}>{errors.items}</p>}
-
-            <label className="mt-xl block" htmlFor="extra">
+          {/* Своими словами, что не входит, цена и срок — одна группа: это
+              и есть ответ, который уедет заказчице. Состав выше собран
+              строками и в плашку полей не вкладывается: третьего уровня
+              поверхности в системе нет. */}
+          <div className={`mt-xl ${panel}`}>
+            <label className="block" htmlFor="extra">
               <span className={fieldLabel}>{compositionAsk.extraLabel}</span>
               <textarea
                 id="extra"

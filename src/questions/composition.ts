@@ -73,7 +73,7 @@ export function compositionFor(category: CategoryId): { parts: QuoteItem[]; serv
  */
 export const compositionAsk = {
   partsQuestion: 'Что входит в цену?',
-  partsHint: 'Отметьте всё, что заказчица получит за названную вилку.',
+  partsHint: 'Отметьте всё, что входит в названную вилку.',
   servicesQuestion: 'Что из работ входит в эту же цену?',
   servicesHint: 'Если замер или доставка оплачиваются отдельно — не отмечайте, напишите об этом ниже.',
   extraLabel: 'Что-то ещё своими словами',

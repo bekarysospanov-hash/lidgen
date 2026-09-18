@@ -13,7 +13,6 @@ interface Seed {
   shape: 'straight' | 'corner' | 'u-shape' | 'island'
   appliances: 'yes' | 'no' | 'undecided'
   district: string | null
-  deadline: string | null
   phone: string
 }
 
@@ -30,7 +29,6 @@ const SEEDS: Seed[] = [
     shape: 'straight',
     appliances: 'yes',
     district: 'ЖК «Алматы Сити»',
-    deadline: 'к Новому году',
     phone: '+77012345678',
   },
   {
@@ -41,7 +39,6 @@ const SEEDS: Seed[] = [
     shape: 'corner',
     appliances: 'yes',
     district: 'Орбита-3',
-    deadline: null,
     phone: '+77021234567',
   },
   {
@@ -50,7 +47,6 @@ const SEEDS: Seed[] = [
     shape: 'straight',
     appliances: 'no',
     district: null,
-    deadline: 'через месяц',
     phone: '+77471234567',
   },
 ]
@@ -70,12 +66,11 @@ export async function seedProbeRequests(): Promise<void> {
         city: { code: 'almaty', name: null },
         phone: seed.phone,
         district: seed.district,
-        deadline: seed.deadline,
         // Согласие обязательно с US-11: демо-заявка проходит тот же путь,
         // что и настоящая, включая отметку на форме.
         consent: { policyVersion: POLICY_VERSION, acceptedAt: new Date().toISOString() },
       })
-      // Подтверждение — то же, что делает заказчица: без него заявка
+      // Подтверждение — то же, что делает человек в форме: без него заявка
       // не классифицируется и никому не маршрутизируется.
       await api.confirmOtp({ requestId: created.id, code: '1234' })
     } catch {

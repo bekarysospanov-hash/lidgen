@@ -130,7 +130,6 @@ function toListItem(record: RequestRecord, masterId: string, routedAt: string) {
     mainSize: record.mainSize,
     city: record.city,
     district: record.district,
-    deadline: record.deadline,
     photosCount: record.photos.length,
     quotedByMe: myQuote(record, masterId) !== undefined,
   })
@@ -178,7 +177,6 @@ export function getRequest(token: string, id: string): RequestForMaster {
     description: record.description,
     city: record.city,
     district: record.district,
-    deadline: record.deadline,
     finishLevel: record.finishLevel,
     photos: record.photos,
     myQuote: mine ?? null,

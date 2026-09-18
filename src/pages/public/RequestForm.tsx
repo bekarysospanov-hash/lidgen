@@ -37,7 +37,6 @@ import type {
 import {
   categories,
   city as cityAsk,
-  deadline as deadlineAsk,
   description as descriptionAsk,
   district as districtAsk,
   finishLevel as finishAsk,
@@ -96,7 +95,9 @@ function Ask({ title, hint, plain = false, children }: {
 /**
  * Точка выбора — круг, залитый зелёным у отмеченного (DESIGN.md § Состояния).
  * Квадрат отсюда убран сознательно: PM проверил на себе, что глаз его
- * проскакивает мимо.
+ * проскакивает мимо. Это про ЕДИНИЧНЫЙ выбор, которым занята вся эта форма;
+ * множественный носит квадрат с галочкой (`choiceBox`) — там форма сообщает
+ * то, чего круг сказать не может, что отметок будет несколько.
  */
 function Dot({ on }: { on: boolean }) {
   return <span aria-hidden="true" className={choiceDot(on)} />
@@ -173,7 +174,6 @@ const optLabel = 'group-hover:underline underline-offset-4'
 
 type DoorsId = (typeof wardrobeDoors.options)[number]['id']
 type FinishId = (typeof finishAsk.options)[number]['id']
-type DeadlineId = (typeof deadlineAsk.options)[number]['id']
 type ShapeId = (typeof kitchenShape.options)[number]['id']
 type ApplianceId = (typeof kitchenAppliances.options)[number]['id']
 type FieldKey = 'size' | 'description' | 'city' | 'cityName' | 'phone' | 'consent'
@@ -222,8 +222,6 @@ export default function RequestForm() {
   const [doors, setDoors] = useState<DoorsId | null>(null)
   const [toCeiling, setToCeiling] = useState<boolean | null>(null)
   const [finish, setFinish] = useState<FinishId | null>(null)
-  const [deadlineId, setDeadlineId] = useState<DeadlineId | null>(null)
-  const [deadlineDate, setDeadlineDate] = useState('')
   const [district, setDistrict] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -326,9 +324,6 @@ export default function RequestForm() {
   if (toCeiling !== null)
     rows.push([L.ceiling, wardrobeCeiling.options.find((o) => o.id === (toCeiling ? 'yes' : 'no'))!.label])
   if (finish) rows.push([L.finish, finishAsk.options.find((o) => o.id === finish)!.label])
-  if (deadlineId === 'date' && deadlineDate.trim()) rows.push([L.deadline, deadlineDate.trim()])
-  else if (deadlineId && deadlineId !== 'date')
-    rows.push([L.deadline, deadlineAsk.value[deadlineId]])
   if (cityCode)
     rows.push([
       L.city,
@@ -393,18 +388,6 @@ export default function RequestForm() {
       return { errors: next }
     }
 
-    /**
-     * Срок уходит строкой, которую читает мебельщик, а не кодом варианта:
-     * контракт хранит свободный текст (§2), и «к Новому году» в заявке
-     * полезнее, чем 'date'.
-     */
-    const deadlineValue =
-      deadlineId === 'date'
-        ? deadlineDate.trim() || null
-        : deadlineId
-          ? deadlineAsk.value[deadlineId]
-          : null
-
     const details: Details =
       chosen === 'kitchen'
         ? { category: 'kitchen', shape, appliances }
@@ -422,7 +405,6 @@ export default function RequestForm() {
         city: cityValue,
         phone: phoneValue,
         district: district.trim() || null,
-        deadline: deadlineValue,
         finishLevel: finish,
         // US-10: снимки уходят как есть, включая пустой список. Проверять
         // их здесь нечего — каждый уже принят сервером при загрузке (§5).
@@ -670,17 +652,23 @@ export default function RequestForm() {
 
                 <Section>
                   <Ask title={kitchenAppliances.question} hint={kitchenAppliances.hint}>
-                    {/* Три коротких ответа — чипсами: строка на всю ширину
-                        ради двух слов растягивает блок впустую. */}
-                    <div className="flex flex-wrap gap-sm">
+                    {/* Строками, а не чипсами (решение PM 18.09): «Нет,
+                        отдельно стоящую» — 21 знак, и три пилюли разной длины
+                        встают криво, с рваным правым краем. Отметка круглая:
+                        выбирают одно из, и квадрат сказал бы, что можно
+                        отметить несколько (§ Shapes). */}
+                    <Rows>
                       {kitchenAppliances.options.map((o) => (
-                        <label key={o.id} className={chip(appliances === o.id)}>
-                          <input type="radio" name="appliances" value={o.id} className="sr-only"
-                            checked={appliances === o.id} onChange={() => { setAppliances(o.id); touched() }} />
-                          <span>{o.label}</span>
-                        </label>
+                        <div key={o.id} className={blockRowDivider}>
+                          <label className={blockRow(appliances === o.id)}>
+                            <input type="radio" name="appliances" value={o.id} className="sr-only"
+                              checked={appliances === o.id} onChange={() => { setAppliances(o.id); touched() }} />
+                            <span className={`min-w-0 ${optLabel}`}>{o.label}</span>
+                            <Dot on={appliances === o.id} />
+                          </label>
+                        </div>
                       ))}
-                    </div>
+                    </Rows>
                   </Ask>
                 </Section>
               </>
@@ -714,16 +702,19 @@ export default function RequestForm() {
 
                 <Section>
                   <Ask title={wardrobeCeiling.question} hint={wardrobeCeiling.hint}>
-                    <div className="flex flex-wrap gap-sm">
+                    <Rows>
                       {wardrobeCeiling.options.map((o) => (
-                        <label key={o.id} className={chip(toCeiling === (o.id === 'yes'))}>
-                          <input type="radio" name="toCeiling" value={o.id} className="sr-only"
-                            checked={toCeiling === (o.id === 'yes')}
-                            onChange={() => { setToCeiling(o.id === 'yes'); touched() }} />
-                          <span>{o.label}</span>
-                        </label>
+                        <div key={o.id} className={blockRowDivider}>
+                          <label className={blockRow(toCeiling === (o.id === 'yes'))}>
+                            <input type="radio" name="toCeiling" value={o.id} className="sr-only"
+                              checked={toCeiling === (o.id === 'yes')}
+                              onChange={() => { setToCeiling(o.id === 'yes'); touched() }} />
+                            <span className={`min-w-0 ${optLabel}`}>{o.label}</span>
+                            <Dot on={toCeiling === (o.id === 'yes')} />
+                          </label>
+                        </div>
                       ))}
-                    </div>
+                    </Rows>
                   </Ask>
                 </Section>
               </>
@@ -809,45 +800,20 @@ export default function RequestForm() {
             </Section>
 
             <Section>
-              <Ask title={deadlineAsk.question} hint={deadlineAsk.hint}>
-                <div className="flex flex-wrap gap-sm">
-                  {deadlineAsk.options.map((o) => (
-                    <label key={o.id} className={chip(deadlineId === o.id)}>
-                      <input type="radio" name="deadline" value={o.id} className="sr-only"
-                        checked={deadlineId === o.id}
-                        onChange={() => { setDeadlineId(o.id); touched() }} />
-                      <span>{o.label}</span>
-                    </label>
-                  ))}
-                </div>
-                {/* Дата — свободной строкой: «к Новому году» человек называет
-                    охотнее, чем 20.12, и мебельщику этого хватает. */}
-                {deadlineId === 'date' && (
-                  <div className="mt-lg">
-                    <label htmlFor="deadline-date" className={`block ${fieldLabel}`}>
-                      {deadlineAsk.dateLabel}
-                    </label>
-                    <input id="deadline-date" value={deadlineDate}
-                      placeholder={deadlineAsk.datePlaceholder}
-                      onChange={(e) => { setDeadlineDate(e.target.value); touched() }}
-                      className={`mt-sm block w-full max-w-[20rem] ${field()}`} />
-                  </div>
-                )}
-              </Ask>
-            </Section>
-
-            <Section>
               <Ask title={cityAsk.question} hint={cityAsk.hint}>
-                <div className="flex flex-wrap gap-sm">
+                <Rows>
                   {cityAsk.options.map((o) => (
-                    <label key={o.id} className={chip(cityCode === o.id)}>
-                      <input type="radio" name="city" id={`city-${o.id}`} value={o.id}
-                        className="sr-only" checked={cityCode === o.id}
-                        onChange={() => { setCityCode(o.id); setErrors({ ...errors, city: undefined }); touched() }} />
-                      <span>{o.label}</span>
-                    </label>
+                    <div key={o.id} className={blockRowDivider}>
+                      <label className={blockRow(cityCode === o.id)}>
+                        <input type="radio" name="city" id={`city-${o.id}`} value={o.id}
+                          className="sr-only" checked={cityCode === o.id}
+                          onChange={() => { setCityCode(o.id); setErrors({ ...errors, city: undefined }); touched() }} />
+                        <span className={`min-w-0 ${optLabel}`}>{o.label}</span>
+                        <Dot on={cityCode === o.id} />
+                      </label>
+                    </div>
                   ))}
-                </div>
+                </Rows>
                 {cityCode === 'other' && (
                   <div className="mt-lg">
                     <label htmlFor="city-other-name" className={`block ${fieldLabel}`}>
@@ -938,7 +904,6 @@ export default function RequestForm() {
                 <div className="mt-md max-w-measure">
                   {sendError && <p role="alert" className={errorTextClass}>{sendError}</p>}
                   {!sendError && <p className={hintText}>{screen.submitHint}</p>}
-                  {sizeUnknown && <p className={`mt-sm ${hintText}`}>{screen.incompleteNote}</p>}
                 </div>
               </div>
             </Section>

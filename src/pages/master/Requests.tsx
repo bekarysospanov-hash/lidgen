@@ -59,7 +59,6 @@ function RequestRow({ item }: { item: RequestForMasterListItem }) {
     routedAtLabel(item.routedAt),
     [cityLabel(item.city.code, item.city.name), item.district].filter(Boolean).join(', '),
     item.photosCount > 0 ? requestsPage.photos(item.photosCount) : null,
-    item.deadline,
   ].filter(Boolean)
 
   return (

@@ -55,13 +55,17 @@ export const Details = z.discriminatedUnion('category', [
 ])
 export type Details = z.infer<typeof Details>
 
-/** Восемь состояний, включая out_of_coverage (§4, зафиксированное расхождение). */
+/**
+ * Шесть состояний (§4). Было восемь: `incomplete` и `unreached` убраны 18.09
+ * вместе с операторским контуром дозвона — заявка без размера теперь уходит
+ * мебельщикам как есть. Оба вернутся, когда появится дежурный: описаны в §9
+ * контракта, а не оставлены в схеме пустыми. Держать статус, который никто
+ * не присваивает, значит держать и тексты «мы вам позвоним» к нему.
+ */
 export const RequestStatus = z.enum([
   'unconfirmed',
   'qualified',
-  'incomplete',
   'out_of_coverage',
-  'unreached',
   'routed',
   'quoted',
   'closed',
@@ -97,7 +101,6 @@ export const CreateRequest = z.object({
   city: City,
   phone: Phone,
   district: z.string().nullable().optional(),
-  deadline: z.string().nullable().optional(),
   finishLevel: FinishLevel.nullable().optional(),
   /**
    * Обязателен с US-11: заявка без согласия не создаётся. Проверка живёт
@@ -134,13 +137,11 @@ export const RequestForClient = z.strictObject({
   createdAt: Iso,
   phoneConfirmedAt: Iso.nullable(),
   routedAt: Iso.nullable(),
-  completedManually: z.boolean(),
   details: Details,
   mainSize: MainSize,
   description: z.string(),
   city: City,
   district: z.string().nullable(),
-  deadline: z.string().nullable(),
   finishLevel: FinishLevel.nullable(),
   photos: z.array(Photo),
   quotes: z.array(Quote),
@@ -162,7 +163,6 @@ export const RequestForMasterListItem = z.strictObject({
   mainSize: MainSize,
   city: City,
   district: z.string().nullable(),
-  deadline: z.string().nullable(),
   /** Число, а не снимки: «есть 3 фото» — всё, что нужно в списке. */
   photosCount: z.int().min(0),
   /** Отвечал уже или нет. Иначе мебельщик отвечает дважды (US-19a). */
@@ -184,11 +184,10 @@ export const RequestForMaster = z.strictObject({
   routedAt: Iso,
   details: Details,
   mainSize: MainSize,
-  /** Свободный текст заказчицы — его мебельщик читает первым. */
+  /** Свободный текст из заявки — его мебельщик читает первым. */
   description: z.string(),
   city: City,
   district: z.string().nullable(),
-  deadline: z.string().nullable(),
   finishLevel: FinishLevel.nullable(),
   photos: z.array(Photo),
   /** Своё отправленное КП — что он уже назвал. Чужих здесь нет. */

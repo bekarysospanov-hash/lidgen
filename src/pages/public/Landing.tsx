@@ -15,10 +15,11 @@ import bedroom from '../../assets/probe/bedroom.jpg'
 import cabinet from '../../assets/probe/cabinet.jpg'
 import kitchen from '../../assets/probe/kitchen.jpg'
 import { PageShell } from '../../components/PageShell'
-import { buttonFilled, hintText, link, panel } from '../../components/ui'
+import { buttonFilled, buttonText, hintText, link, panel } from '../../components/ui'
 import { landing, probePanel } from '../../texts/landing'
 import { probeText } from '../../texts/probe'
 import { lastRequest } from '../../probe-trail'
+import { clearSession, readSession } from '../master/session'
 
 /**
  * Снимок — радиус 0 и без рамки (DESIGN.md § Components, § Shapes).
@@ -35,6 +36,12 @@ function Shot({ src, alt, ratio }: { src: string; alt: string; ratio: string }) 
 export default function Landing() {
   // PROBE: след последней заявки этой вкладки — см. probe-trail.ts.
   const trail = lastRequest()
+  /**
+   * PROBE: кто сейчас в кабинете. Держится состоянием, а не чтением на
+   * каждый рендер: после выхода панель обязана перерисоваться тут же,
+   * иначе человек жмёт «выйти» и не видит, сработало ли.
+   */
+  const [master, setMaster] = useState(() => readSession())
   /**
    * Сколько карточек в каталоге. Ноль — блок о мастерских не показывается
    * вовсе (US-02). Отказ операции считается нулём: обещать каталог, которого
@@ -112,6 +119,7 @@ export default function Landing() {
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{probePanel.title}</h2>
           <p className="mt-sm max-w-measure text-body tracking-body">{probePanel.body}</p>
+          <p className={`mt-sm max-w-measure ${hintText}`}>{probePanel.warning}</p>
           <div className={`mt-lg ${panel}`}>
             <div className="flex flex-col gap-md">
               <Link to="/request" className={link}>{probePanel.toRequest}</Link>
@@ -119,6 +127,25 @@ export default function Landing() {
                 <Link to="/master" className={link}>{probePanel.toMaster}</Link>
                 <span className={`mt-xs block ${hintText}`}>{probePanel.masterNote}</span>
               </span>
+              {/* Пока сессия жива, /master открывает кабинет вошедшего и поля
+                  для номера не показывает. Смена мебельщика — единственное,
+                  что нельзя сделать догадкой, поэтому выход стоит здесь же. */}
+              {master && (
+                <span>
+                  <span className="block">{probePanel.signedInAs(master.master.name)}</span>
+                  <button
+                    type="button"
+                    className={`${buttonText} mt-xs -ml-sm`}
+                    onClick={() => {
+                      clearSession()
+                      setMaster(null)
+                    }}
+                  >
+                    {probePanel.signOut}
+                  </button>
+                  <span className={`mt-xs block ${hintText}`}>{probePanel.signOutNote}</span>
+                </span>
+              )}
               {/* Третья дверь появляется, только когда заявка уже оставлена
                   в этой вкладке: возвращает к своим предложениям внутренним
                   переходом, без копирования адреса. */}

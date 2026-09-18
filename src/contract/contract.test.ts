@@ -232,7 +232,7 @@ describe('CreateRequest', () => {
     expect(CreateRequest.safeParse(validCreateRequest({ description: 'а' })).success).toBe(true)
   })
 
-  it('district/deadline/finishLevel можно не передавать', () => {
+  it('district/finishLevel можно не передавать', () => {
     const payload = validCreateRequest()
     expect(CreateRequest.safeParse(payload).success).toBe(true)
   })
@@ -276,9 +276,7 @@ describe('RequestStatus', () => {
   it.each([
     'unconfirmed',
     'qualified',
-    'incomplete',
     'out_of_coverage',
-    'unreached',
     'routed',
     'quoted',
     'closed',
@@ -372,13 +370,11 @@ function validRequestForClient(overrides: Record<string, unknown> = {}) {
     createdAt: '2026-09-15T10:00:00.000Z',
     phoneConfirmedAt: '2026-09-15T10:05:00.000Z',
     routedAt: null,
-    completedManually: false,
     details: { category: 'kitchen', shape: 'corner', appliances: 'yes' },
     mainSize: { known: true, meters: 12.5 },
     description: 'Нужна угловая кухня на заказ',
     city: { code: 'almaty', name: null },
     district: null,
-    deadline: null,
     finishLevel: null,
     photos: [],
     quotes: [],
@@ -839,7 +835,6 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
       mainSize: { known: true, meters: 3.2 },
       city: { code: 'almaty', name: null },
       district: null,
-      deadline: null,
       photosCount: 3,
       quotedByMe: false,
     }
@@ -874,7 +869,6 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
       description: 'Кухня в новостройке, нужен расчёт',
       city: listItem.city,
       district: null,
-      deadline: null,
       finishLevel: null,
       photos: [],
       myQuote: null,

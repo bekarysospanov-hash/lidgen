@@ -43,7 +43,8 @@ export const Meters = z
 
 /**
  * Главный размер. Ветка «пока не знаю» — валидный самостоятельный вариант
- * (US-05a), она же переводит заявку в incomplete (§4).
+ * (US-05a). С 18.09 она больше не задерживает заявку: та уходит мебельщикам
+ * без числа, а вилка приходит шире (решение PM — дозвона в пробе нет).
  */
 export const MainSize = z.discriminatedUnion('known', [
   z.object({ known: z.literal(true), meters: Meters }),

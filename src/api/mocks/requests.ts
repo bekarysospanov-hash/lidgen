@@ -60,13 +60,11 @@ function toClientProjection(record: RequestRecord) {
     createdAt: record.createdAt,
     phoneConfirmedAt: record.phoneConfirmedAt,
     routedAt: record.routedAt,
-    completedManually: record.completedManually,
     details: record.details,
     mainSize: record.mainSize,
     description: record.description,
     city: record.city,
     district: record.district,
-    deadline: record.deadline,
     finishLevel: record.finishLevel,
     photos: record.photos,
     quotes: record.quotes,
@@ -74,14 +72,15 @@ function toClientProjection(record: RequestRecord) {
 }
 
 /**
- * Классификация статуса внутри confirmOtp (§4):
- * !covered(city) → out_of_coverage; иначе !mainSize.known → incomplete;
- * иначе qualified. out_of_coverage приоритетнее incomplete — звонить туда,
- * где некому передать заказ, работа впустую.
+ * Классификация статуса внутри confirmOtp (§4): !covered(city) →
+ * out_of_coverage, иначе qualified.
+ *
+ * Размер на статус больше не влияет (18.09): заявка без метража уходит
+ * мебельщикам как есть. Прежняя ветка вела в incomplete и ждала дозвона
+ * дежурного, которого в пробе не будет, — и заявка умирала молча.
  */
 function classify(record: RequestRecord): RequestStatus {
   if (!covered(record.city.code)) return 'out_of_coverage'
-  if (!record.mainSize.known) return 'incomplete'
   return 'qualified'
 }
 
@@ -123,13 +122,11 @@ export function create(input: CreateRequestInput): RequestCreated {
     createdAt: now.toISOString(),
     phoneConfirmedAt: null,
     routedAt: null,
-    completedManually: false,
     details: payload.details,
     mainSize: payload.mainSize,
     description: payload.description,
     city: payload.city,
     district: payload.district ?? null,
-    deadline: payload.deadline ?? null,
     finishLevel: payload.finishLevel ?? null,
     phone: payload.phone,
     consent: payload.consent ?? null,

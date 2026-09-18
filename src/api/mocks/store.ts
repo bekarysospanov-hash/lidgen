@@ -26,13 +26,11 @@ export interface RequestRecord {
   createdAt: string
   phoneConfirmedAt: string | null
   routedAt: string | null
-  completedManually: boolean
   details: Details
   mainSize: MainSize
   description: string
   city: City
   district: string | null
-  deadline: string | null
   finishLevel: FinishLevel | null
   phone: string
   consent: Consent | null
