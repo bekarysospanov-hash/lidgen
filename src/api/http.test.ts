@@ -551,34 +551,40 @@ describe('кабинет мебельщика (§5б)', () => {
     expect(mine.card).toBeNull()
   })
 
-  it('правка карточки уходит PUT, фотографии в тело не попадают', async () => {
-    fetchMock.mockResolvedValueOnce(
-      fakeResponse(200, {
-        name: 'Цех 12',
-        city: { code: 'almaty', name: null },
-        card: {
-          about: 'Кухни на заказ',
-          yearsOnMarket: 15,
-          does: ['кухни'],
-          photos: ['/work-1.jpg'],
-          publishedAt: '2026-09-01T00:00:00.000Z',
-        },
-      }),
-    )
-
-    await httpApi.updateMyCard(MASTER_TOKEN, {
+  it('правка карточки уходит PUT — вместе со снимками и часами', async () => {
+    const card = {
       about: 'Кухни на заказ',
       yearsOnMarket: 15,
       does: ['кухни'],
-      photos: ['/chuzhoe.jpg'],
-    })
+      role: 'workshop',
+      services: [{ id: 'measure', paid: false }],
+      serviceArea: null,
+      extras: [],
+      photos: [{ url: '/work-1.jpg', kind: 'kitchen', caption: null, isRender: false }],
+      logo: null,
+      warrantyMonths: 24,
+      leadTime: { min: 25, max: 35 },
+      hours: { days: ['mon'], from: '10:00', to: '19:00' },
+      contactPhone: '+77010000001',
+      messengers: ['whatsapp'],
+      publishedAt: '2026-09-01T00:00:00.000Z',
+    }
+    fetchMock.mockResolvedValueOnce(
+      fakeResponse(200, { name: 'Цех 12', city: { code: 'almaty', name: null }, card }),
+    )
+
+    const { publishedAt, ...patch } = card
+    expect(publishedAt).toBeDefined()
+    await httpApi.updateMyCard(MASTER_TOKEN, patch)
 
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
     expect(String(url)).toBe('/api/master/card')
     expect(options?.method).toBe('PUT')
-    // Схема входа фотографии не знает: лишнее поле отсекается до отправки,
-    // и чужой снимок физически не доезжает до сервера.
-    expect(String(options?.body)).not.toContain('chuzhoe')
+    // Снимки с 18.09 в теле запроса: карточку заполняет мебельщик (§5б).
+    expect(String(options?.body)).toContain('work-1.jpg')
+    // Дата публикации по-прежнему не правится: она след согласия, и схема
+    // входа её не знает — лишнее поле отсекается до отправки.
+    expect(String(options?.body)).not.toContain('publishedAt')
   })
 
   it('карточка каталога читается GET на /api/masters/{id}, без токена', async () => {
@@ -591,7 +597,17 @@ describe('кабинет мебельщика (§5б)', () => {
           about: 'Кухни на заказ',
           yearsOnMarket: 15,
           does: ['кухни'],
-          photos: ['/work-1.jpg'],
+          role: 'workshop',
+          services: [{ id: 'measure', paid: false }],
+          serviceArea: null,
+          extras: [],
+          photos: [{ url: '/work-1.jpg', kind: 'kitchen', caption: null, isRender: false }],
+          logo: null,
+          warrantyMonths: null,
+          leadTime: null,
+          hours: null,
+          contactPhone: null,
+          messengers: [],
           publishedAt: '2026-09-01T00:00:00.000Z',
         },
       }),

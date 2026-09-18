@@ -38,6 +38,7 @@ import {
   RequestForMaster,
   RequestForMasterListItem,
   Routing,
+  MasterCardPublic,
   MyCard,
   UpdateMyCard,
   tier,
@@ -528,7 +529,23 @@ describe('своя карточка мебельщика — US-20', () => {
     about: 'Делаем кухни и шкафы на заказ с 2011 года',
     yearsOnMarket: 15,
     does: ['кухни', 'шкафы-купе'],
-    photos: ['/work-1.jpg', '/work-2.jpg'],
+    role: 'workshop',
+    services: [
+      { id: 'measure', paid: false },
+      { id: 'assembly', paid: true },
+    ],
+    serviceArea: 'Алматы и пригород до 30 км',
+    extras: ['Свой цех, без подрядчиков'],
+    photos: [
+      { url: '/work-1.jpg', kind: 'kitchen', caption: 'Кухня 3,4 м', isRender: false },
+      { url: '/work-2.jpg', kind: 'wardrobe', caption: null, isRender: true },
+    ],
+    logo: null,
+    warrantyMonths: 24,
+    leadTime: { min: 25, max: 35 },
+    hours: { days: ['mon', 'sat'], from: '10:00', to: '19:00' },
+    contactPhone: '+77010000001',
+    messengers: ['whatsapp'],
     publishedAt: '2026-09-01T00:00:00.000Z',
   }
 
@@ -542,6 +559,19 @@ describe('своя карточка мебельщика — US-20', () => {
     expect(MyCard.safeParse(full).success).toBe(true)
   })
 
+  /** Схема, а не экран: поле, спрятанное разметкой, лежит в теле ответа. */
+  it('публичная карточка режет контакт схемой, а не показом', () => {
+    const parsed = MasterCardPublic.safeParse({
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'Цех 12',
+      city: { code: 'almaty', name: null },
+      card: { ...card, contactPhone: '+77010000001', messengers: ['whatsapp'] },
+    })
+    expect(parsed.success).toBe(true)
+    expect(parsed.success && 'contactPhone' in parsed.data.card).toBe(false)
+    expect(parsed.success && JSON.stringify(parsed.data).includes('+7701')).toBe(false)
+  })
+
   it('телефон и acceptingFrom мебельщику не отдаются — проекция строгая', () => {
     const extra = {
       name: 'Цех 12',
@@ -553,16 +583,88 @@ describe('своя карточка мебельщика — US-20', () => {
   })
 
   describe('UpdateMyCard', () => {
-    const valid = { about: 'Кухни на заказ', yearsOnMarket: 15, does: ['кухни'] }
+    const valid = {
+      about: 'Кухни на заказ',
+      yearsOnMarket: 15,
+      does: ['кухни'],
+      role: 'workshop',
+      services: [{ id: 'measure', paid: false }],
+      serviceArea: null,
+      extras: [],
+      photos: [{ url: '/work-1.jpg', kind: 'kitchen', caption: null, isRender: false }],
+      logo: null,
+      warrantyMonths: null,
+      leadTime: null,
+      hours: null,
+      contactPhone: null,
+      messengers: [],
+    }
 
-    it('правится только текст', () => {
+    it('карточка правится целиком — всё, что мебельщик рассказывает о себе', () => {
       expect(UpdateMyCard.safeParse(valid).success).toBe(true)
     })
 
-    it('фотографии в теле запроса не принимаются: их собираем и проверяем мы', () => {
-      const withPhotos = { ...valid, photos: ['/chuzhoe.jpg'] }
-      const parsed = UpdateMyCard.safeParse(withPhotos)
-      expect(parsed.success && 'photos' in parsed.data).toBe(false)
+    /**
+     * Снимки с 18.09 в теле запроса: карточку заполняет мебельщик, и без
+     * своих работ заполнять её нечем (контракт §5б, решение изменено).
+     */
+    it('фотографии в теле запроса принимаются — вместе с видом работы', () => {
+      const parsed = UpdateMyCard.safeParse(valid)
+      expect(parsed.success && parsed.data.photos[0]?.kind).toBe('kitchen')
+    })
+
+    it('снимок без вида работы не проходит: по нему строятся разделы карточки', () => {
+      const noKind = { ...valid, photos: [{ url: '/work-1.jpg', caption: null }] }
+      expect(UpdateMyCard.safeParse(noKind).success).toBe(false)
+    })
+
+    it('карточка без единого снимка не проходит', () => {
+      expect(UpdateMyCard.safeParse({ ...valid, photos: [] }).success).toBe(false)
+    })
+
+    it('услуга из списка — только своя; выдуманную не принимаем', () => {
+      const made = { ...valid, services: [{ id: 'polishing', paid: false }] }
+      expect(UpdateMyCard.safeParse(made).success).toBe(false)
+    })
+
+    it('повтор услуги не проходит: в карточке он показался бы дважды', () => {
+      const twice = {
+        ...valid,
+        services: [
+          { id: 'measure', paid: false },
+          { id: 'measure', paid: true },
+        ],
+      }
+      expect(UpdateMyCard.safeParse(twice).success).toBe(false)
+    })
+
+    /** Условие — часть услуги: без него два одинаковых списка несравнимы. */
+    it('услуга несёт условие: входит в цену или считается отдельно', () => {
+      const parsed = UpdateMyCard.safeParse({
+        ...valid,
+        services: [{ id: 'delivery', paid: true }],
+      })
+      expect(parsed.success && parsed.data.services[0]?.paid).toBe(true)
+    })
+
+    it('роль обязательна: «цех» и «производство» — разный разговор о сроках', () => {
+      const { role, ...withoutRole } = valid as Record<string, unknown>
+      expect(role).toBeDefined()
+      expect(UpdateMyCard.safeParse(withoutRole).success).toBe(false)
+    })
+
+    it('выдуманная роль не проходит', () => {
+      expect(UpdateMyCard.safeParse({ ...valid, role: 'dealer' }).success).toBe(false)
+    })
+
+    it('рабочий день, который кончается раньше начала, не проходит', () => {
+      const backwards = { ...valid, hours: { days: ['mon'], from: '19:00', to: '10:00' } }
+      expect(UpdateMyCard.safeParse(backwards).success).toBe(false)
+    })
+
+    it('срок изготовления с перевёрнутой вилкой не проходит', () => {
+      const backwards = { ...valid, leadTime: { min: 40, max: 10 } }
+      expect(UpdateMyCard.safeParse(backwards).success).toBe(false)
     })
 
     it('дата публикации не правится: это след согласия, а не поле профиля', () => {

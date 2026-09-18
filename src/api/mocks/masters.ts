@@ -9,6 +9,7 @@ import {
   UpdateMyCard,
   type City,
   type Master,
+  type MasterCard,
 } from '../../contract'
 import { ApiError } from '../errors'
 import { newId, newToken } from './store'
@@ -59,15 +60,108 @@ const ACCEPTING_FROM = '2026-09-01T00:00:00.000Z'
  * `yearsOnMarket` схема требует целым и обязательным, поэтому число здесь
  * есть — но оно демонстрационное, как метражи в демо-заявках.
  */
-const PROBE_CARD = {
+const PROBE_CARD: MasterCard = {
   about:
     'Небольшой цех на Сайране: два столяра и сборщик. Делаем кухни и шкафы ' +
     'по своим чертежам, монтаж ведём сами, без подрядчиков. Берём три-четыре ' +
     'заказа в месяц — чтобы не растягивать сроки.',
   yearsOnMarket: 12,
   does: ['Кухни', 'Шкафы-купе', 'Гардеробные', 'Мебель для ванной'],
-  photos: [kitchen, cabinet, bedroom],
+  role: 'workshop',
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'design', paid: false },
+    { id: 'assembly', paid: false },
+    { id: 'appliances', paid: false },
+    { id: 'delivery', paid: true },
+    { id: 'nonstandard', paid: false },
+  ],
+  serviceArea: 'Алматы и пригород до 30 км',
+  extras: ['Свой цех, без подрядчиков', 'Подгоняем по месту после ремонта'],
+  photos: [
+    { url: kitchen, kind: 'kitchen', caption: 'Кухня 3,4 м, Алматы', isRender: false },
+    { url: cabinet, kind: 'wardrobe', caption: 'Шкаф в нишу, двери купе', isRender: false },
+    { url: bedroom, kind: 'other', caption: null, isRender: false },
+  ],
+  logo: null,
+  warrantyMonths: 24,
+  leadTime: { min: 25, max: 35 },
+  hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], from: '10:00', to: '19:00' },
+  contactPhone: '+77010000001',
+  messengers: ['whatsapp'],
   publishedAt: '2026-09-18T06:00:00.000Z',
+}
+
+/**
+ * PROBE: вторая демонстрационная карточка — заполнена скупо. Заведена
+ * не для объёма, а против единственного примера: карточка, показанная
+ * в одном-единственном полном виде, выглядит обязательной, и первый же
+ * мебельщик без гарантии и без подписей к снимкам покажется сломанным.
+ * Здесь нет отличий своими словами, гарантия названа коротким сроком,
+ * снимков два, и каталог обязан читаться так же ровно.
+ */
+const PROBE_CARD_SECOND: MasterCard = {
+  about:
+    'Работаем вдвоём с братом. Кухни и шкафы, чаще в новостройках: ' +
+    'приезжаем на замер после ремонта, ставим за день.',
+  yearsOnMarket: 4,
+  does: ['Кухни', 'Шкафы-купе'],
+  role: 'workshop',
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'assembly', paid: true },
+    { id: 'installments', paid: false },
+  ],
+  serviceArea: null,
+  extras: [],
+  photos: [
+    { url: cabinet, kind: 'wardrobe', caption: null, isRender: false },
+    { url: kitchen, kind: 'kitchen', caption: null, isRender: false },
+  ],
+  logo: null,
+  warrantyMonths: 12,
+  leadTime: { min: 30, max: 45 },
+  hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '09:00', to: '18:00' },
+  contactPhone: '+77010000002',
+  messengers: ['whatsapp', 'telegram'],
+  publishedAt: '2026-09-18T07:00:00.000Z',
+}
+
+/**
+ * PROBE: третья — с разрывом в неделе и без гарантии. Проверяет ровно два
+ * места, которые на полной карточке не видно: «Пн–Пт, Вс» не должно
+ * схлопнуться в «Пн–Вс», а несказанная гарантия — не должна показываться
+ * нулём или прочерком.
+ */
+const PROBE_CARD_THIRD: MasterCard = {
+  about:
+    'Столярка у вокзала. Беремся за то, что не встало в готовые размеры: ' +
+    'ниши под лестницей, скошенные стены, потолки под три метра.',
+  yearsOnMarket: 7,
+  does: ['Шкафы-купе', 'Гардеробные', 'Столы и стеллажи'],
+  role: 'factory',
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'delivery', paid: false },
+    { id: 'assembly', paid: false },
+    { id: 'dismantle', paid: true },
+    { id: 'nonstandard', paid: false },
+  ],
+  serviceArea: 'Астана, выезд в Косшы и Талапкер',
+  extras: ['Выезжаем за город'],
+  photos: [
+    // PROBE: третий снимок помечен рендером — иначе состояние «это рисунок,
+    // а не снятая работа» не посмотреть ни на одном экране.
+    { url: bedroom, kind: 'other', caption: 'Стеллаж во всю стену', isRender: true },
+    { url: cabinet, kind: 'wardrobe', caption: 'Гардеробная 2,1 м', isRender: false },
+  ],
+  logo: null,
+  warrantyMonths: null,
+  leadTime: null,
+  hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sun'], from: '10:00', to: '20:00' },
+  contactPhone: '+77010000004',
+  messengers: ['telegram'],
+  publishedAt: '2026-09-18T08:00:00.000Z',
 }
 
 const MASTERS: Master[] = [
@@ -86,7 +180,8 @@ const MASTERS: Master[] = [
     city: city('almaty'),
     phone: '+77010000002',
     acceptingFrom: ACCEPTING_FROM,
-    card: null,
+    // PROBE: скупо заполненная карточка — см. PROBE_CARD_SECOND выше.
+    card: PROBE_CARD_SECOND,
   },
   {
     id: 'aaaaaaa3-aaaa-4aaa-8aaa-aaaaaaaaaaa3',
@@ -102,7 +197,8 @@ const MASTERS: Master[] = [
     city: city('astana'),
     phone: '+77010000004',
     acceptingFrom: ACCEPTING_FROM,
-    card: null,
+    // PROBE: карточка с разрывом в неделе и без гарантии — PROBE_CARD_THIRD.
+    card: PROBE_CARD_THIRD,
   },
   {
     id: 'aaaaaaa5-aaaa-4aaa-8aaa-aaaaaaaaaaa5',

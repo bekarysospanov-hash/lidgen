@@ -734,9 +734,10 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
       // Мастерская из списка есть, карточки у неё нет — ответ тот же, что
       // для несуществующего id: приём заявок и публикация разные решения,
       // и подтверждать существование мастерской чужому человеку незачем.
-      // Берётся вторая: у первой с 18.09 лежит демонстрационная карточка
-      // (PROBE), иначе три экрана нельзя посмотреть с данными.
-      await expect(mockApi.getMasterCard('aaaaaaa2-aaaa-4aaa-8aaa-aaaaaaaaaaa2')).rejects.toSatisfy(
+      // Берётся третья: у первых двух с 18.09 лежат демонстрационные
+      // карточки (PROBE) — полная и скупо заполненная. Без них каталог,
+      // публичная карточка и «Моя карточка» смотрятся только пустыми.
+      await expect(mockApi.getMasterCard('aaaaaaa3-aaaa-4aaa-8aaa-aaaaaaaaaaa3')).rejects.toSatisfy(
         (e: unknown) => isApiError(e) && e.code === 'MASTER_NOT_FOUND',
       )
     })
@@ -749,6 +750,30 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
       expect(card.card.photos.length).toBeGreaterThan(0)
     })
 
+    /**
+     * Эндпоинт каталога открыт без токена (§5), и телефон мастерской — ПДн.
+     * Проверяется всё тело ответа, а не одно поле: спрятанный на экране
+     * номер всё равно виден в консоли браузера.
+     */
+    it('телефон мастерской в каталог не уходит — ни в одном поле ответа', async () => {
+      const card = await mockApi.getMasterCard('aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')
+      expect(JSON.stringify(card)).not.toContain('+7701')
+      expect('contactPhone' in card.card).toBe(false)
+      expect('messengers' in card.card).toBe(false)
+    })
+
+    it('и в списке каталога тоже не уходит', async () => {
+      const list = await mockApi.listMasters()
+      expect(list.length).toBeGreaterThan(0)
+      expect(JSON.stringify(list)).not.toContain('+7701')
+    })
+
+    it('себе мебельщик свой телефон видит: это его собственное поле', async () => {
+      const session = await login(ALMATY_PHONES[0])
+      const mine = await mockApi.getMyCard(session.token)
+      expect(mine.card?.contactPhone).toBe('+77010000001')
+    })
+
     it('несуществующая мастерская отвечает так же', async () => {
       await expect(mockApi.getMasterCard('00000000-0000-4000-8000-000000000000')).rejects.toSatisfy(
         (e: unknown) => isApiError(e) && e.code === 'MASTER_NOT_FOUND',
@@ -756,31 +781,89 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
     })
 
     it('мебельщик видит своё название и город, карточки пока нет', async () => {
-      const session = await login(ALMATY_PHONES[1])
+      const session = await login(ALMATY_PHONES[2])
       const mine = await mockApi.getMyCard(session.token)
       expect(mine.name.length).toBeGreaterThan(0)
       expect(mine.card).toBeNull()
     })
 
-    it('у кого карточка опубликована — тот видит её и правит текст', async () => {
+    it('у кого карточка опубликована — тот правит её целиком', async () => {
       const session = await login(ALMATY_PHONES[0])
       const saved = await mockApi.updateMyCard(session.token, {
         about: 'Кухни и шкафы на заказ, монтаж свой',
         yearsOnMarket: 13,
         does: ['Кухни', 'Шкафы-купе'],
+        role: 'workshop',
+        services: [
+          { id: 'measure', paid: false },
+          { id: 'assembly', paid: true },
+        ],
+        serviceArea: 'Алматы и пригород до 30 км',
+        extras: ['Свой цех, без подрядчиков'],
+        photos: [
+          { url: '/work-1.jpg', kind: 'kitchen', caption: 'Кухня 3,4 м', isRender: false },
+        ],
+        logo: null,
+        warrantyMonths: 24,
+        leadTime: { min: 25, max: 35 },
+        hours: { days: ['mon', 'tue'], from: '10:00', to: '19:00' },
+        contactPhone: '+77010000001',
+        messengers: ['whatsapp'],
       })
       expect(saved.card?.about).toBe('Кухни и шкафы на заказ, монтаж свой')
-      // Снимки правкой текста не трогаются: их собираем мы (A2, §5б).
-      expect(saved.card?.photos.length).toBeGreaterThan(0)
+      // Снимки теперь его собственные (§5б, решение 18.09): что отправил,
+      // то и лежит в карточке — включая вид работы и подпись.
+      expect(saved.card?.photos).toEqual([
+        { url: '/work-1.jpg', kind: 'kitchen', caption: 'Кухня 3,4 м', isRender: false },
+      ])
+      expect(saved.card?.services).toEqual([
+        { id: 'measure', paid: false },
+        { id: 'assembly', paid: true },
+      ])
+      expect(saved.card?.serviceArea).toBe('Алматы и пригород до 30 км')
+      expect(saved.card?.hours?.days).toEqual(['mon', 'tue'])
+    })
+
+    it('дата публикации правкой не сдвигается: это след согласия', async () => {
+      const session = await login(ALMATY_PHONES[0])
+      const before = await mockApi.getMyCard(session.token)
+      const saved = await mockApi.updateMyCard(session.token, {
+        about: 'Другой текст о мастерской',
+        yearsOnMarket: 13,
+        does: ['Кухни'],
+        role: 'workshop',
+        services: [],
+        serviceArea: null,
+        extras: [],
+        photos: [{ url: '/work-1.jpg', kind: 'kitchen', caption: null, isRender: false }],
+        logo: null,
+        warrantyMonths: null,
+        leadTime: null,
+        hours: null,
+        contactPhone: null,
+        messengers: [],
+      })
+      expect(saved.card?.publishedAt).toBe(before.card?.publishedAt)
     })
 
     it('правка до публикации — CARD_NOT_PUBLISHED, а не ошибка ввода', async () => {
-      const session = await login(ALMATY_PHONES[1])
+      const session = await login(ALMATY_PHONES[2])
       await expect(
         mockApi.updateMyCard(session.token, {
           about: 'Кухни на заказ',
           yearsOnMarket: 15,
           does: ['кухни'],
+          role: 'workshop',
+          services: [],
+          serviceArea: null,
+          extras: [],
+          photos: [{ url: '/work-1.jpg', kind: 'kitchen', caption: null, isRender: false }],
+          logo: null,
+          warrantyMonths: null,
+          leadTime: null,
+          hours: null,
+          contactPhone: null,
+          messengers: [],
         }),
       ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'CARD_NOT_PUBLISHED')
     })
