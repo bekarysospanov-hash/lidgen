@@ -80,8 +80,8 @@ zod-схемы контракта, моки.
 ```bash
 npm install
 npm run dev          # экраны на моках
-npm test             # 343 теста: контракт, моки, http-клиент, форматирование
-npm run e2e          # 7 сквозных сценариев
+npm test             # 341 тест: контракт, моки, http-клиент, форматирование
+npm run e2e          # 8 сквозных сценариев
 npm run design:check # код против DESIGN.md
 ```
 
