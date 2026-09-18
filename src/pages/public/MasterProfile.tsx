@@ -299,6 +299,10 @@ export default function MasterProfile() {
               })}
             </div>
           </div>
+          {/* Оговорка стоит сразу под перечнем, а не в конце экрана: тот же
+              замер человек увидит второй раз в предложении, и узнать, какой
+              ответ главнее, он должен здесь, а не когда заметит расхождение. */}
+          <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.servicesNote}</p>
         </>
       )}
 

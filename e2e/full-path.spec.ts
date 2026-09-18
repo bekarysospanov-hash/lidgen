@@ -252,7 +252,7 @@ test('опубликованная карточка открывается це�
   await page.goto('/masters/aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')
   await expect(page.getByRole('heading', { name: 'Мастерская на Сайране' })).toBeVisible()
   await expect(page.getByText('Кухни', { exact: true }).first()).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Что входит в работу' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Что обычно входит в цену' })).toBeVisible()
   await expect(page.getByText('Замер на месте')).toBeVisible()
   await expect(page.getByText('от 25 до 35 дней')).toBeVisible()
   await expect(page.getByText('Шкафы и гардеробные')).toBeVisible()
@@ -341,9 +341,11 @@ test('каталог отбирает по виду работ и городу, 
   await page.goto('/masters')
   await expect(page.getByText('3 мастерские')).toBeVisible()
 
-  // Мебели для ванной не показала ни одна: это не пустой каталог, и экран
-  // обязан сказать разницу словами.
+  // Ванную отметила одна мастерская, и она в Алматы. Пара «ванная + Шымкент»
+  // не даёт никого — это не пустой каталог, и экран обязан сказать разницу
+  // словами, а не показать пустоту.
   await page.getByRole('button', { name: 'Ванная' }).click()
+  await page.getByRole('button', { name: 'Шымкент' }).click()
   await expect(page.getByRole('heading', { name: 'Под этот выбор никого' })).toBeVisible()
   await снимок(page, 'каталог-отбор-пуст')
 

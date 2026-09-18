@@ -529,6 +529,7 @@ describe('своя карточка мебельщика — US-20', () => {
     about: 'Делаем кухни и шкафы на заказ с 2011 года',
     yearsOnMarket: 15,
     does: ['кухни', 'шкафы-купе'],
+    categories: ['kitchen', 'wardrobe'],
     services: [
       { id: 'measure', paid: false },
       { id: 'assembly', paid: true },
@@ -586,6 +587,7 @@ describe('своя карточка мебельщика — US-20', () => {
       about: 'Кухни на заказ',
       yearsOnMarket: 15,
       does: ['кухни'],
+      categories: ['kitchen'],
         services: [{ id: 'measure', paid: false }],
       serviceArea: null,
       extras: [],

@@ -67,6 +67,7 @@ const PROBE_CARD: MasterCard = {
     'заказа в месяц — чтобы не растягивать сроки.',
   yearsOnMarket: 12,
   does: ['Кухни', 'Шкафы-купе', 'Гардеробные', 'Мебель для ванной'],
+  categories: ['kitchen', 'wardrobe', 'bathroom'],
   services: [
     { id: 'measure', paid: false },
     { id: 'design', paid: false },
@@ -105,6 +106,7 @@ const PROBE_CARD_SECOND: MasterCard = {
     'приезжаем на замер после ремонта, ставим за день.',
   yearsOnMarket: 4,
   does: ['Кухни', 'Шкафы-купе'],
+  categories: ['kitchen', 'wardrobe'],
   services: [
     { id: 'measure', paid: false },
     { id: 'assembly', paid: true },
@@ -137,6 +139,7 @@ const PROBE_CARD_THIRD: MasterCard = {
     'ниши под лестницей, скошенные стены, потолки под три метра.',
   yearsOnMarket: 7,
   does: ['Шкафы-купе', 'Гардеробные', 'Столы и стеллажи'],
+  categories: ['wardrobe', 'other'],
   services: [
     { id: 'measure', paid: false },
     { id: 'delivery', paid: false },

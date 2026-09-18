@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
+import { CategoryIcon } from '../../components/CategoryIcon'
 import { Box, CheckRows, ChoiceRows } from '../../components/Choice'
 import { MasterListCard } from '../../components/MasterListCard'
 import { MasterShell } from '../../components/MasterShell'
@@ -84,6 +85,13 @@ const SERVICE_ROWS = MASTER_SERVICES.map((id) => ({ id, label: serviceText(id).o
 
 const PHOTO_KINDS = categories.map((category) => ({ id: category.id, label: category.label }))
 
+/** Те же четыре категории, что у заявки: по ним заказчик и отбирает. */
+const CATEGORY_ROWS = categories.map((category) => ({
+  id: category.id,
+  label: category.label,
+  hint: category.hint,
+}))
+
 /**
  * Пределы берутся из контракта, а не повторяются числами: разойдясь,
  * экран пустил бы шестой пункт, который схема отвергнет уже на отправке.
@@ -100,6 +108,7 @@ type ErrorField =
   | 'about'
   | 'years'
   | 'does'
+  | 'categories'
   | 'services'
   | 'extras'
   | 'photos'
@@ -114,6 +123,7 @@ interface Draft {
   years: string
   /** Направления одной строкой через запятую: их до шести, и это не список форм. */
   does: string
+  categories: CategoryId[]
   services: ServiceOffer[]
   area: string
   extras: string[]
@@ -133,6 +143,7 @@ const EMPTY: Draft = {
   about: '',
   years: '',
   does: '',
+  categories: [],
   services: [],
   area: '',
   extras: [],
@@ -207,6 +218,7 @@ export default function MasterProfileEdit() {
             about: it.about,
             years: String(it.yearsOnMarket),
             does: it.does.join(', '),
+            categories: [...it.categories],
             services: it.services.map((service) => ({ ...service })),
             area: it.serviceArea ?? '',
             extras: [...it.extras],
@@ -358,6 +370,8 @@ export default function MasterProfileEdit() {
       found.years = profilePage.errorYears
     }
 
+    if (draft.categories.length === 0) found.categories = profilePage.errorCategoriesEmpty
+
     if (draft.photos.length === 0) found.photos = profilePage.errorPhotosEmpty
 
     // Пустой пункт молча исчезал при сохранении: человек добавил строку,
@@ -432,6 +446,7 @@ export default function MasterProfileEdit() {
       about: draft.about,
       yearsOnMarket: Number(draft.years) || 0,
       does: parseDoes(draft.does),
+      categories: draft.categories,
       services: draft.services,
       serviceArea: draft.area.trim() === '' ? null : draft.area.trim(),
       extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
@@ -484,6 +499,7 @@ export default function MasterProfileEdit() {
         about: draft.about.trim(),
         yearsOnMarket: Number(draft.years),
         does: parseDoes(draft.does),
+        categories: draft.categories,
         services: draft.services,
         serviceArea: draft.area.trim() === '' ? null : draft.area.trim(),
         extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
@@ -571,6 +587,21 @@ export default function MasterProfileEdit() {
                 className={`mt-sm block w-[10rem] tabular-nums ${field(errors.years !== undefined)}`} />
             </label>
             {errors.years !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.years}</p>}
+
+            {/* Отбор и показ — рядом, но порознь: по отметкам мастерскую
+                находят в каталоге, строкой ниже она называет себя своими
+                словами. Раньше отбор шёл по видам снимков, и мастерская,
+                которая делает ванные, но не сняла их, выпадала. */}
+            <p className={`mt-xl ${fieldLabel}`}>{profilePage.categoriesLabel}</p>
+            <p className={`mt-xs max-w-measure ${hintText}`}>{profilePage.categoriesHint}</p>
+            <div className="mt-sm">
+              <CheckRows options={CATEGORY_ROWS} chosen={draft.categories}
+                icon={(id) => <CategoryIcon id={id} />}
+                onToggle={(id) => set({ categories: toggle(draft.categories, id) })} />
+            </div>
+            {errors.categories !== undefined && (
+              <p className={`mt-xs ${errorTextClass}`}>{errors.categories}</p>
+            )}
 
             <label className="mt-xl block" htmlFor="does">
               <span className={fieldLabel}>{profilePage.doesLabel}</span>

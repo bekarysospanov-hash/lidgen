@@ -161,6 +161,19 @@ export const MasterCard = z.object({
   about: z.string().trim().min(1).max(CARD_LIMITS.aboutChars),
   yearsOnMarket: z.int().min(0),
   does: z.array(z.string().trim().min(1)).min(1).max(6),
+  /**
+   * Что мастерская делает — отметками, а не словами. Заведено 18.09 после
+   * разбора: отбор в каталоге шёл по видам снимков, и мастерская, которая
+   * делает ванные, но не сняла их, из отбора выпадала. Свободная строка
+   * `does` осталась: она про слова мастерской, а этот список — про отбор,
+   * и путать их нельзя. Совпадение четвёрки с категориями заявки
+   * не случайно — по ним же однажды пойдёт маршрутизация.
+   */
+  categories: z
+    .array(CategoryId)
+    .min(1)
+    .max(4)
+    .refine(uniqueStrings, { message: 'Направление не повторяется' }),
   /** Что входит в работу и на каких условиях. Пустой список законен. */
   services: z
     .array(ServiceOffer)
@@ -298,6 +311,7 @@ export const UpdateMyCard = MasterCard.pick({
   about: true,
   yearsOnMarket: true,
   does: true,
+  categories: true,
   services: true,
   serviceArea: true,
   extras: true,
