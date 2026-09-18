@@ -397,7 +397,6 @@ export default function Offers() {
       {request.quotes.length >= 2 && (
         <section className="mt-3xl">
           <h2 className="text-subheading tracking-subheading font-medium">{offersPage.compareTitle}</h2>
-          <p className={`mt-sm max-w-measure ${hintText}`}>{offersPage.compareNote}</p>
           <Compare quotes={[...request.quotes].sort((a, b) => a.sentAt.localeCompare(b.sentAt))} />
         </section>
       )}
