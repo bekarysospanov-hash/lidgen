@@ -41,7 +41,6 @@ import {
   type CategoryId,
   type MasterCardPublic,
   type MasterPhoto,
-  type MasterRole,
   type MasterSession,
   type Messenger,
   type MyCard,
@@ -49,7 +48,7 @@ import {
   type WeekDay,
 } from '../../contract'
 import { categories, cityName } from '../../questions/categories'
-import { doesSuggestions, extrasSuggestions, roles, serviceText } from '../../questions/services'
+import { doesSuggestions, extrasSuggestions, serviceText } from '../../questions/services'
 import { errorText, validationUnmapped } from '../../texts/request'
 import { profilePage } from '../../texts/master'
 import { readSession } from './session'
@@ -83,8 +82,6 @@ const MESSENGERS: readonly { id: Messenger; label: string }[] = [
  */
 const SERVICE_ROWS = MASTER_SERVICES.map((id) => ({ id, label: serviceText(id).ownLabel }))
 
-const ROLE_ROWS = roles.map((role) => ({ id: role.id, label: role.ownLabel }))
-
 const PHOTO_KINDS = categories.map((category) => ({ id: category.id, label: category.label }))
 
 /**
@@ -117,7 +114,6 @@ interface Draft {
   years: string
   /** Направления одной строкой через запятую: их до шести, и это не список форм. */
   does: string
-  role: MasterRole
   services: ServiceOffer[]
   area: string
   extras: string[]
@@ -137,7 +133,6 @@ const EMPTY: Draft = {
   about: '',
   years: '',
   does: '',
-  role: 'workshop',
   services: [],
   area: '',
   extras: [],
@@ -212,7 +207,6 @@ export default function MasterProfileEdit() {
             about: it.about,
             years: String(it.yearsOnMarket),
             does: it.does.join(', '),
-            role: it.role,
             services: it.services.map((service) => ({ ...service })),
             area: it.serviceArea ?? '',
             extras: [...it.extras],
@@ -438,7 +432,6 @@ export default function MasterProfileEdit() {
       about: draft.about,
       yearsOnMarket: Number(draft.years) || 0,
       does: parseDoes(draft.does),
-      role: draft.role,
       services: draft.services,
       serviceArea: draft.area.trim() === '' ? null : draft.area.trim(),
       extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
@@ -491,7 +484,6 @@ export default function MasterProfileEdit() {
         about: draft.about.trim(),
         yearsOnMarket: Number(draft.years),
         does: parseDoes(draft.does),
-        role: draft.role,
         services: draft.services,
         serviceArea: draft.area.trim() === '' ? null : draft.area.trim(),
         extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
@@ -614,13 +606,6 @@ export default function MasterProfileEdit() {
                 предпросмотр всей карточки, и направления в нём уже видно.
                 Одно и то же, сказанное дважды, человек читает как две разные
                 вещи и ищет между ними разницу (чек-лист, п. 3). */}
-          </Part>
-
-          {/* Кто перед заказчиком. Стоит до услуг: «цех» и «производство» —
-              разный разговор о сроках и о том, кто приедет на замер. */}
-          <Part title={profilePage.roleLabel} hint={profilePage.roleHint}>
-            <ChoiceRows name="role" options={ROLE_ROWS} value={draft.role}
-              onPick={(role) => set({ role })} />
           </Part>
 
           {/* Услуги — закрытый список: под каждую нарисован знак (контракт §2).

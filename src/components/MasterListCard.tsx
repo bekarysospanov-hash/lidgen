@@ -10,7 +10,7 @@
 import { Link } from 'react-router-dom'
 import type { MasterCardPublic } from '../contract'
 import { cityName } from '../questions/categories'
-import { roleText, serviceText } from '../questions/services'
+import { serviceText } from '../questions/services'
 import { leadTime, warranty } from '../texts/format'
 import { mastersPage } from '../texts/masters'
 import { ServiceIcon } from './ServiceIcon'
@@ -63,8 +63,7 @@ export function MasterListCard({ master, asPreview = false }: {
       {/* tabular-nums: карточки идут столбцом, и годы со сроками читаются
           по вертикали — без него «12 лет» и «4 года» гуляют по ширине. */}
       <p className={`mt-xs tabular-nums ${hintText}`}>
-        {roleText(card.role).label} · {cityName(master.city)} ·{' '}
-        {mastersPage.yearsLabel(card.yearsOnMarket)}
+        {cityName(master.city)} · {mastersPage.yearsLabel(card.yearsOnMarket)}
       </p>
       {card.serviceArea !== null && (
         <p className={`mt-xs ${hintText}`}>

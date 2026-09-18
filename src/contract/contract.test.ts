@@ -529,7 +529,6 @@ describe('своя карточка мебельщика — US-20', () => {
     about: 'Делаем кухни и шкафы на заказ с 2011 года',
     yearsOnMarket: 15,
     does: ['кухни', 'шкафы-купе'],
-    role: 'workshop',
     services: [
       { id: 'measure', paid: false },
       { id: 'assembly', paid: true },
@@ -587,8 +586,7 @@ describe('своя карточка мебельщика — US-20', () => {
       about: 'Кухни на заказ',
       yearsOnMarket: 15,
       does: ['кухни'],
-      role: 'workshop',
-      services: [{ id: 'measure', paid: false }],
+        services: [{ id: 'measure', paid: false }],
       serviceArea: null,
       extras: [],
       photos: [{ url: '/work-1.jpg', kind: 'kitchen', caption: null, isRender: false }],
@@ -645,16 +643,6 @@ describe('своя карточка мебельщика — US-20', () => {
         services: [{ id: 'delivery', paid: true }],
       })
       expect(parsed.success && parsed.data.services[0]?.paid).toBe(true)
-    })
-
-    it('роль обязательна: «цех» и «производство» — разный разговор о сроках', () => {
-      const { role, ...withoutRole } = valid as Record<string, unknown>
-      expect(role).toBeDefined()
-      expect(UpdateMyCard.safeParse(withoutRole).success).toBe(false)
-    })
-
-    it('выдуманная роль не проходит', () => {
-      expect(UpdateMyCard.safeParse({ ...valid, role: 'dealer' }).success).toBe(false)
     })
 
     it('рабочий день, который кончается раньше начала, не проходит', () => {

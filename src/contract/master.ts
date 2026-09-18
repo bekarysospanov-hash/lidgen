@@ -75,14 +75,6 @@ export const ServiceOffer = z.strictObject({
 })
 export type ServiceOffer = z.infer<typeof ServiceOffer>
 
-/**
- * Кто перед заказчиком. Три роли, а не четыре: дилер — перепродажа чужого
- * производства, и в пробе такой мастерской нет. Появится — заведём вместе
- * с правилом, чей это заказ и кто отвечает за брак.
- */
-export const MasterRole = z.enum(['workshop', 'factory', 'studio'])
-export type MasterRole = z.infer<typeof MasterRole>
-
 /** Где мастерской удобнее отвечать. Почты не спрашиваем — ею не пользуются. */
 export const Messenger = z.enum(['whatsapp', 'telegram'])
 export type Messenger = z.infer<typeof Messenger>
@@ -154,6 +146,12 @@ const uniqueStrings = <T>(items: readonly T[]) => new Set(items).size === items.
  * Публичная карточка каталога (US-02). Появляется только после согласия
  * мастерской на публикацию и заполнения карточки нами (трек A2).
  *
+ * Роли («своя мастерская / своё производство / проект и сопровождение»)
+ * здесь была и снята 18.09 решением PM. Ни одна формулировка не проходила
+ * проверку «так о себе напишет живой мебельщик»: слово про устройство
+ * бизнеса, а заказчик выбирает по работам, услугам и срокам. Понадобится —
+ * вернём, когда будет видно из разговоров, что этот вопрос вообще задают.
+ *
  * Запрет, вынесенный из PRD в контракт: сгенерированные карточки, спарсенные
  * чужие портфолио и вымышленные мастерские «для объёма» недопустимы. Заявка
  * на несуществующее предложение делает CPL неинтерпретируемым, а чужие фото —
@@ -163,8 +161,6 @@ export const MasterCard = z.object({
   about: z.string().trim().min(1).max(CARD_LIMITS.aboutChars),
   yearsOnMarket: z.int().min(0),
   does: z.array(z.string().trim().min(1)).min(1).max(6),
-  /** Чем мастерская занимается: цех, фабрика или студия с подрядом. */
-  role: MasterRole,
   /** Что входит в работу и на каких условиях. Пустой список законен. */
   services: z
     .array(ServiceOffer)
@@ -302,7 +298,6 @@ export const UpdateMyCard = MasterCard.pick({
   about: true,
   yearsOnMarket: true,
   does: true,
-  role: true,
   services: true,
   serviceArea: true,
   extras: true,

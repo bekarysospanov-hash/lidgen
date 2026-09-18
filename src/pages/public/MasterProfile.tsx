@@ -22,7 +22,7 @@ import { blockRowDivider, buttonFilled, chip, hintText, link, panel } from '../.
 import type { CategoryId, MasterCardPublic, MasterPhoto } from '../../contract'
 import { z } from 'zod'
 import { cityName } from '../../questions/categories'
-import { roleText, serviceText } from '../../questions/services'
+import { serviceText } from '../../questions/services'
 import { leadTime, warranty, workHours } from '../../texts/format'
 import { masterCardPage, mastersPage } from '../../texts/masters'
 import { ServiceIcon } from '../../components/ServiceIcon'
@@ -237,8 +237,7 @@ export default function MasterProfile() {
       {/* Шапка экрана: метка → заголовок → лид (§ Шапка экрана). Метка —
           роль, город и стаж: место мастерской в мире заказчика. */}
       <p className={`mt-lg tabular-nums ${hintText}`}>
-        {roleText(card.role).label} · {cityName(master.city)} ·{' '}
-        {mastersPage.yearsLabel(card.yearsOnMarket)}
+        {cityName(master.city)} · {mastersPage.yearsLabel(card.yearsOnMarket)}
       </p>
       <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
         {master.name}

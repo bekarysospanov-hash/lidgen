@@ -332,6 +332,37 @@ test('мебельщик правит карточку — и правка ви�
   await снимок(page, 'правка-доехала-до-каталога')
 })
 
+/**
+ * US-02 — каталог отбирает, а не просто перечисляет. Отбор живёт в адресе:
+ * человек уходит в карточку и возвращается кнопкой браузера, и его выбор
+ * на этом переходе теряться не должен.
+ */
+test('каталог отбирает по виду работ и городу, отбор переживает возврат @shots', async ({ page }) => {
+  await page.goto('/masters')
+  await expect(page.getByText('3 мастерские')).toBeVisible()
+
+  // Мебели для ванной не показала ни одна: это не пустой каталог, и экран
+  // обязан сказать разницу словами.
+  await page.getByRole('button', { name: 'Ванная' }).click()
+  await expect(page.getByRole('heading', { name: 'Под этот выбор никого' })).toBeVisible()
+  await снимок(page, 'каталог-отбор-пуст')
+
+  await page.getByRole('button', { name: 'Показать всех' }).click()
+  await page.getByRole('button', { name: 'Шкафы' }).click()
+  await page.getByRole('button', { name: 'Алматы' }).click()
+  await expect(page).toHaveURL(/kind=wardrobe/)
+  await expect(page).toHaveURL(/city=almaty/)
+  await expect(page.getByText('2 мастерские')).toBeVisible()
+  await снимок(page, 'каталог-отобран')
+
+  await page.getByRole('link', { name: 'Смотреть работы' }).first().click()
+  await expect(page.getByRole('link', { name: 'Все мастерские' })).toBeVisible()
+  await page.goBack()
+  // Отбор на месте — и в адресе, и на чипсах.
+  await expect(page).toHaveURL(/kind=wardrobe&city=almaty/)
+  await expect(page.getByText('2 мастерские')).toBeVisible()
+})
+
 test('политика открывается и честно помечена черновиком @shots', async ({ page }) => {
   await page.goto('/privacy')
   await expect(
