@@ -4,8 +4,8 @@ import { api } from '../../api/client'
 import { requestSource, track } from '../../analytics'
 import { isApiError } from '../../api/errors'
 import { CategoryIcon } from '../../components/CategoryIcon'
-import { CheckMark } from '../../components/icons'
-import { CloseIcon } from '../../components/icons'
+import { CheckRows, ChoiceRows, Dot, Rows } from '../../components/Choice'
+import { CameraIcon, CloseIcon } from '../../components/icons'
 import { KitchenShape } from '../../components/KitchenShape'
 import { WardrobeDoors } from '../../components/WardrobeDoors'
 import { OtpConfirm } from '../../components/OtpConfirm'
@@ -13,12 +13,9 @@ import { PageShell } from '../../components/PageShell'
 import { PhoneInput } from '../../components/PhoneInput'
 import {
   blockRow,
-  blockRowDivider,
   buttonFilled,
   buttonText,
   chip,
-  choiceBox,
-  choiceDot,
   errorTextClass,
   field,
   fieldLabel,
@@ -127,125 +124,25 @@ function Ask({ title, hint, plain = false, children }: {
 }
 
 /**
- * Точка выбора — круг, залитый зелёным у отмеченного (DESIGN.md § Состояния).
- * Квадрат отсюда убран сознательно: PM проверил на себе, что глаз его
- * проскакивает мимо. Это про ЕДИНИЧНЫЙ выбор, которым занята вся эта форма;
- * множественный носит квадрат с галочкой (`choiceBox`) — там форма сообщает
- * то, чего круг сказать не может, что отметок будет несколько.
- */
-function Dot({ on }: { on: boolean }) {
-  return <span aria-hidden="true" className={choiceDot(on)} />
-}
-
-/**
- * Список строк. Разделитель живёт на обёртке, а не на самой строке: у
- * выбранной строки своя зелёная обводка, и линия на том же элементе с ней
- * спорила бы. Отрицательный отступ по бокам — чтобы фон выбранной доходил
- * до краёв блока, а не обрывался внутри.
- */
-function Rows({ children }: { children: React.ReactNode }) {
-  return <div className="-mx-md">{children}</div>
-}
-
-/** Отметка множественного выбора: квадрат с галочкой (DESIGN.md § Components). */
-function Box({ on }: { on: boolean }) {
-  return (
-    <span aria-hidden="true" className={choiceBox(on)}>
-      {on && <CheckMark />}
-    </span>
-  )
-}
-
-interface Option<T extends string> {
-  id: T
-  label: string
-  hint?: string
-}
-
-/**
- * Список строк выбора «одно из». До 18.09 эта разметка была переписана
- * семь раз подряд — по копии на каждый вопрос, — и правка строки означала
- * семь правок, из которых забывалась половина. Полный путь добавляет ещё
- * шесть вопросов, и без выноса файл вырос бы вдвое.
- *
- * `icon` — необязательный: у категорий и формы кухни слева стоит чертёж,
- * у остальных вопросов предметного образа нет, и строка живёт без иконки.
- */
-function Choice<T extends string>({ name, options, value, onPick, icon }: {
-  name: string
-  options: readonly Option<T>[]
-  value: T | null
-  onPick: (id: T) => void
-  icon?: (id: T) => React.ReactNode
-}) {
-  return (
-    <Rows>
-      {options.map((o) => (
-        <div key={o.id} className={blockRowDivider}>
-          <label className={blockRow(value === o.id)}>
-            <input type="radio" name={name} value={o.id} className="sr-only"
-              checked={value === o.id} onChange={() => onPick(o.id)} />
-            {icon?.(o.id)}
-            <span className="min-w-0">
-              <span className={`block ${optLabel}`}>{o.label}</span>
-              {o.hint && <span className={`mt-xs block ${hintText}`}>{o.hint}</span>}
-            </span>
-            <Dot on={value === o.id} />
-          </label>
-        </div>
-      ))}
-    </Rows>
-  )
-}
-
-/**
- * Список строк «отметьте сколько нужно» — тот же элемент, но с квадратной
- * отметкой: форма говорит человеку, сколько он вправе выбрать (§ Shapes).
- */
-function Checks<T extends string>({ options, chosen, onToggle }: {
-  options: readonly Option<T>[]
-  chosen: readonly T[]
-  onToggle: (id: T) => void
-}) {
-  return (
-    <Rows>
-      {options.map((o) => {
-        const on = chosen.includes(o.id)
-        return (
-          <div key={o.id} className={blockRowDivider}>
-            <label className={blockRow(on)}>
-              <input type="checkbox" className="sr-only" checked={on}
-                onChange={() => onToggle(o.id)} />
-              <span className="min-w-0">
-                <span className={`block ${optLabel}`}>{o.label}</span>
-                {o.hint && <span className={`mt-xs block ${hintText}`}>{o.hint}</span>}
-              </span>
-              <Box on={on} />
-            </label>
-          </div>
-        )
-      })}
-    </Rows>
-  )
-}
-
-/**
  * Числовое поле с подписью единицы справа. Ширина короткая — 10rem: поле
  * мерится тем, что в него пишут, а не тем, сколько осталось места
  * (DESIGN.md § Ширины полей ввода).
  */
-function NumberAsk({ id, label, value, unit, invalid, onChange }: {
+function NumberAsk({ id, label, value, unit, placeholder, invalid, onChange }: {
   id: string
   label: string
   value: string
   unit: string
+  /** Пример нужного числа. Без него поле молчит о том, какого вида ответ ждут. */
+  placeholder: string
   invalid: boolean
   onChange: (value: string) => void
 }) {
   return (
     <div className="flex items-baseline gap-sm">
       <input id={id} inputMode="decimal" autoComplete="off" aria-label={label}
-        value={value} aria-invalid={invalid} aria-describedby={`${id}-note`}
+        value={value} placeholder={placeholder}
+        aria-invalid={invalid} aria-describedby={`${id}-note`}
         onChange={(e) => onChange(e.target.value)}
         className={`w-[10rem] tabular-nums ${field(invalid)}`} />
       <span className={hintText}>{unit}</span>
@@ -855,7 +752,7 @@ export default function RequestForm() {
           <Ask title={screen.stepCategory}>
             {/* Иконка несёт содержание, а не украшает: категорию узнают
                 по предмету раньше, чем прочитают слово (§ Иконки). */}
-            <Choice name="category" options={categories} value={category}
+            <ChoiceRows name="category" options={categories} value={category}
               icon={(id) => <CategoryIcon id={id} />}
               onPick={(id) => {
                 setCategory(id)
@@ -875,7 +772,7 @@ export default function RequestForm() {
             {category === 'other' && (
               <Section>
                 <Ask title={otherKindAsk.question} hint={otherKindAsk.hint}>
-                  <Choice name="otherKind" options={otherKindAsk.options} value={otherKindId}
+                  <ChoiceRows name="otherKind" options={otherKindAsk.options} value={otherKindId}
                     onPick={(id) => { setOtherKindId(id); touched() }} />
                 </Ask>
               </Section>
@@ -929,7 +826,7 @@ export default function RequestForm() {
                     {/* Чертёж занимает место иконки и встаёт в ту же колонку,
                         что иконки категорий: одна вертикаль на всю форму
                         (§ Do — колонка иконок и есть каркас блока). */}
-                    <Choice name="shape" options={kitchenShape.options} value={shape}
+                    <ChoiceRows name="shape" options={kitchenShape.options} value={shape}
                       icon={(id) => <KitchenShape id={id} />}
                       onPick={(id) => { setShape(id); touched() }} />
                   </Ask>
@@ -943,7 +840,7 @@ export default function RequestForm() {
                   <Section>
                     <Ask plain title={wallsAsk.secondQuestion} hint={wallsAsk.secondHint}>
                       <NumberAsk id="second-wall" label={wallsAsk.secondQuestion}
-                        value={secondWall} unit={metersUnit(secondWall)}
+                        value={secondWall} unit={metersUnit(secondWall)} placeholder={wallsAsk.placeholder}
                         invalid={Boolean(errors.secondWall)}
                         onChange={(v) => { setSecondWall(v); setErrors({ ...errors, secondWall: undefined }); touched() }} />
                       <Note id="second-wall-note" error={errors.secondWall} />
@@ -955,7 +852,7 @@ export default function RequestForm() {
                   <Section>
                     <Ask plain title={wallsAsk.thirdQuestion}>
                       <NumberAsk id="third-wall" label={wallsAsk.thirdQuestion}
-                        value={thirdWall} unit={metersUnit(thirdWall)}
+                        value={thirdWall} unit={metersUnit(thirdWall)} placeholder={wallsAsk.thirdPlaceholder}
                         invalid={Boolean(errors.thirdWall)}
                         onChange={(v) => { setThirdWall(v); setErrors({ ...errors, thirdWall: undefined }); touched() }} />
                       <Note id="third-wall-note" error={errors.thirdWall} />
@@ -965,7 +862,7 @@ export default function RequestForm() {
 
                 <Section>
                   <Ask title={upperAsk.question} hint={upperAsk.hint}>
-                    <Choice name="upper" options={upperAsk.options} value={upper}
+                    <ChoiceRows name="upper" options={upperAsk.options} value={upper}
                       onPick={(id) => { setUpper(id); touched() }} />
                   </Ask>
                 </Section>
@@ -973,7 +870,7 @@ export default function RequestForm() {
                 <Section>
                   <Ask plain title={ceilingAsk.question} hint={ceilingAsk.hint}>
                     <NumberAsk id="ceiling" label={ceilingAsk.question}
-                      value={ceiling} unit={metersUnit(ceiling)}
+                      value={ceiling} unit={metersUnit(ceiling)} placeholder={ceilingAsk.placeholder}
                       invalid={Boolean(errors.ceiling)}
                       onChange={(v) => { setCeiling(v); setErrors({ ...errors, ceiling: undefined }); touched() }} />
                     <Note id="ceiling-note" error={errors.ceiling} />
@@ -987,7 +884,7 @@ export default function RequestForm() {
                         встают криво, с рваным правым краем. Отметка круглая:
                         выбирают одно из, и квадрат сказал бы, что можно
                         отметить несколько (§ Shapes). */}
-                    <Choice name="appliances" options={kitchenAppliances.options}
+                    <ChoiceRows name="appliances" options={kitchenAppliances.options}
                       value={appliances} onPick={(id) => { setAppliances(id); touched() }} />
                   </Ask>
                 </Section>
@@ -998,7 +895,7 @@ export default function RequestForm() {
                 {appliances === 'yes' && (
                   <Section>
                     <Ask title={applianceAsk.question} hint={applianceAsk.hint}>
-                      <Checks options={applianceAsk.options} chosen={applianceIds}
+                      <CheckRows options={applianceAsk.options} chosen={applianceIds}
                         onToggle={(id) => {
                           setApplianceIds((current) =>
                             current.includes(id)
@@ -1019,7 +916,7 @@ export default function RequestForm() {
               <>
                 <Section>
                   <Ask title={wardrobeDoors.question} hint={wardrobeDoors.hint}>
-                    <Choice name="doors" options={wardrobeDoors.options} value={doors}
+                    <ChoiceRows name="doors" options={wardrobeDoors.options} value={doors}
                       icon={(id) => <WardrobeDoors id={id} />}
                       onPick={(id) => { setDoors(id); touched() }} />
                   </Ask>
@@ -1027,7 +924,7 @@ export default function RequestForm() {
 
                 <Section>
                   <Ask title={wardrobeCeiling.question} hint={wardrobeCeiling.hint}>
-                    <Choice name="toCeiling" options={wardrobeCeiling.options}
+                    <ChoiceRows name="toCeiling" options={wardrobeCeiling.options}
                       value={toCeiling === null ? null : toCeiling ? 'yes' : 'no'}
                       onPick={(id) => { setToCeiling(id === 'yes'); touched() }} />
                   </Ask>
@@ -1039,7 +936,7 @@ export default function RequestForm() {
                   <Section>
                     <Ask plain title={ceilingAsk.question} hint={ceilingAsk.hint}>
                       <NumberAsk id="wardrobe-ceiling" label={ceilingAsk.question}
-                        value={ceiling} unit={metersUnit(ceiling)}
+                        value={ceiling} unit={metersUnit(ceiling)} placeholder={ceilingAsk.placeholder}
                         invalid={Boolean(errors.ceiling)}
                         onChange={(v) => { setCeiling(v); setErrors({ ...errors, ceiling: undefined }); touched() }} />
                       <Note id="wardrobe-ceiling-note" error={errors.ceiling} />
@@ -1049,7 +946,7 @@ export default function RequestForm() {
 
                 <Section>
                   <Ask title={placementAsk.question} hint={placementAsk.hint}>
-                    <Choice name="placement" options={placementAsk.options} value={placement}
+                    <ChoiceRows name="placement" options={placementAsk.options} value={placement}
                       onPick={(id) => { setPlacement(id); touched() }} />
                   </Ask>
                 </Section>
@@ -1061,7 +958,7 @@ export default function RequestForm() {
                   <Section>
                     <Ask plain title={nicheAsk.question} hint={nicheAsk.hint}>
                       <NumberAsk id="niche-depth" label={nicheAsk.question}
-                        value={nicheDepthValue} unit={metersUnit(nicheDepthValue)}
+                        value={nicheDepthValue} unit={metersUnit(nicheDepthValue)} placeholder={nicheAsk.placeholder}
                         invalid={Boolean(errors.nicheDepth)}
                         onChange={(v) => { setNicheDepthValue(v); setErrors({ ...errors, nicheDepth: undefined }); touched() }} />
                       <Note id="niche-depth-note" error={errors.nicheDepth} />
@@ -1071,7 +968,7 @@ export default function RequestForm() {
 
                 <Section>
                   <Ask title={insideAsk.question} hint={insideAsk.hint}>
-                    <Checks options={insideAsk.options} chosen={insideIds}
+                    <CheckRows options={insideAsk.options} chosen={insideIds}
                       onToggle={(id) => {
                         setInsideIds((current) =>
                           current.includes(id)
@@ -1090,21 +987,21 @@ export default function RequestForm() {
               <>
                 <Section>
                   <Ask title={mountAsk.question} hint={mountAsk.hint}>
-                    <Choice name="mount" options={mountAsk.options} value={mount}
+                    <ChoiceRows name="mount" options={mountAsk.options} value={mount}
                       onPick={(id) => { setMount(id); touched() }} />
                   </Ask>
                 </Section>
 
                 <Section>
                   <Ask title={basinAsk.question} hint={basinAsk.hint}>
-                    <Choice name="basin" options={basinAsk.options} value={basin}
+                    <ChoiceRows name="basin" options={basinAsk.options} value={basin}
                       onPick={(id) => { setBasin(id); touched() }} />
                   </Ask>
                 </Section>
 
                 <Section>
                   <Ask title={needsAsk.question} hint={needsAsk.hint}>
-                    <Checks options={needsAsk.options} chosen={needIds}
+                    <CheckRows options={needsAsk.options} chosen={needIds}
                       onToggle={(id) => {
                         setNeedIds((current) =>
                           current.includes(id)
@@ -1121,7 +1018,7 @@ export default function RequestForm() {
               <Ask plain title={descriptionAsk.question} hint={descriptionAsk.hint}>
                 <textarea id="description" rows={5} value={text}
                   aria-label={descriptionAsk.question}
-                  placeholder={descriptionAsk.placeholder}
+                  placeholder={descriptionAsk.placeholders[category]}
                   aria-invalid={Boolean(errors.description)}
                   aria-describedby="description-note"
                   onChange={(e) => { setText(e.target.value); setErrors({ ...errors, description: undefined }); touched() }}
@@ -1137,7 +1034,7 @@ export default function RequestForm() {
                 мне ответить»: мебельщик увидит этап в списке заявок. */}
             <Section>
               <Ask title={readinessAsk.question} hint={readinessAsk.hint}>
-                <Choice name="readiness" options={readinessAsk.options} value={readinessId}
+                <ChoiceRows name="readiness" options={readinessAsk.options} value={readinessId}
                   onPick={(id) => { setReadinessId(id); touched() }} />
               </Ask>
             </Section>
@@ -1176,6 +1073,7 @@ export default function RequestForm() {
                   onChange={(e) => { void addPhotos(e.target.files); e.target.value = '' }} />
                 <button type="button" className={buttonText} disabled={photoBusy}
                   onClick={() => filePicker.current?.click()}>
+                  <CameraIcon />
                   {photoList.length > 0 ? photosAsk.addMore : photosAsk.add}
                 </button>
               </Ask>
@@ -1189,14 +1087,14 @@ export default function RequestForm() {
                 оставлено — заменятся так же, как схемы форм кухни. */}
             <Section>
               <Ask title={finishAsk.question} hint={finishAsk.hint}>
-                <Choice name="finish" options={finishAsk.options} value={finish}
+                <ChoiceRows name="finish" options={finishAsk.options} value={finish}
                   onPick={(id) => { setFinish(id); touched() }} />
               </Ask>
             </Section>
 
             <Section>
               <Ask title={cityAsk.question} hint={cityAsk.hint}>
-                <Choice name="city" options={cityAsk.options} value={cityCode}
+                <ChoiceRows name="city" options={cityAsk.options} value={cityCode}
                   onPick={(id) => {
                     setCityCode(id)
                     setErrors({ ...errors, city: undefined })

@@ -118,9 +118,13 @@ export const buttonFilled =
   'transition-[filter,opacity] duration-100 hover:brightness-92 active:brightness-88 ' +
   'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100'
 
-/** button-text — зелёная надпись без заливки, второстепенное действие рядом с главным. */
+/**
+ * button-text — зелёная надпись без заливки, второстепенное действие рядом
+ * с главным. `gap-sm` — расстояние до иконки действия, когда она есть
+ * («Добавить фото»); у кнопки с одной подписью он ничего не двигает.
+ */
 export const buttonText =
-  'inline-flex min-h-target items-center justify-center rounded-sm px-sm py-sm ' +
+  'inline-flex min-h-target items-center justify-center gap-sm rounded-sm px-sm py-sm ' +
   'text-label tracking-label font-medium text-primary underline-offset-4 ' +
   'transition-opacity duration-100 hover:underline ' +
   'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:no-underline'

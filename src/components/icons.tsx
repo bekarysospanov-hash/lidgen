@@ -118,6 +118,26 @@ export function CheckMark() {
 }
 
 /**
+ * Камера — добавить снимок комнаты. Подпись у кнопки остаётся: система
+ * разрешает иконку действия там, где действие узнают по форме, но снимать
+ * подпись запрещает везде, кроме навигации шапки (§ Иконки).
+ *
+ * Круглый объектив — предметный контур, а не форма элемента интерфейса:
+ * запрет на круглое сверх точки и чипса про поверхности и отметки, а камера
+ * без круга в середине перестаёт быть камерой.
+ */
+export function CameraIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9.5a2 2 0 0 1 2-2h1.8l1.3-2h5.8l1.3 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <circle cx="12" cy="13.5" r="3.2" />
+    </svg>
+  )
+}
+
+/**
  * Шеврон — строка ведёт дальше (DESIGN.md § Components, «Строка блока»).
  * Вторая иконка, которой система разрешает жить без подписи: стрелку узнают
  * по форме, а сама строка подписана названием заявки. Направление вправо,
@@ -130,5 +150,141 @@ export function ChevronIcon() {
       strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 5l7 7-7 7" />
     </svg>
+  )
+}
+
+/**
+ * Знаки услуг мастерской (§ Иконки: «смысловые в блоках — только если блок
+ * без иконки читается хуже»). Список услуг закрыт схемой ровно потому, что
+ * под каждое значение нужен знак: произвольную строку рисовать нечем.
+ *
+ * Подписи не снимаются ни у одной: узнаваемого прототипа здесь нет ни у чего,
+ * кроме грузовика, а угаданная иконка — это украшение, изображающее работу.
+ * Все рисуются одним каркасом: 24, толщина 1.5, скруглённые концы — иначе
+ * восемь знаков, нарисованных по отдельности, расходятся в стиле.
+ */
+function Glyph({ children }: { children: React.ReactNode }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </svg>
+  )
+}
+
+/** Замер — рулетка: корпус с лентой и делениями. */
+export function MeasureIcon() {
+  return (
+    <Glyph>
+      <path d="M3 9h18v6H3z" />
+      <path d="M7.5 9v2.5M12 9v3.5M16.5 9v2.5" />
+    </Glyph>
+  )
+}
+
+/** Проект — лист с чертежом: рамка и линии плана внутри. */
+export function DesignIcon() {
+  return (
+    <Glyph>
+      <path d="M4 4h16v16H4z" />
+      <path d="M4 10h9M13 10v10" />
+    </Glyph>
+  )
+}
+
+/** Доставка — фургон. Единственный знак здесь с готовым прототипом. */
+export function DeliveryIcon() {
+  return (
+    <Glyph>
+      <path d="M2 7h11v9H2z" />
+      <path d="M13 10h4l3 3.2V16h-7z" />
+      <circle cx="7" cy="18" r="1.8" />
+      <circle cx="17" cy="18" r="1.8" />
+    </Glyph>
+  )
+}
+
+/** Сборка и установка — отвёртка: жало, хват, рукоять. */
+export function AssemblyIcon() {
+  return (
+    <Glyph>
+      <path d="M3.5 20.5l6.2-6.2" />
+      <path d="M9.2 13.6l3.4 3.4 2.1-2.1-3.4-3.4z" />
+      <path d="M13.5 10.2l3.1-3.1a2.6 2.6 0 0 1 3.7 3.7l-3.1 3.1" />
+    </Glyph>
+  )
+}
+
+/** Уберёт старую мебель — вынесенный короб со стрелкой наружу. */
+export function DismantleIcon() {
+  return (
+    <Glyph>
+      <path d="M4 10h9v10H4z" />
+      <path d="M4 10l2-4h5l2 4" />
+      <path d="M16 8h5m0 0-2.2-2.2M21 8l-2.2 2.2" />
+    </Glyph>
+  )
+}
+
+/** Встроит технику — духовка: дверца с окном и ручкой. */
+export function AppliancesIcon() {
+  return (
+    <Glyph>
+      <path d="M4 4h16v16H4z" />
+      <path d="M4 8h16" />
+      <path d="M7 12h10v5H7z" />
+    </Glyph>
+  )
+}
+
+/** Оплата частями — та же сумма, разнесённая на два платежа. */
+export function InstallmentsIcon() {
+  return (
+    <Glyph>
+      <path d="M3 6h13v8H3z" />
+      <path d="M8 18h13" />
+      <path d="M18 15l3 3-3 3" />
+    </Glyph>
+  )
+}
+
+/** Нестандарт — скошенная стена и размер поперёк неё. */
+export function NonstandardIcon() {
+  return (
+    <Glyph>
+      <path d="M4 20V9l7-5v16z" />
+      <path d="M15 7v12m0-12-1.8 1.8M15 7l1.8 1.8m-1.8 10.2-1.8-1.8M15 19l1.8-1.8" />
+    </Glyph>
+  )
+}
+
+/** Гарантия — щит: обещание, за которым мастерская стоит. */
+export function WarrantyIcon() {
+  return (
+    <Glyph>
+      <path d="M12 3l7 2.6v5.6c0 4-2.9 7.4-7 8.8-4.1-1.4-7-4.8-7-8.8V5.6z" />
+      <path d="M9 12l2.2 2.2L15.5 10" />
+    </Glyph>
+  )
+}
+
+/** Срок изготовления — часы. Прототип готовый, но подпись всё равно стоит. */
+export function LeadTimeIcon() {
+  return (
+    <Glyph>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </Glyph>
+  )
+}
+
+/** Часы работы — календарная неделя: когда мастерская на месте. */
+export function HoursIcon() {
+  return (
+    <Glyph>
+      <path d="M4 6h16v14H4z" />
+      <path d="M4 10h16M9 4v4M15 4v4" />
+    </Glyph>
   )
 }

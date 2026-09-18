@@ -44,7 +44,7 @@ export const mainSize = {
   unitOne: 'метр',
   unitFew: 'метра',
   unitMany: 'метров',
-  placeholder: 'например, 3,2',
+  placeholder: '3,2',
   unknownLabel: 'Пока не знаю',
   unknownNote: 'Хорошо, обойдёмся без числа. Мебельщик назовёт вилку шире — уточните размер при разговоре с ним.',
   errorEmpty: 'Без этого числа мебельщик не сможет назвать цену. Напишите примерно или нажмите «Пока не знаю».',
@@ -94,7 +94,18 @@ export const kitchenAppliances = {
 export const description = {
   question: 'Расскажите своими словами',
   hint: 'Пары предложений хватит — это мебельщик прочитает первым.',
-  placeholder: 'Например: кухня в новостройке, хочется светлую и до потолка, техника уже куплена.',
+  /**
+   * Пример своей категории. Один общий пример про кухню человек с ванной
+   * читает как чужой: подсказка должна показывать, ЧТО писать, а показывала
+   * чужой предмет. Пример не начинается с «например» — слово занимает
+   * строку и ничего не добавляет: серый текст в пустом поле и так пример.
+   */
+  placeholders: {
+    kitchen: 'Кухня в новостройке, хочется светлую и до потолка…',
+    wardrobe: 'Шкаф в спальню, внутри полки и штанга, дверцы купе…',
+    bathroom: 'Тумба под раковину, сверху зеркало со шкафчиком…',
+    other: 'Комод в прихожую, по ширине простенка, невысокий…',
+  } as const satisfies Record<CategoryId, string>,
   errorEmpty: 'Напишите хотя бы пару слов — иначе мебельщик получит пустую заявку.',
   errorTooLong: 'Слишком длинно. Оставьте главное — не больше 2000 символов.',
 } as const
@@ -142,7 +153,7 @@ export const city = {
     { id: 'other', label: 'Другой город' },
   ] as const satisfies readonly ChoiceOption[],
   otherLabel: 'Название города',
-  otherPlaceholder: 'например, Караганда',
+  otherPlaceholder: 'Караганда',
   errorEmpty: 'Выберите город — иначе заявку некому передать.',
   errorOtherEmpty: 'Напишите название города.',
 } as const
@@ -211,7 +222,10 @@ export const kitchenWalls = {
   secondHint: 'Длинная стена — та, что вы назвали первой.',
   thirdQuestion: 'И по третьей?',
   thirdHint: '',
-  placeholder: 'например, 2,4',
+  placeholder: '2,4',
+  // У третьей стены пример свой, и это не украшение: два поля подряд с
+  // одинаковым серым числом читаются как уже заполненные одинаково.
+  thirdPlaceholder: '1,8',
   errorInvalid:
     'Проверьте число: больше 0 и не больше 30 метров, точность — до сантиметра.',
 } as const
@@ -223,7 +237,7 @@ export const kitchenWalls = {
 export const ceilingHeight = {
   question: 'Какой высоты потолок?',
   hint: 'Есть в плане квартиры. Обычно 2,5–2,8 метра.',
-  placeholder: 'например, 2,7',
+  placeholder: '2,7',
   errorInvalid: 'Проверьте число: от 2 до 4 метров. Например 2,7.',
 } as const
 
@@ -279,7 +293,7 @@ export const wardrobePlacement = {
 export const nicheDepth = {
   question: 'Насколько глубокая ниша?',
   hint: 'От задней стены до края проёма.',
-  placeholder: 'например, 0,6',
+  placeholder: '0,6',
   errorInvalid: 'Проверьте число: больше 0 и не больше 2 метров.',
 } as const
 
@@ -303,7 +317,7 @@ export const wardrobeInside = {
 export const bathroomWidth = {
   question: 'Сколько сантиметров вдоль стены, где встанет тумба?',
   hint: 'Примерно — нормально.',
-  placeholder: 'например, 80',
+  placeholder: '80',
   unit: 'см',
   errorInvalid: 'Проверьте число: от 20 до 300 сантиметров. Например 80.',
 } as const
@@ -384,7 +398,7 @@ export const readiness = {
  */
 export const district = {
   label: 'ЖК или район',
-  placeholder: 'например, ЖК «Алматы Сити» или Орбита-3',
+  placeholder: 'ЖК «Алматы Сити»',
   hint: 'Мебельщику важно, далеко ли ехать на замер.',
 } as const
 
