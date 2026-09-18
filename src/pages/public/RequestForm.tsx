@@ -4,6 +4,7 @@ import { api } from '../../api/client'
 import { requestSource, track } from '../../analytics'
 import { isApiError } from '../../api/errors'
 import { CategoryIcon } from '../../components/CategoryIcon'
+import { CheckMark } from '../../components/icons'
 import { CloseIcon } from '../../components/icons'
 import { KitchenShape } from '../../components/KitchenShape'
 import { WardrobeDoors } from '../../components/WardrobeDoors'
@@ -16,6 +17,7 @@ import {
   buttonFilled,
   buttonText,
   chip,
+  choiceBox,
   choiceDot,
   errorTextClass,
   field,
@@ -25,18 +27,50 @@ import {
   panel,
   stepPanel,
 } from '../../components/ui'
-import { City, Description, MainSize, PHOTO_MAX_COUNT, PHOTO_MIME, Phone } from '../../contract'
+import {
+  CeilingMeters,
+  City,
+  Description,
+  MainSize,
+  Meters,
+  NicheDepthMeters,
+  PHOTO_MAX_COUNT,
+  PHOTO_MIME,
+  Phone,
+} from '../../contract'
 import type {
+  Appliance,
+  BathroomBasin,
+  BathroomMount,
+  BathroomNeed,
   CityCode,
   CreateRequest,
   Details,
+  KitchenUpper,
   MainSize as MainSizeValue,
+  OtherKind,
   Photo,
+  Readiness,
   RequestCreated,
+  WardrobeInside,
+  WardrobePlacement,
 } from '../../contract'
 import {
+  applianceList as applianceAsk,
+  bathroomBasin as basinAsk,
+  bathroomMount as mountAsk,
+  bathroomNeeds as needsAsk,
+  bathroomWidth as bathWidthAsk,
   categories,
+  ceilingHeight as ceilingAsk,
   city as cityAsk,
+  kitchenUpper as upperAsk,
+  kitchenWalls as wallsAsk,
+  nicheDepth as nicheAsk,
+  otherKind as otherKindAsk,
+  readiness as readinessAsk,
+  wardrobeInside as insideAsk,
+  wardrobePlacement as placementAsk,
   description as descriptionAsk,
   district as districtAsk,
   finishLevel as finishAsk,
@@ -113,6 +147,112 @@ function Rows({ children }: { children: React.ReactNode }) {
   return <div className="-mx-md">{children}</div>
 }
 
+/** Отметка множественного выбора: квадрат с галочкой (DESIGN.md § Components). */
+function Box({ on }: { on: boolean }) {
+  return (
+    <span aria-hidden="true" className={choiceBox(on)}>
+      {on && <CheckMark />}
+    </span>
+  )
+}
+
+interface Option<T extends string> {
+  id: T
+  label: string
+  hint?: string
+}
+
+/**
+ * Список строк выбора «одно из». До 18.09 эта разметка была переписана
+ * семь раз подряд — по копии на каждый вопрос, — и правка строки означала
+ * семь правок, из которых забывалась половина. Полный путь добавляет ещё
+ * шесть вопросов, и без выноса файл вырос бы вдвое.
+ *
+ * `icon` — необязательный: у категорий и формы кухни слева стоит чертёж,
+ * у остальных вопросов предметного образа нет, и строка живёт без иконки.
+ */
+function Choice<T extends string>({ name, options, value, onPick, icon }: {
+  name: string
+  options: readonly Option<T>[]
+  value: T | null
+  onPick: (id: T) => void
+  icon?: (id: T) => React.ReactNode
+}) {
+  return (
+    <Rows>
+      {options.map((o) => (
+        <div key={o.id} className={blockRowDivider}>
+          <label className={blockRow(value === o.id)}>
+            <input type="radio" name={name} value={o.id} className="sr-only"
+              checked={value === o.id} onChange={() => onPick(o.id)} />
+            {icon?.(o.id)}
+            <span className="min-w-0">
+              <span className={`block ${optLabel}`}>{o.label}</span>
+              {o.hint && <span className={`mt-xs block ${hintText}`}>{o.hint}</span>}
+            </span>
+            <Dot on={value === o.id} />
+          </label>
+        </div>
+      ))}
+    </Rows>
+  )
+}
+
+/**
+ * Список строк «отметьте сколько нужно» — тот же элемент, но с квадратной
+ * отметкой: форма говорит человеку, сколько он вправе выбрать (§ Shapes).
+ */
+function Checks<T extends string>({ options, chosen, onToggle }: {
+  options: readonly Option<T>[]
+  chosen: readonly T[]
+  onToggle: (id: T) => void
+}) {
+  return (
+    <Rows>
+      {options.map((o) => {
+        const on = chosen.includes(o.id)
+        return (
+          <div key={o.id} className={blockRowDivider}>
+            <label className={blockRow(on)}>
+              <input type="checkbox" className="sr-only" checked={on}
+                onChange={() => onToggle(o.id)} />
+              <span className="min-w-0">
+                <span className={`block ${optLabel}`}>{o.label}</span>
+                {o.hint && <span className={`mt-xs block ${hintText}`}>{o.hint}</span>}
+              </span>
+              <Box on={on} />
+            </label>
+          </div>
+        )
+      })}
+    </Rows>
+  )
+}
+
+/**
+ * Числовое поле с подписью единицы справа. Ширина короткая — 10rem: поле
+ * мерится тем, что в него пишут, а не тем, сколько осталось места
+ * (DESIGN.md § Ширины полей ввода).
+ */
+function NumberAsk({ id, label, value, unit, invalid, onChange }: {
+  id: string
+  label: string
+  value: string
+  unit: string
+  invalid: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <div className="flex items-baseline gap-sm">
+      <input id={id} inputMode="decimal" autoComplete="off" aria-label={label}
+        value={value} aria-invalid={invalid} aria-describedby={`${id}-note`}
+        onChange={(e) => onChange(e.target.value)}
+        className={`w-[10rem] tabular-nums ${field(invalid)}`} />
+      <span className={hintText}>{unit}</span>
+    </div>
+  )
+}
+
 /**
  * Сообщение под полем. Ошибка — красным на 15px: § Состояния требует менять
  * вместе границу поля и текст под ним, одной красной рамки человек на
@@ -176,7 +316,19 @@ type DoorsId = (typeof wardrobeDoors.options)[number]['id']
 type FinishId = (typeof finishAsk.options)[number]['id']
 type ShapeId = (typeof kitchenShape.options)[number]['id']
 type ApplianceId = (typeof kitchenAppliances.options)[number]['id']
-type FieldKey = 'size' | 'description' | 'city' | 'cityName' | 'phone' | 'consent'
+type FieldKey =
+  | 'size'
+  | 'description'
+  | 'city'
+  | 'cityName'
+  | 'phone'
+  | 'consent'
+  // Числа полного пути: необязательные, но введённое неверно —
+  // ошибка, а не молчаливо отброшенное значение.
+  | 'secondWall'
+  | 'thirdWall'
+  | 'ceiling'
+  | 'nicheDepth'
 type FieldErrors = Partial<Record<FieldKey, string>>
 
 /** Куда ставить фокус по первой незакрытой ошибке — порядок как на экране. */
@@ -221,6 +373,21 @@ export default function RequestForm() {
   /** US-06 — двери и высота шкафа. Как и у кухни, отправку не блокируют. */
   const [doors, setDoors] = useState<DoorsId | null>(null)
   const [toCeiling, setToCeiling] = useState<boolean | null>(null)
+  // Полный путь (18.09): поля раскрываются следом за ответом на предыдущий
+  // вопрос. Пустые значения законны — короткий путь остаётся коротким.
+  const [secondWall, setSecondWall] = useState('')
+  const [thirdWall, setThirdWall] = useState('')
+  const [ceiling, setCeiling] = useState('')
+  const [upper, setUpper] = useState<KitchenUpper | null>(null)
+  const [applianceIds, setApplianceIds] = useState<Appliance[]>([])
+  const [placement, setPlacement] = useState<WardrobePlacement | null>(null)
+  const [nicheDepthValue, setNicheDepthValue] = useState('')
+  const [insideIds, setInsideIds] = useState<WardrobeInside[]>([])
+  const [mount, setMount] = useState<BathroomMount | null>(null)
+  const [basin, setBasin] = useState<BathroomBasin | null>(null)
+  const [needIds, setNeedIds] = useState<BathroomNeed[]>([])
+  const [otherKindId, setOtherKindId] = useState<OtherKind | null>(null)
+  const [readinessId, setReadinessId] = useState<Readiness | null>(null)
   const [finish, setFinish] = useState<FinishId | null>(null)
   const [district, setDistrict] = useState('')
   const [sendError, setSendError] = useState<string | null>(null)
@@ -246,6 +413,27 @@ export default function RequestForm() {
    * молча (контракт §5, §8). Ключ «на попытку отправки» — значит на попытку,
    * а не на жизнь формы: изменившееся содержимое — уже другая попытка.
    */
+  /**
+   * Вопрос о размере зависит от категории: ванная мерится сантиметрами,
+   * остальное — метрами вдоль стены (18.09).
+   */
+  const isBathroom = category === 'bathroom'
+  const sizeAsk = isBathroom
+    ? bathWidthAsk
+    : { ...mainSizeAsk(category ?? 'other'), placeholder: mainSize.placeholder }
+
+  /**
+   * Развилка короткого и полного пути проходит здесь, поэтому здесь же
+   * событие: без него отвал «нажал „пока не знаю“ и ушёл» неотличим
+   * от «испугался числа и ушёл», а это разные диагнозы (контракт §2).
+   *
+   * Своей защиты от повторов нет — её держит `track`: события воронки
+   * считаются один раз за сессию, и правка числа не новый ответ.
+   */
+  function answeredSize(known: boolean) {
+    track('size_answered', { known })
+  }
+
   function touched() {
     if (attemptId.current) attemptId.current = null
     if (cooldown > 0) setCooldown(0)
@@ -313,17 +501,49 @@ export default function RequestForm() {
 
   const L = summary.labels
   const rows: [string, string][] = []
+  /** Подпись выбранного варианта: сводка показывает слова, а не коды. */
+  const pick = <T extends string>(options: readonly { id: T; label: string }[], id: T | null) =>
+    id === null ? null : (options.find((o) => o.id === id)?.label ?? null)
+  /** Отмеченное списком — через запятую, в порядке самого списка. */
+  const picked = <T extends string>(options: readonly { id: T; label: string }[], ids: readonly T[]) =>
+    options.filter((o) => ids.includes(o.id)).map((o) => o.label).join(', ')
+
   if (category) rows.push([L.category, categories.find((c) => c.id === category)!.label])
+  const otherKindLabel = pick(otherKindAsk.options, otherKindId)
+  if (otherKindLabel) rows.push([L.otherKind, otherKindLabel])
   const sizeLabel = isKitchen ? L.size : L.sizeOther
   if (sizeUnknown) rows.push([sizeLabel, L.sizeUnknown])
-  else if (size.trim()) rows.push([sizeLabel, `${size.trim()} ${metersUnit(size)}`])
+  else if (size.trim())
+    rows.push([
+      sizeLabel,
+      isBathroom ? `${size.trim()} ${bathWidthAsk.unit}` : `${size.trim()} ${metersUnit(size)}`,
+    ])
   if (shape) rows.push([L.shape, kitchenShape.options.find((o) => o.id === shape)!.label])
+  if (secondWall.trim()) rows.push([L.secondWall, `${secondWall.trim()} ${metersUnit(secondWall)}`])
+  if (thirdWall.trim()) rows.push([L.thirdWall, `${thirdWall.trim()} ${metersUnit(thirdWall)}`])
+  const upperLabel = pick(upperAsk.options, upper)
+  if (upperLabel) rows.push([L.upper, upperLabel])
+  if (ceiling.trim()) rows.push([L.ceilingHeight, `${ceiling.trim()} ${metersUnit(ceiling)}`])
   if (appliances)
     rows.push([L.appliances, kitchenAppliances.options.find((o) => o.id === appliances)!.label])
+  if (appliances === 'yes' && applianceIds.length > 0)
+    rows.push([L.applianceList, picked(applianceAsk.options, applianceIds)])
   if (doors) rows.push([L.doors, wardrobeDoors.options.find((o) => o.id === doors)!.label])
   if (toCeiling !== null)
     rows.push([L.ceiling, wardrobeCeiling.options.find((o) => o.id === (toCeiling ? 'yes' : 'no'))!.label])
+  const placementLabel = pick(placementAsk.options, placement)
+  if (placementLabel) rows.push([L.placement, placementLabel])
+  if (placement === 'niche' && nicheDepthValue.trim())
+    rows.push([L.nicheDepth, `${nicheDepthValue.trim()} ${metersUnit(nicheDepthValue)}`])
+  if (insideIds.length > 0) rows.push([L.inside, picked(insideAsk.options, insideIds)])
+  const mountLabel = pick(mountAsk.options, mount)
+  if (mountLabel) rows.push([L.mount, mountLabel])
+  const basinLabel = pick(basinAsk.options, basin)
+  if (basinLabel) rows.push([L.basin, basinLabel])
+  if (needIds.length > 0) rows.push([L.needs, picked(needsAsk.options, needIds)])
   if (finish) rows.push([L.finish, finishAsk.options.find((o) => o.id === finish)!.label])
+  const readinessLabel = pick(readinessAsk.options, readinessId)
+  if (readinessLabel) rows.push([L.readiness, readinessLabel])
   if (cityCode)
     rows.push([
       L.city,
@@ -338,18 +558,51 @@ export default function RequestForm() {
    * здесь нет, потому что до выбора на экране нет ни одного поля и ни одной
    * кнопки отправки — отправлять нечего и нечем.
    */
+  /**
+   * Число полного пути: пустое поле — не ошибка, эти вопросы необязательны.
+   * Введено, но не разбирается схемой — ошибка: молча отбросить число,
+   * которое человек написал, хуже, чем сказать про него.
+   *
+   * «Мягко принимать, строго отдавать» (DESIGN.md § Принципы): запятая
+   * и точка равноправны на входе, наружу уходит одно число.
+   */
+  function optionalNumber(
+    raw: string,
+    schema: { safeParse: (value: unknown) => { success: boolean } },
+    field: keyof FieldErrors,
+    message: string,
+    errors: FieldErrors,
+  ): number | null {
+    if (raw.trim().length === 0) return null
+    const value = Number(raw.trim().replace(',', '.'))
+    if (!Number.isFinite(value) || !schema.safeParse(value).success) {
+      errors[field] = message
+      return null
+    }
+    return Number(value.toFixed(2))
+  }
+
   function build(chosen: CategoryId): { payload: CreateRequest } | { errors: FieldErrors } {
     const next: FieldErrors = {}
 
     let sizeValue: MainSizeValue | null = null
+    // Ванная мерится сантиметрами: «восемьдесят сантиметров» — то, как человек
+    // говорит про тумбу. В контракт уходят метры (§2, Meters).
+    const sizeDivisor = chosen === 'bathroom' ? 100 : 1
     if (sizeUnknown) {
       sizeValue = { known: false }
     } else if (size.trim().length === 0) {
       next.size = mainSize.errorEmpty
     } else {
-      const parsed = MainSize.safeParse({ known: true, meters: Number(size.trim().replace(',', '.')) })
-      if (parsed.success) sizeValue = parsed.data
-      else next.size = mainSize.errorInvalid
+      const raw = Number(size.trim().replace(',', '.'))
+      const meters = raw / sizeDivisor
+      // Ванную спрашивают сантиметрами, а Meters проверяет метры — и «5 см»
+      // проходило бы как 0,05 м. Границы проверяются в тех единицах, в каких
+      // задан вопрос, иначе текст ошибки обещает то, чего никто не проверяет.
+      const outOfRange = chosen === 'bathroom' && (!Number.isFinite(raw) || raw < 20 || raw > 300)
+      const parsed = MainSize.safeParse({ known: true, meters: Number(meters.toFixed(2)) })
+      if (parsed.success && !outOfRange) sizeValue = parsed.data
+      else next.size = chosen === 'bathroom' ? bathWidthAsk.errorInvalid : mainSize.errorInvalid
     }
 
     const parsedText = Description.safeParse(text)
@@ -388,34 +641,48 @@ export default function RequestForm() {
       return { errors: next }
     }
 
-    // Поля полного пути (18.09) заполняются следующим шагом — вопросы к ним
-    // ещё не выведены на экран. Пустые значения законны: ветка расширена
-    // nullable-полями именно затем, чтобы короткий путь остался коротким.
+    // Полный путь: заполнено то, что человек назвал, остальное — null.
+    // Списки уходят как есть: повторы схема отклонит, а форма их не создаёт.
+    const secondWallM = optionalNumber(secondWall, Meters, 'secondWall', wallsAsk.errorInvalid, next)
+    const thirdWallM = optionalNumber(thirdWall, Meters, 'thirdWall', wallsAsk.errorInvalid, next)
+    const ceilingM = optionalNumber(ceiling, CeilingMeters, 'ceiling', ceilingAsk.errorInvalid, next)
+    const nicheDepthM = optionalNumber(
+      nicheDepthValue, NicheDepthMeters, 'nicheDepth', nicheAsk.errorInvalid, next,
+    )
+
+    // Скрытое поле в заявку не уходит: человек поставил П-образную, вписал
+    // третью стену, передумал на прямую — третьей стены у него нет, и
+    // мебельщик не должен видеть данные, которых не было на экране при
+    // отправке. Правило одно на все раскрывающиеся поля.
+    const hasSecond = shape === 'corner' || shape === 'u-shape'
     const details: Details =
       chosen === 'kitchen'
         ? {
             category: 'kitchen',
             shape,
             appliances,
-            secondWallM: null,
-            thirdWallM: null,
-            ceilingM: null,
-            upper: null,
-            applianceList: [],
+            secondWallM: hasSecond ? secondWallM : null,
+            thirdWallM: shape === 'u-shape' ? thirdWallM : null,
+            ceilingM,
+            upper,
+            // Список техники нужен только когда её встраивают: ответ «нет»
+            // с отмеченной духовкой — противоречие, которого быть не должно.
+            applianceList: appliances === 'yes' ? applianceIds : [],
           }
         : chosen === 'wardrobe'
           ? {
               category: 'wardrobe',
               doors,
               toCeiling,
-              placement: null,
-              nicheDepthM: null,
-              ceilingM: null,
-              inside: [],
+              placement,
+              nicheDepthM: placement === 'niche' ? nicheDepthM : null,
+              // Высоту потолка спрашивают только у шкафа до потолка.
+              ceilingM: toCeiling === true ? ceilingM : null,
+              inside: insideIds,
             }
           : chosen === 'bathroom'
-            ? { category: 'bathroom', mount: null, basin: null, needs: [] }
-            : { category: 'other', kind: null }
+            ? { category: 'bathroom', mount, basin, needs: needIds }
+            : { category: 'other', kind: otherKindId }
 
     if (!attemptId.current) attemptId.current = crypto.randomUUID()
 
@@ -427,6 +694,7 @@ export default function RequestForm() {
         city: cityValue,
         phone: phoneValue,
         district: district.trim() || null,
+        readiness: readinessId,
         finishLevel: finish,
         // US-10: снимки уходят как есть, включая пустой список. Проверять
         // их здесь нечего — каждый уже принят сервером при загрузке (§5).
@@ -585,60 +853,68 @@ export default function RequestForm() {
       <form onSubmit={submit}>
         <Section>
           <Ask title={screen.stepCategory}>
-            <Rows>
-              {categories.map((c) => (
-                <div key={c.id} className={blockRowDivider}>
-                  <label className={blockRow(category === c.id)}>
-                    <input type="radio" name="category" value={c.id} className="sr-only"
-                      checked={category === c.id}
-                      onChange={() => {
-                        setCategory(c.id)
-                        setErrors({})
-                        touched()
-                        track('category_selected', { category: c.id })
-                      }} />
-                    {/* Иконка несёт содержание, а не украшает: категорию узнают
-                        по предмету раньше, чем прочитают слово (§ Иконки). */}
-                    <CategoryIcon id={c.id} />
-                    <span className="min-w-0">
-                      <span className={`block ${optLabel}`}>{c.label}</span>
-                      <span className={`mt-xs block ${hintText}`}>{c.hint}</span>
-                    </span>
-                    <Dot on={category === c.id} />
-                  </label>
-                </div>
-              ))}
-            </Rows>
+            {/* Иконка несёт содержание, а не украшает: категорию узнают
+                по предмету раньше, чем прочитают слово (§ Иконки). */}
+            <Choice name="category" options={categories} value={category}
+              icon={(id) => <CategoryIcon id={id} />}
+              onPick={(id) => {
+                setCategory(id)
+                setErrors({})
+                touched()
+                track('category_selected', { category: id })
+              }} />
           </Ask>
         </Section>
 
         {category && (
           <>
+            {/* «Другое» раскрывается подкатегорией сразу, до размера: пока
+                неизвестно, детская это или кладовая, вопрос о метрах вдоль
+                стены задавать рано. Список по комнатам — так думает человек,
+                который обставляет квартиру (решение PM 18.09). */}
+            {category === 'other' && (
+              <Section>
+                <Ask title={otherKindAsk.question} hint={otherKindAsk.hint}>
+                  <Choice name="otherKind" options={otherKindAsk.options} value={otherKindId}
+                    onPick={(id) => { setOtherKindId(id); touched() }} />
+                </Ask>
+              </Section>
+            )}
+
             {/* Размер — общее поле всех категорий (контракт §2), спрашивается
                 у всех; формулировка вопроса зависит от категории. */}
             <Section>
-              <Ask plain title={mainSizeAsk(category).question} hint={mainSizeAsk(category).hint}>
+              <Ask plain title={sizeAsk.question} hint={sizeAsk.hint}>
                 <div className="flex items-baseline gap-sm">
                   {/* Заголовок вопроса стоит над блоком и служит меткой
                       глазами, но программно с полем не связан: диктор прочёл бы
                       «поле ввода» без имени. aria-label повторяет вопрос —
                       подпись остаётся одна, слышимая и видимая. */}
                   <input id="main-size" inputMode="decimal" autoComplete="off"
-                    aria-label={mainSizeAsk(category).question}
-                    value={size} disabled={sizeUnknown} placeholder={mainSize.placeholder}
+                    aria-label={sizeAsk.question}
+                    value={size} disabled={sizeUnknown} placeholder={sizeAsk.placeholder}
                     aria-invalid={Boolean(errors.size)}
                     aria-describedby="size-note"
                     onChange={(e) => { setSize(e.target.value); setErrors({ ...errors, size: undefined }); touched() }}
+                    onBlur={() => answeredSize(size.trim().length > 0)}
                     className={`w-[10rem] tabular-nums ${field(Boolean(errors.size))}`} />
-                  {/* Подпись единицы склоняется по введённому: «3,2 метра». */}
-                  <span className={hintText}>{metersUnit(size)}</span>
+                  {/* Подпись единицы склоняется по введённому: «3,2 метра».
+                      Ванная мерится сантиметрами — там склонять нечего. */}
+                  <span className={hintText}>
+                    {isBathroom ? bathWidthAsk.unit : metersUnit(size)}
+                  </span>
                 </div>
                 {/* «Пока не знаю» — короткое значение, ему место в чипсе,
                     а не в строке: строка на всю ширину ради двух слов
                     выглядит как ошибка вёрстки (§ Components). */}
                 <label className={`${chip(sizeUnknown)} mt-lg`}>
                   <input type="checkbox" className="sr-only" checked={sizeUnknown}
-                    onChange={(e) => { setSizeUnknown(e.target.checked); setErrors({ ...errors, size: undefined }); touched() }} />
+                    onChange={(e) => {
+                      setSizeUnknown(e.target.checked)
+                      setErrors({ ...errors, size: undefined })
+                      touched()
+                      answeredSize(!e.target.checked)
+                    }} />
                   <span className="whitespace-nowrap">{mainSize.unknownLabel}</span>
                 </label>
                 <Note id="size-note" error={errors.size}
@@ -653,22 +929,54 @@ export default function RequestForm() {
                     {/* Чертёж занимает место иконки и встаёт в ту же колонку,
                         что иконки категорий: одна вертикаль на всю форму
                         (§ Do — колонка иконок и есть каркас блока). */}
-                    <Rows>
-                      {kitchenShape.options.map((o) => (
-                        <div key={o.id} className={blockRowDivider}>
-                          <label className={blockRow(shape === o.id)}>
-                            <input type="radio" name="shape" value={o.id} className="sr-only"
-                              checked={shape === o.id} onChange={() => { setShape(o.id); touched() }} />
-                            <KitchenShape id={o.id} />
-                            <span className="min-w-0">
-                              <span className={`block ${optLabel}`}>{o.label}</span>
-                              <span className={`mt-xs block ${hintText}`}>{o.hint}</span>
-                            </span>
-                            <Dot on={shape === o.id} />
-                          </label>
-                        </div>
-                      ))}
-                    </Rows>
+                    <Choice name="shape" options={kitchenShape.options} value={shape}
+                      icon={(id) => <KitchenShape id={id} />}
+                      onPick={(id) => { setShape(id); touched() }} />
+                  </Ask>
+                </Section>
+
+                {/* Полный путь раскрывается ПОСЛЕ формы кухни: вторая стена
+                    существует только у угловой, третья — только у П-образной.
+                    Спрашивать их раньше формы значило бы спрашивать о стене,
+                    которой, может быть, нет. */}
+                {(shape === 'corner' || shape === 'u-shape') && (
+                  <Section>
+                    <Ask plain title={wallsAsk.secondQuestion} hint={wallsAsk.secondHint}>
+                      <NumberAsk id="second-wall" label={wallsAsk.secondQuestion}
+                        value={secondWall} unit={metersUnit(secondWall)}
+                        invalid={Boolean(errors.secondWall)}
+                        onChange={(v) => { setSecondWall(v); setErrors({ ...errors, secondWall: undefined }); touched() }} />
+                      <Note id="second-wall-note" error={errors.secondWall} />
+                    </Ask>
+                  </Section>
+                )}
+
+                {shape === 'u-shape' && (
+                  <Section>
+                    <Ask plain title={wallsAsk.thirdQuestion}>
+                      <NumberAsk id="third-wall" label={wallsAsk.thirdQuestion}
+                        value={thirdWall} unit={metersUnit(thirdWall)}
+                        invalid={Boolean(errors.thirdWall)}
+                        onChange={(v) => { setThirdWall(v); setErrors({ ...errors, thirdWall: undefined }); touched() }} />
+                      <Note id="third-wall-note" error={errors.thirdWall} />
+                    </Ask>
+                  </Section>
+                )}
+
+                <Section>
+                  <Ask title={upperAsk.question} hint={upperAsk.hint}>
+                    <Choice name="upper" options={upperAsk.options} value={upper}
+                      onPick={(id) => { setUpper(id); touched() }} />
+                  </Ask>
+                </Section>
+
+                <Section>
+                  <Ask plain title={ceilingAsk.question} hint={ceilingAsk.hint}>
+                    <NumberAsk id="ceiling" label={ceilingAsk.question}
+                      value={ceiling} unit={metersUnit(ceiling)}
+                      invalid={Boolean(errors.ceiling)}
+                      onChange={(v) => { setCeiling(v); setErrors({ ...errors, ceiling: undefined }); touched() }} />
+                    <Note id="ceiling-note" error={errors.ceiling} />
                   </Ask>
                 </Section>
 
@@ -679,20 +987,28 @@ export default function RequestForm() {
                         встают криво, с рваным правым краем. Отметка круглая:
                         выбирают одно из, и квадрат сказал бы, что можно
                         отметить несколько (§ Shapes). */}
-                    <Rows>
-                      {kitchenAppliances.options.map((o) => (
-                        <div key={o.id} className={blockRowDivider}>
-                          <label className={blockRow(appliances === o.id)}>
-                            <input type="radio" name="appliances" value={o.id} className="sr-only"
-                              checked={appliances === o.id} onChange={() => { setAppliances(o.id); touched() }} />
-                            <span className={`min-w-0 ${optLabel}`}>{o.label}</span>
-                            <Dot on={appliances === o.id} />
-                          </label>
-                        </div>
-                      ))}
-                    </Rows>
+                    <Choice name="appliances" options={kitchenAppliances.options}
+                      value={appliances} onPick={(id) => { setAppliances(id); touched() }} />
                   </Ask>
                 </Section>
+
+                {/* Какая именно техника — только после «да, встроенную»:
+                    список у того, кто ответил «нет», спрашивал бы о вещи,
+                    которой не будет. */}
+                {appliances === 'yes' && (
+                  <Section>
+                    <Ask title={applianceAsk.question} hint={applianceAsk.hint}>
+                      <Checks options={applianceAsk.options} chosen={applianceIds}
+                        onToggle={(id) => {
+                          setApplianceIds((current) =>
+                            current.includes(id)
+                              ? current.filter((item) => item !== id)
+                              : [...current, id])
+                          touched()
+                        }} />
+                    </Ask>
+                  </Section>
+                )}
               </>
             )}
 
@@ -703,40 +1019,99 @@ export default function RequestForm() {
               <>
                 <Section>
                   <Ask title={wardrobeDoors.question} hint={wardrobeDoors.hint}>
-                    <Rows>
-                      {wardrobeDoors.options.map((o) => (
-                        <div key={o.id} className={blockRowDivider}>
-                          <label className={blockRow(doors === o.id)}>
-                            <input type="radio" name="doors" value={o.id} className="sr-only"
-                              checked={doors === o.id} onChange={() => { setDoors(o.id); touched() }} />
-                            <WardrobeDoors id={o.id} />
-                            <span className="min-w-0">
-                              <span className={`block ${optLabel}`}>{o.label}</span>
-                              <span className={`mt-xs block ${hintText}`}>{o.hint}</span>
-                            </span>
-                            <Dot on={doors === o.id} />
-                          </label>
-                        </div>
-                      ))}
-                    </Rows>
+                    <Choice name="doors" options={wardrobeDoors.options} value={doors}
+                      icon={(id) => <WardrobeDoors id={id} />}
+                      onPick={(id) => { setDoors(id); touched() }} />
                   </Ask>
                 </Section>
 
                 <Section>
                   <Ask title={wardrobeCeiling.question} hint={wardrobeCeiling.hint}>
-                    <Rows>
-                      {wardrobeCeiling.options.map((o) => (
-                        <div key={o.id} className={blockRowDivider}>
-                          <label className={blockRow(toCeiling === (o.id === 'yes'))}>
-                            <input type="radio" name="toCeiling" value={o.id} className="sr-only"
-                              checked={toCeiling === (o.id === 'yes')}
-                              onChange={() => { setToCeiling(o.id === 'yes'); touched() }} />
-                            <span className={`min-w-0 ${optLabel}`}>{o.label}</span>
-                            <Dot on={toCeiling === (o.id === 'yes')} />
-                          </label>
-                        </div>
-                      ))}
-                    </Rows>
+                    <Choice name="toCeiling" options={wardrobeCeiling.options}
+                      value={toCeiling === null ? null : toCeiling ? 'yes' : 'no'}
+                      onPick={(id) => { setToCeiling(id === 'yes'); touched() }} />
+                  </Ask>
+                </Section>
+
+                {/* Высота потолка нужна только шкафу до потолка: у обычного
+                    она на цену не влияет и была бы вопросом впустую. */}
+                {toCeiling === true && (
+                  <Section>
+                    <Ask plain title={ceilingAsk.question} hint={ceilingAsk.hint}>
+                      <NumberAsk id="wardrobe-ceiling" label={ceilingAsk.question}
+                        value={ceiling} unit={metersUnit(ceiling)}
+                        invalid={Boolean(errors.ceiling)}
+                        onChange={(v) => { setCeiling(v); setErrors({ ...errors, ceiling: undefined }); touched() }} />
+                      <Note id="wardrobe-ceiling-note" error={errors.ceiling} />
+                    </Ask>
+                  </Section>
+                )}
+
+                <Section>
+                  <Ask title={placementAsk.question} hint={placementAsk.hint}>
+                    <Choice name="placement" options={placementAsk.options} value={placement}
+                      onPick={(id) => { setPlacement(id); touched() }} />
+                  </Ask>
+                </Section>
+
+                {/* Единственная глубина, которую спрашивает продукт: ниша
+                    ограничивает шкаф физически. У кухни и тумбы в ванной
+                    глубину задаёт мастер (контракт §2). */}
+                {placement === 'niche' && (
+                  <Section>
+                    <Ask plain title={nicheAsk.question} hint={nicheAsk.hint}>
+                      <NumberAsk id="niche-depth" label={nicheAsk.question}
+                        value={nicheDepthValue} unit={metersUnit(nicheDepthValue)}
+                        invalid={Boolean(errors.nicheDepth)}
+                        onChange={(v) => { setNicheDepthValue(v); setErrors({ ...errors, nicheDepth: undefined }); touched() }} />
+                      <Note id="niche-depth-note" error={errors.nicheDepth} />
+                    </Ask>
+                  </Section>
+                )}
+
+                <Section>
+                  <Ask title={insideAsk.question} hint={insideAsk.hint}>
+                    <Checks options={insideAsk.options} chosen={insideIds}
+                      onToggle={(id) => {
+                        setInsideIds((current) =>
+                          current.includes(id)
+                            ? current.filter((item) => item !== id)
+                            : [...current, id])
+                        touched()
+                      }} />
+                  </Ask>
+                </Section>
+              </>
+            )}
+
+            {/* ВАННАЯ. Ветка была заглушкой до 18.09: размер спрашивался,
+                а всё остальное мебельщик угадывал. */}
+            {category === 'bathroom' && (
+              <>
+                <Section>
+                  <Ask title={mountAsk.question} hint={mountAsk.hint}>
+                    <Choice name="mount" options={mountAsk.options} value={mount}
+                      onPick={(id) => { setMount(id); touched() }} />
+                  </Ask>
+                </Section>
+
+                <Section>
+                  <Ask title={basinAsk.question} hint={basinAsk.hint}>
+                    <Choice name="basin" options={basinAsk.options} value={basin}
+                      onPick={(id) => { setBasin(id); touched() }} />
+                  </Ask>
+                </Section>
+
+                <Section>
+                  <Ask title={needsAsk.question} hint={needsAsk.hint}>
+                    <Checks options={needsAsk.options} chosen={needIds}
+                      onToggle={(id) => {
+                        setNeedIds((current) =>
+                          current.includes(id)
+                            ? current.filter((item) => item !== id)
+                            : [...current, id])
+                        touched()
+                      }} />
                   </Ask>
                 </Section>
               </>
@@ -752,6 +1127,18 @@ export default function RequestForm() {
                   onChange={(e) => { setText(e.target.value); setErrors({ ...errors, description: undefined }); touched() }}
                   className={`block w-full max-w-measure resize-y ${field(Boolean(errors.description))}`} />
                 <Note id="description-note" error={errors.description} />
+              </Ask>
+            </Section>
+
+            {/* Этап — необязательный вопрос и стоит ПОСЛЕ описания, а не
+                перед формой (решение PM 18.09). Вопрос «знаете ли вы размеры»
+                до того, как человек увидел, какие размеры спросят, — это
+                ответ на воображаемый вопрос. Здесь же он читается как «что
+                мне ответить»: мебельщик увидит этап в списке заявок. */}
+            <Section>
+              <Ask title={readinessAsk.question} hint={readinessAsk.hint}>
+                <Choice name="readiness" options={readinessAsk.options} value={readinessId}
+                  onPick={(id) => { setReadinessId(id); touched() }} />
               </Ask>
             </Section>
 
@@ -802,40 +1189,19 @@ export default function RequestForm() {
                 оставлено — заменятся так же, как схемы форм кухни. */}
             <Section>
               <Ask title={finishAsk.question} hint={finishAsk.hint}>
-                <Rows>
-                  {finishAsk.options.map((o) => (
-                    <div key={o.id} className={blockRowDivider}>
-                      <label className={blockRow(finish === o.id)}>
-                        <input type="radio" name="finish" value={o.id} className="sr-only"
-                          checked={finish === o.id}
-                          onChange={() => { setFinish(o.id); touched() }} />
-                        <span className="min-w-0">
-                          <span className={`block ${optLabel}`}>{o.label}</span>
-                          <span className={`mt-xs block ${hintText}`}>{o.hint}</span>
-                        </span>
-                        <Dot on={finish === o.id} />
-                      </label>
-                    </div>
-                  ))}
-                </Rows>
+                <Choice name="finish" options={finishAsk.options} value={finish}
+                  onPick={(id) => { setFinish(id); touched() }} />
               </Ask>
             </Section>
 
             <Section>
               <Ask title={cityAsk.question} hint={cityAsk.hint}>
-                <Rows>
-                  {cityAsk.options.map((o) => (
-                    <div key={o.id} className={blockRowDivider}>
-                      <label className={blockRow(cityCode === o.id)}>
-                        <input type="radio" name="city" id={`city-${o.id}`} value={o.id}
-                          className="sr-only" checked={cityCode === o.id}
-                          onChange={() => { setCityCode(o.id); setErrors({ ...errors, city: undefined }); touched() }} />
-                        <span className={`min-w-0 ${optLabel}`}>{o.label}</span>
-                        <Dot on={cityCode === o.id} />
-                      </label>
-                    </div>
-                  ))}
-                </Rows>
+                <Choice name="city" options={cityAsk.options} value={cityCode}
+                  onPick={(id) => {
+                    setCityCode(id)
+                    setErrors({ ...errors, city: undefined })
+                    touched()
+                  }} />
                 {cityCode === 'other' && (
                   <div className="mt-lg">
                     <label htmlFor="city-other-name" className={`block ${fieldLabel}`}>

@@ -9,11 +9,21 @@ import { POLICY_VERSION } from './texts/privacy'
 
 interface Seed {
   description: string
-  meters: number
+  /** null — заявка без размеров: с 18.09 такие доходят до кабинета как есть. */
+  meters: number | null
   shape: 'straight' | 'corner' | 'u-shape' | 'island'
   appliances: 'yes' | 'no' | 'undecided'
   district: string | null
   phone: string
+  readiness?: 'ready' | 'planning'
+  /** Поля полного пути — заполнены только у той заявки, где человек их назвал. */
+  full?: {
+    secondWallM?: number
+    thirdWallM?: number
+    ceilingM?: number
+    upper?: 'open' | 'closed' | 'attic'
+    applianceList?: ('oven' | 'hob' | 'dishwasher' | 'fridge' | 'hood' | 'microwave')[]
+  }
 }
 
 /**
@@ -49,6 +59,39 @@ const SEEDS: Seed[] = [
     district: null,
     phone: '+77471234567',
   },
+  // Полный путь: человек назвал всё, что спросили. Такая заявка и есть
+  // цель полного пути — по ней цена считается не выезжая.
+  {
+    description:
+      'П-образная кухня, окно между двумя стенами. Верх до потолка, ' +
+      'технику уже купили — вся встроенная.',
+    meters: 3.6,
+    shape: 'u-shape',
+    appliances: 'yes',
+    district: 'ЖК «Тенгиз»',
+    phone: '+77015550101',
+    readiness: 'ready',
+    full: {
+      secondWallM: 2.4,
+      thirdWallM: 1.8,
+      ceilingM: 2.7,
+      upper: 'attic',
+      applianceList: ['oven', 'hob', 'dishwasher', 'hood'],
+    },
+  },
+  // Короткий путь: размеров нет, зато есть описание. До 18.09 такая заявка
+  // не доходила до кабинета вовсе — ждала дозвона, которого не будет.
+  {
+    description:
+      'Пока присматриваюсь. Кухня в двушке, хочется без ручек и светлую. ' +
+      'Размеры скажу, когда доберусь с рулеткой.',
+    meters: null,
+    shape: 'straight',
+    appliances: 'undecided',
+    district: null,
+    phone: '+77015550202',
+    readiness: 'planning',
+  },
 ]
 
 let seeded = false
@@ -60,8 +103,14 @@ export async function seedProbeRequests(): Promise<void> {
   for (const seed of SEEDS) {
     try {
       const created = await api.createRequest({
-        details: { category: 'kitchen', shape: seed.shape, appliances: seed.appliances },
-        mainSize: { known: true, meters: seed.meters },
+        details: {
+          category: 'kitchen',
+          shape: seed.shape,
+          appliances: seed.appliances,
+          ...seed.full,
+        },
+        mainSize: seed.meters === null ? { known: false } : { known: true, meters: seed.meters },
+        readiness: seed.readiness ?? null,
         description: seed.description,
         city: { code: 'almaty', name: null },
         phone: seed.phone,

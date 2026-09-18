@@ -30,9 +30,17 @@ import {
 import type { MasterSession, QuoteItem, RequestForMaster } from '../../contract'
 import { compositionAsk, compositionFor, compositionLabels } from '../../questions/composition'
 import {
+  applianceList,
+  bathroomMount,
+  bathroomNeeds,
+  bathroomWidth,
   categories,
   cityName,
   finishLevel,
+  kitchenUpper,
+  otherKind,
+  wardrobeInside,
+  wardrobePlacement,
   wardrobeDoors,
   kitchenAppliances,
   kitchenShape,
@@ -143,6 +151,19 @@ function ItemList({ question, hint, items, chosen, onToggle, className }: {
       </div>
     </fieldset>
   )
+}
+
+/** Число метрами, с запятой и склонённой единицей: «2,4 метра». */
+function meters(value: number): string {
+  return `${String(value).replace('.', ',')} ${metersUnit(value)}`
+}
+
+/** Подписи отмеченного — в порядке самого списка, а не в порядке нажатий. */
+function labelsOf<T extends string>(
+  options: readonly { id: T; label: string }[],
+  ids: readonly T[],
+): string {
+  return options.filter((option) => ids.includes(option.id)).map((option) => option.label).join(', ')
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
@@ -259,8 +280,15 @@ export default function RequestCard() {
     }))
     setErrors((current) => ({ ...current, items: undefined }))
   }
+  /**
+   * Ванная мерится сантиметрами — и в форме, и здесь: «80 см» мебельщик
+   * прочтёт быстрее, чем «0,8 метра», а человек назвал именно 80.
+   */
+  const isBathroom = request.details.category === 'bathroom'
   const size = request.mainSize.known
-    ? `${String(request.mainSize.meters).replace('.', ',')} ${metersUnit(request.mainSize.meters)}`
+    ? isBathroom
+      ? `${Math.round(request.mainSize.meters * 100)} ${bathroomWidth.unit}`
+      : `${String(request.mainSize.meters).replace('.', ',')} ${metersUnit(request.mainSize.meters)}`
     : quotePage.sizeUnknownValue
   const city = cityName(request.city)
 
@@ -285,7 +313,51 @@ export default function RequestCard() {
       (option) => option.id === kitchen.appliances,
     )
     if (shape) details.push({ label: quotePage.shapeLabel, value: shape.label })
+    if (kitchen.secondWallM !== null)
+      details.push({ label: quotePage.secondWallLabel, value: meters(kitchen.secondWallM) })
+    if (kitchen.thirdWallM !== null)
+      details.push({ label: quotePage.thirdWallLabel, value: meters(kitchen.thirdWallM) })
+    const upper = kitchenUpper.options.find((option) => option.id === kitchen.upper)
+    if (upper) details.push({ label: quotePage.upperLabel, value: upper.label })
+    if (kitchen.ceilingM !== null)
+      details.push({ label: quotePage.ceilingHeightLabel, value: meters(kitchen.ceilingM) })
     if (appliances) details.push({ label: quotePage.appliancesLabel, value: appliances.label })
+    if (kitchen.applianceList.length > 0)
+      details.push({
+        label: quotePage.applianceListLabel,
+        value: labelsOf(applianceList.options, kitchen.applianceList),
+      })
+  }
+  if (kitchen.category === 'wardrobe') {
+    const placement = wardrobePlacement.options.find((option) => option.id === kitchen.placement)
+    if (placement) details.push({ label: quotePage.placementLabel, value: placement.label })
+    if (kitchen.nicheDepthM !== null)
+      details.push({ label: quotePage.nicheDepthLabel, value: meters(kitchen.nicheDepthM) })
+    if (kitchen.ceilingM !== null)
+      details.push({ label: quotePage.ceilingHeightLabel, value: meters(kitchen.ceilingM) })
+    if (kitchen.inside.length > 0)
+      details.push({
+        label: quotePage.insideLabel,
+        value: labelsOf(wardrobeInside.options, kitchen.inside),
+      })
+  }
+  if (kitchen.category === 'bathroom') {
+    const mount = bathroomMount.options.find((option) => option.id === kitchen.mount)
+    if (mount) details.push({ label: quotePage.mountLabel, value: mount.label })
+    if (kitchen.basin !== null)
+      details.push({
+        label: quotePage.basinLabel,
+        value: kitchen.basin === 'have' ? quotePage.basinHave : quotePage.basinNeed,
+      })
+    if (kitchen.needs.length > 0)
+      details.push({
+        label: quotePage.needsLabel,
+        value: labelsOf(bathroomNeeds.options, kitchen.needs),
+      })
+  }
+  if (kitchen.category === 'other') {
+    const kind = otherKind.options.find((option) => option.id === kitchen.kind)
+    if (kind) details.push({ label: quotePage.otherKindLabel, value: kind.label })
   }
   details.push({
     label: quotePage.cityLabel,
@@ -378,6 +450,14 @@ export default function RequestCard() {
             лежит ниже и в первый экран не попадает. */}
         {request.myQuote && <span className={badge}>{requestsPage.answeredBadge}</span>}
       </div>
+      {/* Этап — приглушённой строкой, а не шильдиком: слива уже занята
+          отметкой «Отвечено», и второй акцент погасил бы первый
+          (DESIGN.md § Выделяется то, что одно). */}
+      {request.readiness && (
+        <p className={`mt-xs ${hintText}`}>
+          {request.readiness === 'ready' ? quotePage.readinessReady : quotePage.readinessPlanning}
+        </p>
+      )}
 
       {/* Своими словами — то, ради чего мебельщик открывает заявку. Плашки
           нет намеренно: абзац самостоятелен, а плашка вокруг самостоятельного
@@ -505,6 +585,9 @@ export default function RequestCard() {
           <p className={`max-w-measure ${hintText}`}>
             {revising ? quotePage.reviseHint : quotePage.formHint}
           </p>
+          {!revising && !request.mainSize.known && (
+            <p className={`mt-sm max-w-measure ${hintText}`}>{quotePage.formHintNoSize}</p>
+          )}
 
           {/* Состав отмечается, а не пишется (контракт §2, решение 17.09):
               два свободных текста рядом сравнить нельзя — сравнивалась бы

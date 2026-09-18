@@ -57,6 +57,14 @@ function RequestRow({ item }: { item: RequestForMasterListItem }) {
   // куда ехать, есть ли снимки — по этому мебельщик решает, берётся ли он.
   const meta = [
     routedAtLabel(item.routedAt),
+    // Этап стоит рядом с размером не случайно: заявка без числа с пометкой
+    // «пока прикидывает» читается как понятный случай, а не как недоделка,
+    // и мебельщик решает по строке, не открывая её (решение PM 18.09).
+    item.readiness === 'ready'
+      ? requestsPage.readinessReady
+      : item.readiness === 'planning'
+        ? requestsPage.readinessPlanning
+        : null,
     [cityLabel(item.city.code, item.city.name), item.district].filter(Boolean).join(', '),
     item.photosCount > 0 ? requestsPage.photos(item.photosCount) : null,
   ].filter(Boolean)
