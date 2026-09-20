@@ -129,6 +129,34 @@ export const buttonText =
   'transition-opacity duration-100 hover:underline ' +
   'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:no-underline'
 
+/**
+ * tile — плитка витрины: карточка мастерской в сетке каталога (§ Components,
+ * заведена 20.09). Радиус 12, приподнята тенью, внутренний отступ живёт
+ * на содержимом, а не на самой плитке: фото-крышка идёт во всю ширину
+ * и отступа иметь не должна.
+ *
+ * Тень здесь — единственная в системе, и она означает «это отдельный
+ * предмет, его можно взять» (§ Elevation). Наведение её не усиливает:
+ * поднимать предмет выше на hover — движение ради движения; вместо этого
+ * плитка слегка темнеет, как все нажимаемые поверхности.
+ */
+export const tile =
+  'group flex h-full flex-col overflow-hidden rounded-lg bg-surface shadow-tile ' +
+  'transition-[filter] duration-100 hover:brightness-97 active:brightness-94 ' +
+  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ' +
+  'focus-visible:outline-offset-2'
+
+/** tile-photo — крышка плитки: фон на время загрузки снимка. */
+export const tilePhoto = 'bg-surface-container'
+
+/**
+ * shelf — сетка витрины. Колонок столько, сколько поместится при плитке
+ * не уже 272px: одна на телефоне, четыре на широком экране. Число колонок
+ * не задаётся вручную ни на одной ступени — иначе сетка ломается на ширине,
+ * о которой никто не подумал (§ Layout).
+ */
+export const shelf = 'grid gap-lg [grid-template-columns:repeat(auto-fill,minmax(var(--spacing-tile-min),1fr))]'
+
 /** panel-nested — второй уровень, радиус 4, отступ 12. Глубже не вкладывать. */
 export const panelNested = 'rounded-sm bg-surface-container-high p-md'
 

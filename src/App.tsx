@@ -15,8 +15,16 @@ import RequestSent from './pages/public/RequestSent'
 export default function App() {
   return (
     <Routes>
-      {/* Заказчица — публичная зона */}
-      <Route path="/" element={<Landing />} />
+      {/*
+        Заказчик — публичная зона. Главная с 20.09 — каталог: решение PM,
+        каталог стал маркетплейсом и входом по умолчанию.
+
+        Лендинг остался отдельным адресом и не удалён: он несёт оффер под
+        рекламу и размечен UTM (US-01, US-26). Вести платный трафик в каталог
+        вместо оффера — значит потерять то, что проба измеряет.
+      */}
+      <Route path="/" element={<Masters />} />
+      <Route path="/promo" element={<Landing />} />
       <Route path="/masters" element={<Masters />} />
       <Route path="/masters/:id" element={<MasterProfile />} />
       <Route path="/request" element={<RequestForm />} />

@@ -76,7 +76,10 @@ async function ответить(
 }
 
 test('заявка доходит от формы до вилки на странице клиента @shots', async ({ page }) => {
-  await page.goto('/')
+  // Лендинг с 20.09 живёт на /promo: главная отдана каталогу (решение PM).
+  // Оффер остался отдельным адресом — на него ведёт реклама, и проба
+  // измеряет именно его.
+  await page.goto('/promo')
 
   // 1 · Лендинг: каталог пуст, значит блока о мастерских быть не должно (US-02)
   await expect(page.getByRole('heading', { name: 'Смотрите пробу?' })).toBeVisible()
@@ -133,7 +136,13 @@ test('заявка доходит от формы до вилки на стра�
   await page.goBack()
 
   // 5 · Первый мебельщик отвечает
-  await page.getByRole('link', { name: 'Капибара' }).click()
+  // Панель пробы живёт на лендинге, а он с 20.09 на /promo: знак в шапке
+  // ведёт на главную, то есть в каталог. Переход ссылкой, не goto: мок-стор
+  // живёт в памяти вкладки, и перезагрузка обнулила бы заявку.
+  // Панель пробы живёт на лендинге, а он с 20.09 на /promo. Переход идёт
+  // ссылкой из подвала, а не goto: мок-стор живёт в памяти вкладки,
+  // и перезагрузка обнулила бы заявку на середине пути.
+  await page.getByRole('link', { name: 'Как это работает' }).click()
   await черезПробу(page, /Путь мебельщика/)
   await войти(page, МАСТЕР_ОДИН)
   await page.getByRole('link', { name: new RegExp(РАЗМЕР) }).first().click()
@@ -200,8 +209,11 @@ test('заявка доходит от формы до вилки на стра�
     'Ничего сверх вилки: техника, замер и вывоз старой кухни уже внутри.',
   )
 
-  // 8 · Глазами клиента: два предложения, сравнение, контакт
+  // 8 · Глазами клиента: два предложения, сравнение, контакт.
+  // Панель пробы со ссылкой на свою заявку живёт на лендинге (/promo),
+  // и знак в шапке ведёт теперь в каталог — идём подвалом.
   await page.getByRole('link', { name: 'Капибара' }).click()
+  await page.getByRole('link', { name: 'Как это работает' }).click()
   await page.getByRole('link', { name: /Предложения по вашей заявке/ }).click()
 
   await expect(page.getByText('Изменено')).toBeVisible()
@@ -256,8 +268,12 @@ test('опубликованная карточка открывается це�
   await expect(page.getByText('Замер на месте')).toBeVisible()
   await expect(page.getByText('от 25 до 35 дней')).toBeVisible()
   await expect(page.getByText('Шкафы и гардеробные')).toBeVisible()
-  // Телефона в каталоге нет, и причина названа словами (US-24).
-  await expect(page.getByText('Телефон мастерская пришлёт')).toBeVisible()
+  // Связаться можно прямо отсюда (решение PM 20.09): заявка главной кнопкой,
+  // звонок и сообщение — для того, кто уже выбрал.
+  await expect(page.getByRole('heading', { name: 'Связаться с мастерской' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Позвонить' })).toBeVisible()
+  // Безопасная сделка помечена будущей: механизма расчётов нет.
+  await expect(page.getByText('Готовим: деньги замораживаются')).toBeVisible()
   await expect(page.locator('img').first()).toBeVisible()
   await снимок(page, 'карточка-мастерской-заполненная')
 })
@@ -268,7 +284,7 @@ test('каталог показывает опубликованную карт�
   // обратное: витрина показывает опубликованное и ведёт в карточку.
   await page.goto('/masters')
   await expect(page.getByText('Мастерская на Сайране')).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Смотреть работы' }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: /Мастерская на Сайране/ }).first()).toBeVisible()
   // Каталог сравнивает мастерские по тому, что входит в работу (US-02).
   await expect(page.getByText('Замер на месте').first()).toBeVisible()
   // Скупо заполненная карточка стоит рядом и не выглядит сломанной:
@@ -320,8 +336,10 @@ test('мебельщик правит карточку — и правка ви�
   await page.waitForURL('**/masters')
   // Имя мастерской встречается и на лендинге — в панели пробы, — поэтому
   // здесь проверяется заголовок карточки списка, а не текст где угодно.
-  await expect(page.getByRole('heading', { name: 'Мастерские' })).toBeVisible()
-  await page.getByRole('link', { name: 'Смотреть работы' }).first().click()
+  await expect(page.getByRole('heading', { name: /Мебель на заказ/ })).toBeVisible()
+  // Плитка витрины нажимается целиком (§ Components): отдельной ссылки
+  // «Смотреть работы» в ней нет — человек метит в карточку, а не в строку.
+  await page.getByRole('link', { name: /Мастерская на Сайране/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Мастерская на Сайране' })).toBeVisible()
   await expect(page.getByText(отличие)).toBeVisible()
   await expect(page.getByText('Уберёт старую мебель — за отдельную плату')).toBeVisible()
@@ -357,7 +375,9 @@ test('каталог отбирает по виду работ и городу, 
   await expect(page.getByText('2 мастерские')).toBeVisible()
   await снимок(page, 'каталог-отобран')
 
-  await page.getByRole('link', { name: 'Смотреть работы' }).first().click()
+  // Плитка витрины нажимается целиком (§ Components): отдельной ссылки
+  // «Смотреть работы» в ней нет — человек метит в карточку, а не в строку.
+  await page.getByRole('link', { name: /Мастерская на Сайране/ }).first().click()
   await expect(page.getByRole('link', { name: 'Все мастерские' })).toBeVisible()
   await page.goBack()
   // Отбор на месте — и в адресе, и на чипсах.

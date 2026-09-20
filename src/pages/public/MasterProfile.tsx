@@ -18,12 +18,13 @@ import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { HoursIcon, LeadTimeIcon, WarrantyIcon } from '../../components/icons'
-import { blockRowDivider, buttonFilled, chip, hintText, link, panel } from '../../components/ui'
+import { blockRowDivider, buttonFilled, buttonText, chip, hintText, link, panel } from '../../components/ui'
 import type { CategoryId, MasterCardPublic, MasterPhoto } from '../../contract'
 import { z } from 'zod'
 import { cityName } from '../../questions/categories'
 import { serviceText } from '../../questions/services'
 import { leadTime, warranty, workHours } from '../../texts/format'
+import { track } from '../../analytics'
 import { masterCardPage, mastersPage } from '../../texts/masters'
 import { ServiceIcon } from '../../components/ServiceIcon'
 
@@ -324,14 +325,59 @@ export default function MasterProfile() {
       <SectionTitle>{masterCardPage.aboutLabel}</SectionTitle>
       <p className="mt-md max-w-measure text-body tracking-body">{card.about}</p>
 
-      {/* Главное действие в конце экрана (§ Порядок важнее полноты). Обе
-          строки — перед кнопкой, а не после: предупреждение, прочитанное
-          после нажатия, уже не предупреждение. */}
-      <p className={`mt-3xl max-w-measure ${hintText}`}>{masterCardPage.contactNote}</p>
-      <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.fanNote}</p>
-      <Link to="/request" className={`mt-lg inline-flex ${buttonFilled}`}>
-        {masterCardPage.toRequest}
-      </Link>
+      {/* Действия в конце экрана (§ Порядок важнее полноты): человек сначала
+          смотрит работы и условия, потом решает. Заявка — главная кнопка:
+          несколько предложений выгоднее одного разговора, и строка под ней
+          говорит об этом прямо. Звонок и сообщение — для того, кто уже выбрал. */}
+      <SectionTitle>{masterCardPage.actionsTitle}</SectionTitle>
+
+      <div className="mt-md flex flex-col gap-md sm:flex-row sm:flex-wrap sm:items-center">
+        <Link to="/request"
+          className={`w-full justify-center sm:w-auto ${buttonFilled}`}>
+          {masterCardPage.actionRequest}
+        </Link>
+
+        {card.contactPhone !== null && (
+          <>
+            {/* tel: и wa.me — внешние переходы, и это <a>, а не Link:
+                роутер их не знает, а телефон открывает звонилку системы. */}
+            <a href={`tel:${card.contactPhone}`} className={buttonText}
+              onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+              {masterCardPage.actionCall}
+            </a>
+            {card.messengers.includes('whatsapp') && (
+              <a href={`https://wa.me/${card.contactPhone.replace(/\D/g, '')}`}
+                target="_blank" rel="noreferrer noopener" className={buttonText}
+                onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+                {masterCardPage.actionWrite}
+              </a>
+            )}
+            {card.messengers.includes('telegram') && (
+              <a href={`https://t.me/+${card.contactPhone.replace(/\D/g, '')}`}
+                target="_blank" rel="noreferrer noopener" className={buttonText}
+                onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+                {masterCardPage.actionWriteTelegram}
+              </a>
+            )}
+          </>
+        )}
+      </div>
+
+      <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.actionRequestNote}</p>
+
+      {card.contactPhone === null && (
+        <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.contactMissing}</p>
+      )}
+
+      {/* Безопасная сделка помечена будущей и ведёт себя как будущая:
+          механизма расчётов нет, и кнопка, за которой ничего не стоит, —
+          обещание живым людям. Строка говорит, чем это станет и как сейчас. */}
+      <section className={`mt-xl ${panel}`}>
+        <p className="text-body tracking-body font-medium">{masterCardPage.actionDeal}</p>
+        <p className={`mt-xs max-w-measure ${hintText}`}>{masterCardPage.actionDealNote}</p>
+      </section>
+
+      <p className={`mt-xl max-w-measure ${hintText}`}>{masterCardPage.fanNote}</p>
     </PageShell>
   )
 }

@@ -461,9 +461,10 @@ export default function MasterProfileEdit() {
         draft.days.length > 0 && draft.hoursFrom !== '' && draft.hoursTo !== ''
           ? { days: draft.days, from: draft.hoursFrom, to: draft.hoursTo }
           : null,
-      // Контакта и мессенджеров в публичной проекции нет вовсе (контракт §2),
-      // поэтому предпросмотр их и не показывает — он обязан совпадать
-      // с каталогом до строчки, иначе перестаёт быть предпросмотром.
+      // Контакт с 20.09 виден в каталоге (контракт §2): предпросмотр обязан
+      // совпадать с ним до строчки, иначе перестаёт быть предпросмотром.
+      contactPhone: draft.phone.trim() === '' ? null : draft.phone.trim(),
+      messengers: draft.messengers,
       publishedAt: card.card?.publishedAt ?? new Date().toISOString(),
     },
   }

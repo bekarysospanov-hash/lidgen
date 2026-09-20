@@ -19,6 +19,21 @@
 @source "./";
 @import "./design-tokens.css";
 
+/*
+ * Тень витрины — единственная величина системы, которую генератор выдать
+ * не может: формат design.md теней не описывает (см. docs/reference,
+ * Component Property Tokens). Правда о ней — в DESIGN.md § Elevation:
+ * тень одна, принадлежит плитке каталога и означает «это отдельный предмет,
+ * его можно взять». Число здесь, смысл там; менять — сначала там.
+ *
+ * Два слоя, оба слабые: лист над столом, а не всплывающее окно.
+ */
+@theme {
+  --shadow-tile:
+    0 1px 2px color-mix(in oklab, var(--color-on-surface) 4%, transparent),
+    0 2px 8px color-mix(in oklab, var(--color-on-surface) 6%, transparent);
+}
+
 html, body {
   overflow-x: clip;
   background: var(--color-surface);

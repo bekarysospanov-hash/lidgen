@@ -559,17 +559,31 @@ describe('своя карточка мебельщика — US-20', () => {
     expect(MyCard.safeParse(full).success).toBe(true)
   })
 
-  /** Схема, а не экран: поле, спрятанное разметкой, лежит в теле ответа. */
-  it('публичная карточка режет контакт схемой, а не показом', () => {
+  /**
+   * Контакт в публичной карточке с 20.09 — решение PM: из каталога звонят
+   * и пишут, не оставляя заявку. До этого он резался схемой. Тест сторожит
+   * не факт показа, а то, что поле доезжает целиком: половина номера или
+   * пустая строка на экране хуже отсутствия.
+   */
+  it('публичная карточка несёт контакт мастерской', () => {
     const parsed = MasterCardPublic.safeParse({
       id: '11111111-1111-4111-8111-111111111111',
       name: 'Цех 12',
       city: { code: 'almaty', name: null },
       card: { ...card, contactPhone: '+77010000001', messengers: ['whatsapp'] },
     })
+    expect(parsed.success && parsed.data.card.contactPhone).toBe('+77010000001')
+    expect(parsed.success && parsed.data.card.messengers).toEqual(['whatsapp'])
+  })
+
+  it('карточка без контакта тоже публикуется: номер необязателен', () => {
+    const parsed = MasterCardPublic.safeParse({
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'Цех 12',
+      city: { code: 'almaty', name: null },
+      card: { ...card, contactPhone: null, messengers: [] },
+    })
     expect(parsed.success).toBe(true)
-    expect(parsed.success && 'contactPhone' in parsed.data.card).toBe(false)
-    expect(parsed.success && JSON.stringify(parsed.data).includes('+7701')).toBe(false)
   })
 
   it('телефон и acceptingFrom мебельщику не отдаются — проекция строгая', () => {

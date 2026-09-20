@@ -13,9 +13,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../api/client'
-import { MasterListCard } from '../../components/MasterListCard'
+import { MasterTile } from '../../components/MasterTile'
 import { PageShell } from '../../components/PageShell'
-import { buttonFilled, buttonText, chip, hintText } from '../../components/ui'
+import { buttonFilled, buttonText, chip, hintText, panel, shelf } from '../../components/ui'
 import { CategoryId, CityCode, type MasterCardPublic } from '../../contract'
 import { cityName } from '../../questions/categories'
 import { mastersPage } from '../../texts/masters'
@@ -25,8 +25,17 @@ type View =
   | { kind: 'ready'; masters: MasterCardPublic[] }
   | { kind: 'failed' }
 
+/**
+ * Заголовок витрины идёт ступенью `hero` (§ Typography, заведена 20.09):
+ * над сеткой во всю раму `heading` в 30 пикселей читается как подпись
+ * к таблице, а не как заголовок страницы.
+ */
 function Title({ children }: { children: React.ReactNode }) {
-  return <h1 className="text-heading tracking-heading font-semibold">{children}</h1>
+  return (
+    <h1 className="max-w-measure text-display tracking-display sm:text-hero sm:tracking-hero font-semibold text-balance">
+      {children}
+    </h1>
+  )
 }
 
 /** Города каталога. «Другой город» сюда не попадает: мастерских там нет. */
@@ -144,11 +153,31 @@ export default function Masters() {
   )
 
   return (
-    <PageShell>
+    <PageShell layout="shelf">
+      {/* Колонка с порядком: на телефоне лидген-баннер уходит под сетку.
+          Заголовок, лид, баннер и два ряда отбора вместе занимали весь
+          первый экран, и до первой плитки приходилось листать — витрина
+          обязана начинаться сразу. На широком экране места хватает,
+          и баннер стоит наверху, где его видно. */}
+      <div className="flex flex-col">
       <Title>{mastersPage.title}</Title>
       <p className="mt-lg max-w-measure text-body tracking-body">{mastersPage.lede}</p>
 
-      <section className="mt-2xl">
+      {/* Вход в лидген прямо из витрины (решение PM 20.09): человек, пришедший
+          смотреть мастерские, чаще всего ещё не выбрал, и ему дешевле получить
+          несколько предложений, чем обходить карточки по одной. Стоит до
+          отбора: после сетки его увидят те, кто уже пролистал всё. */}
+      <section className={`order-last mt-2xl flex flex-wrap items-center gap-md sm:order-none sm:mt-xl ${panel}`}>
+        <p className="max-w-measure text-body tracking-body">
+          <span className="font-medium">{mastersPage.fanTitle}</span> {mastersPage.fanBody}
+        </p>
+        <Link to="/request"
+          className={`w-full justify-center sm:ml-auto sm:w-auto sm:justify-start whitespace-nowrap ${buttonFilled}`}>
+          {mastersPage.fanAction}
+        </Link>
+      </section>
+
+      <section className="mt-xl">
         <FilterRow label={mastersPage.filterKindLabel} allLabel={mastersPage.filterAll}
           value={kind}
           options={KINDS.map((id) => ({ id, label: mastersPage.filterKinds[id] }))}
@@ -186,15 +215,20 @@ export default function Masters() {
             {mastersPage.found(shown.length)}
           </p>
 
-          <ul className="mt-lg flex flex-col gap-xl">
+          {/* Сетка: колонок столько, сколько поместится при плитке
+              не уже 272px. Число колонок вручную не задаётся ни на одной
+              ступени — иначе раскладка ломается на ширине, о которой никто
+              не подумал (§ Layout). */}
+          <ul className={`mt-lg ${shelf}`}>
             {shown.map((master) => (
-              <li key={master.id}>
-                <MasterListCard master={master} />
+              <li key={master.id} className="flex">
+                <MasterTile master={master} />
               </li>
             ))}
           </ul>
         </>
       )}
+      </div>
     </PageShell>
   )
 }

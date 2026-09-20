@@ -22,14 +22,18 @@ const BANNED = [
   // круглой кнопки регуляркой нельзя — это правило прозой, и держится оно
   // на том, что DESIGN.md прочитан. Здесь закрыта лишь шкала: промежуточных
   // ступеней между 8 и full не бывает.
-  { re: /\brounded-(?!none\b|sm\b|md\b|full\b)[a-z0-9[\]]+/g,
-    why: 'ступени радиуса: 0 фото и линии, 4 кнопки и поля, 8 карточки, full точка и чипс — DESIGN.md § Shapes' },
+  { re: /\brounded-(?!none\b|sm\b|md\b|lg\b|full\b|t-lg\b)[a-z0-9[\]]+/g,
+    why: 'ступени радиуса: 0 фото и линии, 4 кнопки и поля, 8 плашки формы, 12 плитка витрины, full точка и чипс — DESIGN.md § Shapes' },
   { re: /\brounded(?![-a-z0-9])/g,
     why: 'голый rounded — это дефолт Tailwind мимо шкалы — DESIGN.md § Shapes' },
   { re: /\bfont-(bold|extrabold|black|light|extralight|thin)\b/g,
     why: 'шкала весов 400 / 500 / 600, крайних нет — DESIGN.md § Typography' },
-  { re: /\b(drop-)?shadow-[a-z0-9[\]]+/g,
-    why: 'теней нет, высота передаётся цветом поверхности — DESIGN.md § Elevation' },
+  // Тень в системе одна — `shadow-tile`, и принадлежит она плитке витрины
+  // (§ Elevation, правка 20.09). Всё остальное, включая дефолтные shadow-sm
+  // и shadow-lg Tailwind, по-прежнему запрещено: разрешение одной тени
+  // не открывает шкалу.
+  { re: /\b(drop-)?shadow-(?!tile\b)[a-z0-9[\]]+/g,
+    why: 'тень одна и только у плитки витрины (shadow-tile) — DESIGN.md § Elevation' },
   { re: /\bbg-gradient-[a-z-]+/g, why: 'градиентов нет — DESIGN.md § Elevation' },
   { re: /\bitalic\b/g, why: 'курсива нет — DESIGN.md § Don\'ts' },
   { re: /\buppercase\b/g,
@@ -76,17 +80,21 @@ const BANNED = [
 
   // Трекинг парен роли и задаётся вместе с ней. Свободный трекинг разносит
   // или слепляет буквы (их wide-tracking, extreme-negative-tracking).
-  { re: /\btracking-(?!display\b|heading\b|subheading\b|body-sm\b|body\b|label\b)[a-z0-9[\]-]+/g,
+  { re: /\btracking-(?!hero\b|display\b|heading\b|subheading\b|body-sm\b|body\b|label\b)[a-z0-9[\]-]+/g,
     why: 'трекинг — только парным к роли токеном (tracking-body, tracking-label) — DESIGN.md § Typography' },
 
   // Выключка по формату: без переносов даёт «реки» (их justified-text).
   { re: /\btext-justify\b/g,
     why: 'выключки по формату нет, выравнивание левое — DESIGN.md § Typography' },
 
-  // Четвёртая мера текста. Ширин три, и все три названы; max-w-prose или
-  // max-w-screen-lg заводит четвёртую незаметно (их line-length).
-  { re: /\bmax-w-(?!measure-title\b|measure\b|column\b|full\b|\[)[a-z0-9-]+/g,
-    why: 'ширин три: measure, measure-title, полная ширина блока — DESIGN.md § Мера строки' },
+  // Четвёртая мера ТЕКСТА. Ширин текста три, и все три названы; max-w-prose
+  // или max-w-screen-lg заводит четвёртую незаметно (их line-length).
+  //
+  // `shelf` сюда не относится и добавлен 20.09: это не мера строки, а рама
+  // страницы и ширина витрины (§ Layout). Раньше то же число стояло
+  // литералом max-w-[1440px] и правило обходило его через ветку с «[».
+  { re: /\bmax-w-(?!measure-title\b|measure\b|column\b|shelf\b|full\b|\[)[a-z0-9-]+/g,
+    why: 'ширин текста три: measure, measure-title, полная ширина блока — DESIGN.md § Мера строки' },
 
   // Движение без события: пульсация, мигание, бегущая строка, отскок
   // (их pulsing-dot, blinking-cursor, marquee, bounce-easing).
@@ -376,6 +384,12 @@ for (const base of SCAN) {
           // transition-[...] перечисляет свойства перехода, а не размеры.
           if (/^[a-z-]+(?:,[a-z-]+)*$/.test(value)) continue
           if (ALLOWED_ARBITRARY.has(value)) continue
+          // Значение, собранное из токенов, литералом не является: раскладка
+          // витрины — это repeat(auto-fill, minmax(var(--spacing-tile-min), 1fr)),
+          // и все размеры в нём приходят из DESIGN.md. Правило сторожит числа
+          // мимо системы, а здесь чисел мимо системы нет (правка 20.09).
+          // `1fr` и `auto` — доли и ключевые слова сетки, не размеры.
+          if (/var\(--/.test(value) && !/\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw)/.test(value)) continue
           findings.push({
             file: rel,
             line: i + 1,

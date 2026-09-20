@@ -71,11 +71,24 @@ function QuoteCard({
 
   return (
     <div className={panel}>
-      <p className="text-subheading tracking-subheading font-medium">{quote.master.name}</p>
+      {/* Имя мастерской ведёт на её карточку (решение PM 20.09). До этого
+          перехода не было вовсе: человек читал цену от незнакомого имени
+          и не мог посмотреть ни работ, ни условий — а именно этого он
+          в эту секунду и хочет.
+
+          Карточка может быть не опубликована: тогда экран честно скажет,
+          что такой мастерской в каталоге нет, и выведет обратно. Это лучше,
+          чем прятать имя от тех, у кого карточка есть. */}
+      <p className="text-subheading tracking-subheading font-medium">
+        <Link to={`/masters/${quote.master.id}`} className={link}>
+          {quote.master.name}
+        </Link>
+      </p>
       <p className={`mt-xs ${hintText}`}>
         {offersPage.quoteArrived} {arrivedAt(quote.sentAt)}
         {quote.updatedAt !== null && ` · ${offersPage.quoteRevised} ${arrivedAt(quote.updatedAt)}`}
       </p>
+      <p className={`mt-xs ${hintText}`}>{offersPage.masterCardHint}</p>
 
       <div className={`mt-lg ${panelNested}`}>
         <p className="text-subheading tracking-subheading font-medium tabular-nums">

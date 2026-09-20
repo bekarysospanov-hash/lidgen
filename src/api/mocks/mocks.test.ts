@@ -751,21 +751,19 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
     })
 
     /**
-     * Эндпоинт каталога открыт без токена (§5), и телефон мастерской — ПДн.
-     * Проверяется всё тело ответа, а не одно поле: спрятанный на экране
-     * номер всё равно виден в консоли браузера.
+     * С 20.09 каталог — маркетплейс, и контакт из карточки доступен без
+     * заявки (решение PM). Тест сторожит доставку: карточка без номера
+     * на экране означала бы, что позвонить нельзя, хотя мастерская его дала.
      */
-    it('телефон мастерской в каталог не уходит — ни в одном поле ответа', async () => {
+    it('телефон мастерской доезжает до каталога', async () => {
       const card = await mockApi.getMasterCard('aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')
-      expect(JSON.stringify(card)).not.toContain('+7701')
-      expect('contactPhone' in card.card).toBe(false)
-      expect('messengers' in card.card).toBe(false)
+      expect(card.card.contactPhone).toBe('+77010000001')
     })
 
-    it('и в списке каталога тоже не уходит', async () => {
+    it('и в списке каталога тоже', async () => {
       const list = await mockApi.listMasters()
       expect(list.length).toBeGreaterThan(0)
-      expect(JSON.stringify(list)).not.toContain('+7701')
+      expect(list.every((item) => item.card.contactPhone !== undefined)).toBe(true)
     })
 
     it('себе мебельщик свой телефон видит: это его собственное поле', async () => {
