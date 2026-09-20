@@ -12,12 +12,12 @@
 // теперь на строке под блоком и на том, что мастерских семь и все знакомы
 // лично. На проде сюда встаёт модерация.
 import { useEffect, useRef, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { Box, CheckRows, ChoiceRows } from '../../components/Choice'
-import { MasterListCard } from '../../components/MasterListCard'
+import { MasterTile } from '../../components/MasterTile'
 import { MasterShell } from '../../components/MasterShell'
 import { ServiceIcon } from '../../components/ServiceIcon'
 import { CameraIcon, CloseIcon } from '../../components/icons'
@@ -31,7 +31,9 @@ import {
   field,
   fieldLabel,
   hintText,
+  link,
   panel,
+  shelf,
 } from '../../components/ui'
 import {
   CARD_LIMITS,
@@ -159,6 +161,35 @@ const EMPTY: Draft = {
   messengers: [],
 }
 
+/**
+ * Черновик из сохранённой карточки. Вынесено из эффекта загрузки: то же
+ * превращение нужно отказу от правки — он возвращает поля к тому, что
+ * лежит на сервере, а не к пустым.
+ */
+function draftFrom(card: MyCard): Draft {
+  const it = card.card
+  if (it === null) return EMPTY
+  return {
+    about: it.about,
+    years: String(it.yearsOnMarket),
+    does: it.does.join(', '),
+    categories: [...it.categories],
+    services: it.services.map((service) => ({ ...service })),
+    area: it.serviceArea ?? '',
+    extras: [...it.extras],
+    photos: [...it.photos],
+    logo: it.logo,
+    warranty: it.warrantyMonths === null ? '' : String(it.warrantyMonths),
+    leadFrom: it.leadTime === null ? '' : String(it.leadTime.min),
+    leadTo: it.leadTime === null ? '' : String(it.leadTime.max),
+    days: it.hours === null ? [] : [...it.hours.days],
+    hoursFrom: it.hours?.from ?? '',
+    hoursTo: it.hours?.to ?? '',
+    phone: it.contactPhone ?? '',
+    messengers: [...it.messengers],
+  }
+}
+
 /** Заголовок раздела — над плашкой, а не внутри неё (чек-лист, п. 1). */
 function Part({ title, hint, children }: {
   title: string
@@ -194,6 +225,18 @@ export default function MasterProfileEdit() {
   const [view, setView] = useState<View>({ kind: 'loading' })
   const [draft, setDraft] = useState<Draft>(EMPTY)
   /**
+   * Две стадии одной страницы, а не два экрана (§ Layout: шаг, который
+   * хочется показать модалкой, показывается стадией той же страницы).
+   *
+   * Почему стадии вообще появились (правка 20.09). Кабинет открывался
+   * сразу анкетой на девять разделов, и мебельщик, зашедший посмотреть,
+   * как он выглядит в каталоге, вместо ответа получал работу. Своё лицо
+   * он видел в предпросмотре — в самом низу, после всех полей, то есть
+   * почти никогда. Теперь обзор первым: плитка, какой его видит заказчик,
+   * и список того, чего не хватает. Правка — по нажатию.
+   */
+  const [editing, setEditing] = useState(false)
+  /**
    * Ключи ошибок перечислены, а не строкой: опечатка в `found.warrenty`
    * молча не показала бы человеку ничего, и поймать это можно было бы
    * только руками.
@@ -212,28 +255,7 @@ export default function MasterProfileEdit() {
     api.getMyCard(session.token).then(
       (card) => {
         setView({ kind: 'ready', card })
-        if (card.card !== null) {
-          const it = card.card
-          setDraft({
-            about: it.about,
-            years: String(it.yearsOnMarket),
-            does: it.does.join(', '),
-            categories: [...it.categories],
-            services: it.services.map((service) => ({ ...service })),
-            area: it.serviceArea ?? '',
-            extras: [...it.extras],
-            photos: [...it.photos],
-            logo: it.logo,
-            warranty: it.warrantyMonths === null ? '' : String(it.warrantyMonths),
-            leadFrom: it.leadTime === null ? '' : String(it.leadTime.min),
-            leadTo: it.leadTime === null ? '' : String(it.leadTime.max),
-            days: it.hours === null ? [] : [...it.hours.days],
-            hoursFrom: it.hours?.from ?? '',
-            hoursTo: it.hours?.to ?? '',
-            phone: it.contactPhone ?? '',
-            messengers: [...it.messengers],
-          })
-        }
+        if (card.card !== null) setDraft(draftFrom(card))
       },
       (error: unknown) =>
         setView({
@@ -519,6 +541,9 @@ export default function MasterProfileEdit() {
           setSaving(false)
           setSaved(true)
           setView({ kind: 'ready', card: updated })
+          // Сохранил — показываем, что вышло: обзор с плиткой и списком
+          // пропусков и есть ответ на «ну и как я теперь выгляжу».
+          setEditing(false)
         },
         (error: unknown) => {
           setSaving(false)
@@ -540,32 +565,108 @@ export default function MasterProfileEdit() {
       )
   }
 
+  // Стадия обзора. Отсюда мебельщик уходит либо в правку, либо в каталог —
+  // посмотреть на себя тем же экраном, каким его видит заказчик.
+  if (!editing) {
+    return (
+      <MasterShell masterName={session.master.name}>
+        <p className={hintText}>{profilePage.label}</p>
+        <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
+          {profilePage.title}
+        </h1>
+        <p className="mt-lg max-w-measure text-body tracking-body">{profilePage.lede}</p>
+
+        {card.card === null ? (
+          // Карточки ещё нет — законное состояние, а не ошибка: приём заявок
+          // и публикация в каталоге разные решения (контракт §2).
+          //
+          // Кнопки «заполнить» здесь нет намеренно (ревью 20.09). Карточку
+          // заводим мы, трек A2: `writeMyCard` при пустой карточке отвечает
+          // CARD_NOT_PUBLISHED и создавать её не умеет. Кнопка обещала бы
+          // работу, которой нет, — мебельщик прошёл бы анкету на девять
+          // разделов и потерял её на сохранении.
+          <section className="mt-3xl">
+            <h2 className="text-subheading tracking-subheading font-medium">
+              {profilePage.emptyTitle}
+            </h2>
+            <p className="mt-sm max-w-measure text-body tracking-body">{profilePage.emptyBody}</p>
+          </section>
+        ) : (
+          <>
+            {/* Своё лицо — первым, и ровно той плиткой, что стоит в каталоге:
+                вторая карточка «для кабинета» разошлась бы с настоящей
+                через неделю. Нажатие открывает публичную карточку. */}
+            <section className="mt-3xl">
+              <h2 className="text-subheading tracking-subheading font-medium">
+                {profilePage.previewTitle}
+              </h2>
+              <p className={`mt-xs max-w-measure ${hintText}`}>{profilePage.previewHint}</p>
+              {/* Сетка витрины, а не своя ширина: плитка обязана быть
+                  того же размера, что в каталоге (§ Layout). */}
+              <div className={`mt-md ${shelf}`}>
+                <MasterTile master={preview} />
+              </div>
+              <p className="mt-md">
+                <Link to={`/masters/${session.master.id}`} className={`text-body tracking-body ${link}`}>
+                  {profilePage.openPublic}
+                </Link>
+              </p>
+            </section>
+
+            {/* Чего не хватает — делами, а не процентом: «заполнено на 68%»
+                не говорит, что делать (бенчмарк 18.09). */}
+            <section className="mt-3xl">
+              <h2 className="text-subheading tracking-subheading font-medium">
+                {profilePage.gapsTitle}
+              </h2>
+              {gaps.length === 0 ? (
+                <p className="mt-md max-w-measure text-body tracking-body">{profilePage.gapsNone}</p>
+              ) : (
+                <ul className="mt-md max-w-measure">
+                  {gaps.map((gap) => (
+                    <li key={gap} className="mt-sm text-body tracking-body first:mt-0">
+                      {gap}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* Что заведено нами и не правится вовсе. Здесь, а не в форме:
+                в форме это был блок без единого поля — человек искал
+                в нём, что нажать. */}
+            <div className={`mt-3xl ${panel}`}>
+              <p className={fieldLabel}>{profilePage.nameLabel}</p>
+              <p className="mt-xs text-body tracking-body">{card.name}</p>
+              <p className={`mt-lg ${fieldLabel}`}>{profilePage.cityLabel}</p>
+              <p className="mt-xs text-body tracking-body">{cityName(card.city)}</p>
+              <p className={`mt-lg max-w-measure ${hintText}`}>{profilePage.fixedNote}</p>
+            </div>
+
+            {saved && <p className={`mt-xl ${hintText}`} role="status">{profilePage.saved}</p>}
+
+            {/* Главное действие в конце экрана (§ Порядок важнее полноты). */}
+            <button type="button" onClick={() => setEditing(true)} className={`mt-xl ${buttonFilled}`}>
+              {profilePage.edit}
+            </button>
+          </>
+        )}
+      </MasterShell>
+    )
+  }
+
   return (
     <MasterShell masterName={session.master.name}>
       <p className={hintText}>{profilePage.label}</p>
       <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
-        {profilePage.title}
+        {profilePage.editTitle}
       </h1>
       <p className="mt-lg max-w-measure text-body tracking-body">{profilePage.lede}</p>
 
-      {/* Что заведено нами и не правится отсюда. Стоит первым, чтобы вопрос
-          «а где поменять город» не возникал посреди формы. */}
-      <div className={`mt-3xl ${panel}`}>
-        <p className={fieldLabel}>{profilePage.nameLabel}</p>
-        <p className="mt-xs text-body tracking-body">{card.name}</p>
-        <p className={`mt-lg ${fieldLabel}`}>{profilePage.cityLabel}</p>
-        <p className="mt-xs text-body tracking-body">{cityName(card.city)}</p>
-        <p className={`mt-lg max-w-measure ${hintText}`}>{profilePage.fixedNote}</p>
-      </div>
-
-      {card.card === null ? (
-        // Карточки ещё нет — законное состояние, а не ошибка: приём заявок
-        // и публикация в каталоге разные решения (контракт §2).
-        <section className="mt-3xl">
-          <h2 className="text-subheading tracking-subheading font-medium">{profilePage.emptyTitle}</h2>
-          <p className="mt-sm max-w-measure text-body tracking-body">{profilePage.emptyBody}</p>
-        </section>
-      ) : (
+      {/* Форма рисуется и тогда, когда карточки ещё нет: с пустой её
+          и заводят. Раньше на этом месте стояло условие, и мебельщик
+          без карточки видел объяснение, почему её нет, — но не поля. */}
+      {
         <>
           <Part title={profilePage.aboutLabel} hint={profilePage.aboutHint}>
             {/* Метки у поля нет: её слово в слово произносит заголовок
@@ -901,15 +1002,23 @@ export default function MasterProfileEdit() {
 
                     {/* Рисунок отмечается здесь, а не угадывается нами:
                         по рендеру заказчик судит о сборке, которой
-                        на картинке нет (контракт §2). */}
-                    <label className={`mt-md ${chip(photo.isRender)}`}>
+                        на картинке нет (контракт §2).
+
+                        Строка с отметкой, а не чипс (правка 20.09): подпись
+                        в 43 знака вдвое длиннее предела чипса в 22, и пилюля
+                        растягивалась на две строки — ровно тот случай,
+                        который § Components велит показывать строкой. */}
+                    <label className={`mt-md ${blockRow(photo.isRender)}`}>
                       <input type="checkbox" className="sr-only" checked={photo.isRender}
                         onChange={() => {
                           const next = [...draft.photos]
                           next[index] = { ...photo, isRender: !photo.isRender }
                           set({ photos: next })
                         }} />
-                      {profilePage.worksRenderLabel}
+                      <span className="min-w-0 flex-1 text-body tracking-body">
+                        {profilePage.worksRenderLabel}
+                      </span>
+                      <Box on={photo.isRender} />
                     </label>
                   </li>
                 ))}
@@ -948,46 +1057,35 @@ export default function MasterProfileEdit() {
             </div>
           </Part>
 
-          {/* Предпросмотр и пропуски. Из бенчмарка (18.09): продавец правит
-              карточку вслепую, пока не увидит себя глазами покупателя,
-              а «профиль заполнен на 68%» не говорит, что делать. */}
-          <section className="mt-3xl">
-            <h2 className="text-subheading tracking-subheading font-medium">
-              {profilePage.previewTitle}
-            </h2>
-            <p className={`mt-xs max-w-measure ${hintText}`}>{profilePage.previewHint}</p>
-            <div className="mt-md max-w-measure">
-              <MasterListCard master={preview} asPreview />
-            </div>
-          </section>
-
-          <section className="mt-3xl">
-            <h2 className="text-subheading tracking-subheading font-medium">
-              {profilePage.gapsTitle}
-            </h2>
-            {gaps.length === 0 ? (
-              <p className="mt-md max-w-measure text-body tracking-body">{profilePage.gapsNone}</p>
-            ) : (
-              <ul className="mt-md max-w-measure">
-                {gaps.map((gap) => (
-                  <li key={gap} className="mt-sm text-body tracking-body first:mt-0">
-                    {gap}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+          {/* Предпросмотр и пропуски отсюда убраны (правка 20.09): они стояли
+              в самом низу анкеты, то есть там, куда доходит не каждый.
+              Теперь это стадия обзора — она же первое, что открывается. */}
 
           {photoError !== null && <p role="alert" className={`mt-xl ${errorTextClass}`}>{photoError}</p>}
           {sendError !== null && <p className={`mt-xl ${errorTextClass}`}>{sendError}</p>}
-          {saved && <p className={`mt-xl ${hintText}`}>{profilePage.saved}</p>}
 
-          {/* Главное действие в конце экрана (§ Порядок важнее полноты). */}
-          <button type="button" onClick={save} disabled={saving} className={`mt-xl ${buttonFilled}`}>
-            {saving ? profilePage.saving : profilePage.save}
-          </button>
+          {/* Главное действие в конце экрана (§ Порядок важнее полноты).
+              Рядом отказ: без него из правки нет выхода, кроме как сохранить
+              то, что начал менять. */}
+          <div className="mt-xl flex flex-wrap items-center gap-lg">
+            <button type="button" onClick={save} disabled={saving} className={buttonFilled}>
+              {saving ? profilePage.saving : profilePage.save}
+            </button>
+            <button type="button" className={buttonText}
+              onClick={() => {
+                // Отказ возвращает и показанное, и набранное: иначе обзор
+                // рисовал бы плитку по правкам, которых нет в карточке.
+                setDraft(draftFrom(card))
+                setErrors({})
+                setSendError(null)
+                setPhotoError(null)
+                setEditing(false)
+              }}>
+              {profilePage.cancel}
+            </button>
+          </div>
         </>
-      )}
+      }
     </MasterShell>
   )
 }

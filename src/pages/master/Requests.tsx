@@ -55,9 +55,19 @@ function RequestRow({ item }: { item: RequestForMasterListItem }) {
 
   // Настоящие числа и имена вместо обобщений (§ Presence): когда пришла,
   // куда ехать, есть ли снимки — по этому мебельщик решает, берётся ли он.
-  const meta = [
+  //
+  // Две строки, а не одна склейка из четырёх кусков (правка 20.09). Пока
+  // всё шло через « · » подряд, на 375 получалось три рваные строки, где
+  // время, этап, город и снимки перетекали друг в друга без разбора.
+  // Теперь верхняя отвечает «куда ехать», нижняя — «когда пришла и
+  // насколько человек готов».
+  const where = [
+    [cityLabel(item.city.code, item.city.name), item.district].filter(Boolean).join(', '),
+    item.photosCount > 0 ? requestsPage.photos(item.photosCount) : null,
+  ].filter(Boolean)
+  const when = [
     routedAtLabel(item.routedAt),
-    // Этап стоит рядом с размером не случайно: заявка без числа с пометкой
+    // Этап стоит рядом со временем не случайно: заявка без числа с пометкой
     // «пока прикидывает» читается как понятный случай, а не как недоделка,
     // и мебельщик решает по строке, не открывая её (решение PM 18.09).
     item.readiness === 'ready'
@@ -65,8 +75,6 @@ function RequestRow({ item }: { item: RequestForMasterListItem }) {
       : item.readiness === 'planning'
         ? requestsPage.readinessPlanning
         : null,
-    [cityLabel(item.city.code, item.city.name), item.district].filter(Boolean).join(', '),
-    item.photosCount > 0 ? requestsPage.photos(item.photosCount) : null,
   ].filter(Boolean)
 
   return (
@@ -88,12 +96,11 @@ function RequestRow({ item }: { item: RequestForMasterListItem }) {
         <span className="min-w-0 flex-1">
           {/* Шильдика «отвечено» здесь нет намеренно: строка уже лежит
               в разделе «Вы ответили», и отметка повторяла бы его заголовок. */}
-          <span className="block text-body tracking-body">
+          <span className="block text-body tracking-body font-medium">
             {categoryLabel(item.category)}, {size}
           </span>
-          <span className={`mt-xs block ${hintText}`}>
-            {meta.join(' · ')}
-          </span>
+          <span className={`mt-xs block ${hintText}`}>{where.join(' · ')}</span>
+          <span className={`block tabular-nums ${hintText}`}>{when.join(' · ')}</span>
         </span>
         <ChevronIcon />
       </Link>
