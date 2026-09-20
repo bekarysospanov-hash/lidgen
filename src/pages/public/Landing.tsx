@@ -137,6 +137,12 @@ export default function Landing() {
                     type="button"
                     className={`${buttonText} mt-xs -ml-sm`}
                     onClick={() => {
+                      // Отзыв на сервере, как в обоих кабинетах (§5в):
+                      // очистка вкладки оставляла токен живым ключом
+                      // до конца двенадцати часов. Найдено перепроверкой
+                      // 20.09 — эта кнопка была третьей и единственной,
+                      // про которую забыли.
+                      void api.signOut(master.token).catch(() => undefined)
                       clearSession()
                       setMaster(null)
                     }}

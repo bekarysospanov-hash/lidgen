@@ -3,7 +3,6 @@
 // нами (A2), и их правка — US-20; здесь список константный, а вход проходит
 // по тому же коду 1234, что и у заявки.
 import {
-  MASTER_SESSION_TTL_HOURS,
   MasterCardPublic,
   MyCard,
   UpdateMyCard,
@@ -12,7 +11,7 @@ import {
   type MasterCard,
 } from '../../contract'
 import { ApiError } from '../errors'
-import { newId, newToken } from './store'
+import { newId } from './store'
 // PROBE: те же три снимка, что на лендинге. Карточка с данными до сих пор
 // не была отрисована ни разу — экраны каталога, публичной карточки и «Моей
 // карточки» проверялись только в пустых состояниях (хэндовер, «Долги»).
@@ -246,37 +245,11 @@ export function listAcceptingIn(cityCode: string): Master[] {
   return MASTERS.filter((master) => master.city.code === cityCode && master.acceptingFrom !== null)
 }
 
-interface Session {
-  masterId: string
-  /** Сессия кабинета живёт 12 часов — до конца рабочего дня (§3). */
-  expiresAt: number
-}
-
-const sessions = new Map<string, Session>()
-
-export function openSession(masterId: string, now: Date): string {
-  const token = newToken()
-  sessions.set(token, {
-    masterId,
-    expiresAt: now.getTime() + MASTER_SESSION_TTL_HOURS * 60 * 60 * 1000,
-  })
-  return token
-}
-
-/** Возвращает мебельщика по токену или undefined — протух, отозван, выдуман. */
-export function resolveSession(token: string, now: Date): Master | undefined {
-  const session = sessions.get(token)
-  if (!session) return undefined
-  if (session.expiresAt <= now.getTime()) {
-    sessions.delete(token)
-    return undefined
-  }
-  return getMaster(session.masterId)
-}
-
-export function resetSessions(): void {
-  sessions.clear()
-}
+/*
+ * Сессии кабинета жили здесь до 20.09. Переехали в `auth.ts` вместе
+ * со входом: дверь стала одна на обе роли, и сессия принадлежит человеку,
+ * а не мастерской. `findMasterByPhone` остался — по нему выводится роль.
+ */
 
 /** Идентификатор КП генерируется тем же способом, что и остальные (§10). */
 export const newQuoteId = newId

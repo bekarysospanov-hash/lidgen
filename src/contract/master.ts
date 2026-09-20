@@ -4,18 +4,16 @@
 // мебельщика». Заявка, дошедшая до кабинета, — единственное, ради чего
 // скелет собирается: без неё «момент истины» из story-map.md не наступает.
 import { z } from 'zod'
-import { City, Iso, OtpCode, Phone, RequestId, Token } from './primitives'
+import { City, Iso, Phone, RequestId } from './primitives'
 import { CategoryId } from './request'
 
 /** Не больше трёх получателей на заявку (US-14, §2 Routing). */
 export const ROUTING_MAX_MASTERS = 3
 
-/**
- * Сессия кабинета живёт 12 часов — до конца рабочего дня, не до конца жизни
- * заявки. Клиентский token открывает одну заявку тому, кто ей владеет,
- * masterToken — список чужих заявок и право отправить КП (§3).
+/*
+ * Срок сессии переехал в `contract/session.ts` вместе с самой сессией
+ * (20.09): она стала общей на обе роли, и число у неё одно.
  */
-export const MASTER_SESSION_TTL_HOURS = 12
 
 /**
  * Пределы карточки одним местом. Экран обязан знать их до отправки: иначе
@@ -332,20 +330,12 @@ export const UpdateMyCard = MasterCard.pick({
 })
 export type UpdateMyCard = z.infer<typeof UpdateMyCard>
 
-/** Ответ masterConfirmCode: кто вошёл и чем дальше авторизуется (§5б). */
-export const MasterSession = z.object({
-  master: MasterProfile,
-  token: Token,
-})
-export type MasterSession = z.infer<typeof MasterSession>
-
-/** Вход masterRequestCode — только номер, пароля в кабинете нет вовсе. */
-export const MasterRequestCodeInput = z.object({ phone: Phone })
-export type MasterRequestCodeInput = z.infer<typeof MasterRequestCodeInput>
-
-/** Вход masterConfirmCode: номер и код из сообщения. */
-export const MasterConfirmCodeInput = z.object({ phone: Phone, code: OtpCode })
-export type MasterConfirmCodeInput = z.infer<typeof MasterConfirmCodeInput>
+/*
+ * `MasterSession`, `MasterRequestCodeInput` и `MasterConfirmCodeInput`
+ * сняты 20.09 (фаза contract, журнал §11): дверей стало одна на обе роли,
+ * и сессия принадлежит человеку, а не мастерской. Их место занял
+ * `Session` в `contract/session.ts`.
+ */
 
 /**
  * Кому ушла заявка. Серверная запись, целиком не отдаётся никому: заказчице
