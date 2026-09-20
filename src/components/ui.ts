@@ -150,12 +150,20 @@ export const tile =
 export const tilePhoto = 'bg-surface-container'
 
 /**
- * shelf — сетка витрины. Колонок столько, сколько поместится при плитке
- * не уже 272px: одна на телефоне, четыре на широком экране. Число колонок
- * не задаётся вручную ни на одной ступени — иначе сетка ломается на ширине,
- * о которой никто не подумал (§ Layout).
+ * shelf — сетка витрины. Колонок столько, сколько поместится при заданном
+ * минимуме плитки: две на телефоне, три на планшете, четыре и пять
+ * на широком экране. Само число колонок не задаётся вручную ни на одной
+ * ступени — иначе сетка ломается на ширине, о которой никто не подумал.
+ *
+ * Минимумов два, и переключаются они на 768 (§ Layout, правка 20.09):
+ * 160 телефону, 224 дальше. Одним числом две задачи не решаются — с 160
+ * на 1440 рама резалась на восемь треков и карточки вставали мелочью
+ * в левом углу, а с 224 на 375 отменялась вторая колонка.
  */
-export const shelf = 'grid gap-lg [grid-template-columns:repeat(auto-fill,minmax(var(--spacing-tile-min),1fr))]'
+export const shelf =
+  'grid gap-md sm:gap-lg ' +
+  '[grid-template-columns:repeat(auto-fill,minmax(var(--spacing-tile-min),1fr))] ' +
+  'md:[grid-template-columns:repeat(auto-fill,minmax(var(--spacing-tile-min-wide),1fr))]'
 
 /** panel-nested — второй уровень, радиус 4, отступ 12. Глубже не вкладывать. */
 export const panelNested = 'rounded-sm bg-surface-container-high p-md'

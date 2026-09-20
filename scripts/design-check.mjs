@@ -80,7 +80,9 @@ const BANNED = [
 
   // Трекинг парен роли и задаётся вместе с ней. Свободный трекинг разносит
   // или слепляет буквы (их wide-tracking, extreme-negative-tracking).
-  { re: /\btracking-(?!hero\b|display\b|heading\b|subheading\b|body-sm\b|body\b|label\b)[a-z0-9[\]-]+/g,
+  // hero снят из списка вместе со ступенью (ревью 20.09): пока он тут стоял,
+  // чекер молча разрешал tracking-hero, которого в токенах уже нет.
+  { re: /\btracking-(?!display\b|heading\b|subheading\b|body-sm\b|body\b|label\b)[a-z0-9[\]-]+/g,
     why: 'трекинг — только парным к роли токеном (tracking-body, tracking-label) — DESIGN.md § Typography' },
 
   // Выключка по формату: без переносов даёт «реки» (их justified-text).

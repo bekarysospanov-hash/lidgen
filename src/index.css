@@ -34,13 +34,25 @@
     0 2px 8px color-mix(in oklab, var(--color-on-surface) 6%, transparent);
 }
 
-html, body {
+/*
+ * Корневой кегль не задаётся: 1rem = то, что человек выставил в браузере
+ * или в телефоне, и вся шкала DESIGN.md отмеряется от него (§ Размеры
+ * в rem). Пока здесь стоял `font-size: var(--text-body)`, корень становился
+ * 17px, и система раздувалась на 6,25% относительно собственных чисел:
+ * body выходил 18,06 вместо 17, цель нажатия 46,75 вместо 44, а плитка
+ * витрины 170 вместо 160 — из-за чего две плитки в ряд на 375 не вставали.
+ * Основной кегль — свойство текста страницы, и живёт он на body.
+ */
+html {
   overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
   background: var(--color-surface);
   color: var(--color-on-surface);
   font-family: var(--font-body);
   font-size: var(--text-body);
-  -webkit-text-size-adjust: 100%;
 }
 
 h1, h2, h3 {
