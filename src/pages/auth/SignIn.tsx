@@ -14,7 +14,7 @@
 // при этом не спрашивается: у человека может быть обе, и выбирать
 // из собственных ролей — работа, которую продукт перекладывает на него.
 import { useEffect, useState } from 'react'
-import { Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
@@ -27,12 +27,13 @@ import {
   field,
   fieldLabel,
   hintText,
+  link,
 } from '../../components/ui'
 import type { OtpSent } from '../../contract'
 import { errorText } from '../../texts/request'
 import { loginPage } from '../../texts/master'
 import { probeText } from '../../texts/probe'
-import { POLICY_VERSION } from '../../texts/privacy'
+import { POLICY_VERSION, consentRow } from '../../texts/privacy'
 import { hasRole, readSession, writeSession } from '../../session'
 
 type Stage =
@@ -264,7 +265,20 @@ export default function SignIn() {
         )
       )}
 
-      <button type="button" onClick={requestCode} disabled={busy} className={`mt-xl block ${buttonFilled}`}>
+      {/* Согласие уходит вместе с запросом кода, значит человек обязан
+          прочитать об этом до нажатия, а не после (US-11, спека §8).
+          Строкой, а не чекбоксом: на форме заявки отметка обязательна,
+          потому что там человек отдаёт номер вместе с заказом; здесь
+          действие одно — «войти», и отдельная галочка к нему добавляет
+          шаг, не добавляя выбора. Ссылка ведёт на ту же политику. */}
+      <p className={`mt-xl max-w-measure ${hintText}`}>
+        {loginPage.consentNote}{' '}
+        <Link to="/privacy" target="_blank" rel="noreferrer" className={link}>
+          {consentRow.linkText}
+        </Link>
+      </p>
+
+      <button type="button" onClick={requestCode} disabled={busy} className={`mt-lg block ${buttonFilled}`}>
         {busy ? loginPage.requesting : loginPage.requestCode}
       </button>
     </PageShell>
