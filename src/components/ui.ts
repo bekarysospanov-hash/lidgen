@@ -46,18 +46,41 @@ export const stepPanel = 'rounded-md bg-surface-container p-lg'
  * обводку. Обводка прозрачная у невыбранной, а не отсутствующая: иначе
  * появление рамки сдвигало бы строку на пиксель.
  */
-export const blockRow = (selected: boolean) =>
-  'group flex w-full cursor-pointer items-center gap-md rounded-sm border ' +
-  'px-md py-md text-left text-body tracking-body ' +
-  'transition-[background-color,border-color,filter] duration-100 ' +
-  'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
-  'has-[:focus-visible]:outline-primary has-[:focus-visible]:outline-offset-2 ' +
-  (selected
-    ? 'border-primary bg-surface-container-high'
-    : 'border-transparent hover:brightness-97 active:brightness-94')
+export const blockRow = (selected: boolean, run: Run = {}) => {
+  const base =
+    'group flex w-full cursor-pointer items-center gap-md border ' +
+    'px-md py-md text-left text-body tracking-body ' +
+    'transition-[background-color,border-color,filter] duration-100 ' +
+    'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
+    'has-[:focus-visible]:outline-primary has-[:focus-visible]:outline-offset-2 '
+  if (!selected) {
+    return `${base}rounded-sm border-transparent hover:brightness-97 active:brightness-94`
+  }
+  // Внутренняя граница группы перекрашивается в её же фон, а не снимается:
+  // снятая уносит пиксель высоты, и строка прыгает при отметке (§ Components).
+  const top = run.afterSelected === true
+  const bottom = run.beforeSelected === true
+  return [
+    base,
+    'bg-surface-container-high border-primary',
+    top ? 'rounded-t-none border-t-surface-container-high' : 'rounded-t-sm',
+    bottom ? 'rounded-b-none border-b-surface-container-high' : 'rounded-b-sm',
+  ].join(' ')
+}
 
-/** Обёртка строки: несёт разделитель, чтобы он не спорил с обводкой выбранной. */
-export const blockRowDivider = 'border-b border-outline last:border-b-0'
+/**
+ * Где строка стоит в цепочке выбранных. Пустой объект — строка сама по себе
+ * (так её и вызывают там, где соседей нет: одиночная отметка снимка).
+ */
+export type Run = { afterSelected?: boolean; beforeSelected?: boolean }
+
+/**
+ * Обёртка строки: несёт разделитель, чтобы он не спорил с обводкой выбранной.
+ * Внутри группы выбранных разделитель гасится — серая линия поперёк зелёной
+ * рамки читается как ошибка вёрстки (§ Components, правка 20.09).
+ */
+export const blockRowDivider = (insideRun = false) =>
+  insideRun ? 'border-b border-transparent' : 'border-b border-outline last:border-b-0'
 
 /**
  * choice-dot — круг 20 с границей `outline`; отмеченный заливается зелёным

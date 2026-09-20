@@ -48,7 +48,7 @@ function InfoRow({ icon, title, note }: {
   note?: string
 }) {
   return (
-    <div className={blockRowDivider}>
+    <div className={blockRowDivider()}>
       <div className="flex items-start gap-md px-md py-md">
         <span className="mt-xs text-on-surface-muted">{icon}</span>
         <span className="min-w-0">

@@ -78,7 +78,7 @@ function RequestRow({ item }: { item: RequestForMasterListItem }) {
   ].filter(Boolean)
 
   return (
-    <div className={blockRowDivider}>
+    <div className={blockRowDivider()}>
       {/* Метка повторяет суть строки, а не только номер: aria-label
           перекрывает текст внутри ссылки, и без категории с размером диктор
           читал бы «открыть заявку 2609-004» — какую именно, неизвестно. */}

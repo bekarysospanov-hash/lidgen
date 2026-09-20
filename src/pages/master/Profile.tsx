@@ -749,7 +749,7 @@ export default function MasterProfileEdit() {
               {SERVICE_ROWS.map((row) => {
                 const chosen = draft.services.find((service) => service.id === row.id)
                 return (
-                  <div key={row.id} className={blockRowDivider}>
+                  <div key={row.id} className={blockRowDivider()}>
                     <label className={blockRow(chosen !== undefined)}>
                       <input type="checkbox" className="sr-only" checked={chosen !== undefined}
                         onChange={() =>

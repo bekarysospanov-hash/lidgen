@@ -58,11 +58,16 @@ export function CheckRows<T extends string>({ options, chosen, onToggle, icon }:
 }) {
   return (
     <Rows>
-      {options.map((option) => {
+      {options.map((option, index) => {
         const on = chosen.includes(option.id)
+        // Соседи по списку: идущие подряд отмеченные строки обводятся одной
+        // рамкой на группу, иначе шесть рамок вплотную читаются зелёной
+        // штриховкой (§ Components, правка 20.09).
+        const prev = index > 0 && chosen.includes(options[index - 1].id)
+        const next = index + 1 < options.length && chosen.includes(options[index + 1].id)
         return (
-          <div key={option.id} className={blockRowDivider}>
-            <label className={blockRow(on)}>
+          <div key={option.id} className={blockRowDivider(on && next)}>
+            <label className={blockRow(on, { afterSelected: prev, beforeSelected: next })}>
               <input type="checkbox" className="sr-only" checked={on}
                 onChange={() => onToggle(option.id)} />
               {icon?.(option.id)}
@@ -92,7 +97,7 @@ export function ChoiceRows<T extends string>({ name, options, value, onPick, ico
   return (
     <Rows>
       {options.map((option) => (
-        <div key={option.id} className={blockRowDivider}>
+        <div key={option.id} className={blockRowDivider()}>
           <label className={blockRow(value === option.id)}>
             <input type="radio" name={name} value={option.id} className="sr-only"
               checked={value === option.id} onChange={() => onPick(option.id)} />

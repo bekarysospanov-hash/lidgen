@@ -137,7 +137,7 @@ function ItemList({ question, hint, items, chosen, onToggle, className }: {
           {items.map((item) => {
             const on = chosen.includes(item)
             return (
-              <div key={item} className={blockRowDivider}>
+              <div key={item} className={blockRowDivider()}>
                 <label className={blockRow(on)}>
                   <input
                     type="checkbox"
