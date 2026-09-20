@@ -1,10 +1,9 @@
 // Плитка витрины — карточка мастерской в сетке каталога (US-02).
 //
-// Отличается от карточки-документа, которая жила здесь до 20.09: та была
-// блоком в колонке 720 и перечисляла всё, что знает. Плитка стоит в сетке
-// рядом с восемью такими же, и её работа другая — за один взгляд сказать,
-// стоит ли открывать. Поэтому фото-крышка, имя, одна строка о мастерской,
-// направления и две метки фактов; всё остальное — внутри карточки.
+// Пересобрана 20.09 под мобильный маркетплейс: на телефоне в ряд стоят две
+// плитки по 163 пикселя, и всё, что не помещается в этот столбик, из неё
+// убрано. Осталось то, по чему выбирают за один взгляд: работа, имя, город,
+// направление и одна метка. Условия, услуги и рассказ — внутри карточки.
 //
 // Плитка целиком — одна цель нажатия (DESIGN.md § Components): человек метит
 // в карточку, а не в ссылку внутри неё.
@@ -12,74 +11,62 @@ import { Link } from 'react-router-dom'
 import type { MasterCardPublic } from '../contract'
 import { cityName } from '../questions/categories'
 import { serviceText } from '../questions/services'
-import { leadTime, warranty } from '../texts/format'
+import { leadTime } from '../texts/format'
 import { mastersPage } from '../texts/masters'
 import { badge, hintText, tile, tilePhoto } from './ui'
 
 /**
- * Метки фактов. Больше двух не ставим: третья превращает витрину в ярмарку
- * и не читается ни одна (§ Components). Берём только то, что мастерская
- * сказала о себе сама, — бесплатный замер и оплату частями спрашивают чаще
- * прочего, и именно по ним отсеивают на первом взгляде.
+ * Метка на плитке одна, а не две. На 163 пикселях вторая уходит на свою
+ * строку и ломает низ ряда; выбирать между «бесплатный замер» и «оплата
+ * частями» не нужно — первое спрашивают чаще.
  */
-const BADGE_SERVICES = ['measure', 'installments'] as const
+const BADGE_SERVICE = 'measure' as const
 
 export function MasterTile({ master }: { master: MasterCardPublic }) {
   const { card } = master
   const cover = card.photos[0]
-
-  const badges = BADGE_SERVICES.flatMap((id) => {
-    const offer = card.services.find((service) => service.id === id)
-    // Услуга за отдельную плату меткой не становится: метка обещает выгоду,
-    // а «замер за деньги» — не выгода, это обычный порядок.
-    return offer !== undefined && !offer.paid ? [serviceText(id).label] : []
-  }).slice(0, 2)
+  const measure = card.services.find((service) => service.id === BADGE_SERVICE)
+  // Услуга за отдельную плату меткой не становится: метка обещает выгоду,
+  // а «замер за деньги» — обычный порядок, а не выгода.
+  const showBadge = measure !== undefined && !measure.paid
 
   return (
     <Link to={`/masters/${master.id}`} className={tile}>
       {/* Фото-крышка: скруглена не она, а плитка — снимок обрезан по её
-          границе сверху (§ Shapes, правка 20.09). */}
-      <span className={`block aspect-[4/3] w-full overflow-hidden rounded-t-lg ${tilePhoto}`}>
+          границе сверху (§ Shapes). Квадрат, а не 4:3: в двух колонках
+          он даёт больше предмета на той же высоте столбца. */}
+      <span className={`relative block aspect-square w-full overflow-hidden rounded-t-lg ${tilePhoto}`}>
         {cover !== undefined && (
           <img src={cover.url} alt={cover.caption ?? ''}
             className="h-full w-full object-cover" />
         )}
-      </span>
-
-      <span className="flex flex-1 flex-col p-lg">
-        <span className="block text-subheading tracking-subheading font-medium">
-          {master.name}
-        </span>
-        <span className={`mt-xs block tabular-nums ${hintText}`}>
-          {cityName(master.city)} · {mastersPage.yearsLabel(card.yearsOnMarket)}
-        </span>
-
-        {/* Направления одной строкой: в сетке место дороже, чем в документе,
-            и перечень в три строки съедает плитку. */}
-        <span className="mt-sm block text-body tracking-body">
-          {card.does.join(' · ')}
-        </span>
-
-        {badges.length > 0 && (
-          <span className="mt-md flex flex-wrap gap-xs">
-            {badges.map((label) => (
-              <span key={label} className={badge}>{label}</span>
-            ))}
+        {showBadge && (
+          <span className={`absolute top-sm left-sm ${badge}`}>
+            {serviceText(BADGE_SERVICE).label}
           </span>
         )}
+      </span>
 
-        {/* Срок и гарантия прижаты к низу: у соседних плиток разное число
-            строк выше, и без этого числа гуляли бы по вертикали. */}
-        <span className={`mt-auto pt-md tabular-nums ${hintText}`}>
-          {[
-            card.leadTime !== null ? leadTime(card.leadTime) : null,
-            card.warrantyMonths !== null
-              ? `${mastersPage.warrantyLabel} ${warranty(card.warrantyMonths)}`
-              : null,
-          ]
-            .filter((item) => item !== null)
-            .join(' · ') || mastersPage.noRating}
+      <span className="flex flex-1 flex-col p-md">
+        {/* Имя — ступень body с весом, а не subheading: в двух колонках
+            22 пикселя ломают название на три строки. */}
+        <span className="block text-body tracking-body font-medium">{master.name}</span>
+
+        {/* Первое направление, а не все: перечень через « · » в 163 пикселя
+            превращается в три строки мелкого текста. */}
+        <span className={`mt-xs block ${hintText}`}>
+          {card.does[0]}
+          {card.does.length > 1 && ` +${card.does.length - 1}`}
         </span>
+
+        <span className={`mt-auto pt-sm tabular-nums ${hintText}`}>
+          {cityName(master.city)}
+          {card.leadTime !== null && ` · ${leadTime(card.leadTime)}`}
+        </span>
+
+        {/* Отзывов в пробе нет: место под оценку занято честной строкой,
+            выдуманное число рейтинга система запрещает (§ Presence). */}
+        <span className={`mt-xs block ${hintText}`}>{mastersPage.noRating}</span>
       </span>
     </Link>
   )

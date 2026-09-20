@@ -288,3 +288,18 @@ export function HoursIcon() {
     </Glyph>
   )
 }
+
+/**
+ * Фильтры — три ползунка разной длины. Прототип выученный: его узнают
+ * на любой витрине, и подпись рядом остаётся (§ Иконки — без подписи
+ * живут только крестик, стрелка и навигация шапки).
+ */
+export function FiltersIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="1.75"
+      strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 7h16M7 12h10M10 17h4" />
+    </svg>
+  )
+}
