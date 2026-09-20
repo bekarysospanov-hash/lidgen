@@ -138,7 +138,11 @@ export function PageShell({ children, layout = 'document', aside }: {
           <p className="text-body-sm tracking-body-sm text-on-surface-muted">{shell.band}</p>
           {/* Рассказ о сервисе: главная — каталог, и открыть его больше
               неоткуда (правка 20.09). */}
-          <Link to="/promo" className={`ml-auto text-body-sm tracking-body-sm ${link}`}>
+          {/* min-h-target: ссылка подвала стоит сама по себе, а не внутри
+              абзаца, и исключение § Размера цели на неё не распространяется
+              — 23 пикселя высоты мимо правила о 44. */}
+          <Link to="/promo"
+            className={`ml-auto inline-flex min-h-target items-center text-body-sm tracking-body-sm ${link}`}>
             {shell.howItWorks}
           </Link>
         </div>
