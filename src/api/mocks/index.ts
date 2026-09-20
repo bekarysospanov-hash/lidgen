@@ -1,13 +1,14 @@
 // mockApi реализует тот же интерфейс Api, что и httpApi. Подмена — в client.ts.
 import type { Api } from '../types'
 import { remove, upload } from './photos'
-import { acceptEvents, confirm, create, getByToken, resend, resendLink } from './requests'
+import { acceptEvents, confirm, create, getByToken, listMine, resend, resendLink } from './requests'
 import {
-  confirmCode,
+  authConfirmCode as authConfirmCodeMock,
   getRequest,
   listRequests,
   myCard,
-  requestCode,
+  authRequestCode as authRequestCodeMock,
+  signOut as signOutMock,
   reviseQuote,
   saveMyCard,
   sendQuote,
@@ -68,13 +69,21 @@ export const mockApi: Api = {
     await delay()
     return getCatalogueCard(id)
   },
-  async masterRequestCode(input) {
+  async authRequestCode(input) {
     await delay()
-    return requestCode(input)
+    return authRequestCodeMock(input)
   },
-  async masterConfirmCode(input) {
+  async authConfirmCode(input) {
     await delay()
-    return confirmCode(input)
+    return authConfirmCodeMock(input)
+  },
+  async signOut(token) {
+    await delay()
+    signOutMock(token)
+  },
+  async listMyRequests(token) {
+    await delay()
+    return listMine(token)
   },
   async listRequestsForMaster(token) {
     await delay()

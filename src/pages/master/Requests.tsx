@@ -19,12 +19,12 @@ import {
   hintText,
   stepPanel,
 } from '../../components/ui'
-import type { MasterSession, RequestForMasterListItem } from '../../contract'
+import type { Session, RequestForMasterListItem } from '../../contract'
 import { categories, metersUnit } from '../../questions/categories'
 import { city as cityQuestion } from '../../questions/categories'
 import { errorText } from '../../texts/request'
 import { requestsPage, routedAtLabel } from '../../texts/master'
-import { clearSession, readSession } from './session'
+import { clearSession, hasRole, readSession } from '../../session'
 
 type View =
   | { kind: 'loading' }
@@ -124,7 +124,7 @@ function RequestGroup({ title, items }: { title: string; items: RequestForMaster
 }
 
 export default function MasterRequests() {
-  const [session, setSession] = useState<MasterSession | null>(() => readSession())
+  const [session, setSession] = useState<Session | null>(() => readSession())
   const [view, setView] = useState<View>({ kind: 'loading' })
 
   /**
@@ -161,11 +161,13 @@ export default function MasterRequests() {
 
   // Не вошёл — на экран входа, а не на пустой кабинет с объяснением,
   // почему он пуст (US-17).
-  if (!session) return <Navigate to="/master" replace />
+  // Гейт по роли, а не по факту входа (§5в): вошедший заказчик
+  // не должен снова видеть форму входа — он уже вошёл.
+  if (!hasRole(session, 'master')) return <Navigate to="/master" replace />
 
   if (view.kind === 'loading') {
     return (
-      <MasterShell masterName={session.master.name}>
+      <MasterShell masterName={session.master?.name}>
         <p className="text-body tracking-body" role="status">
           {requestsPage.loading}
         </p>
@@ -176,7 +178,7 @@ export default function MasterRequests() {
   if (view.kind === 'network' || view.kind === 'failed') {
     const network = view.kind === 'network'
     return (
-      <MasterShell masterName={session.master.name}>
+      <MasterShell masterName={session.master?.name}>
         <Title>{network ? requestsPage.networkTitle : requestsPage.failedTitle}</Title>
         <p className="mt-lg max-w-measure text-body tracking-body">
           {network ? requestsPage.networkBody : view.message}
@@ -199,7 +201,7 @@ export default function MasterRequests() {
   const answered = view.items.filter((item) => item.quotedByMe)
 
   return (
-    <MasterShell masterName={session.master.name}>
+    <MasterShell masterName={session.master?.name}>
       <Title>{requestsPage.title}</Title>
 
       {view.items.length === 0 ? (

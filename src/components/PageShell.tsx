@@ -5,7 +5,9 @@
 // Липкой шапки нет и цвет здесь площади не занимает: в системе
 // «Мастерская — присутствие» высота передаётся тоном поверхности, а оболочка
 // остаётся холстом — выделяться должно содержимое, а не рама вокруг него.
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { readSession } from '../session'
 import { shell } from '../texts/shell'
 import { BrandMark, MastersIcon, RequestIcon } from './icons'
 import { link } from './ui'
@@ -26,23 +28,43 @@ const brandLink =
  * подпись остаётся — иконка без подписи допустима только у стрелки
  * и закрытия (DESIGN.md § Иконки).
  */
+/**
+ * Третий пункт шапки — со словом, а не иконкой. Ступень label, как у кнопки:
+ * это вход, а не переход по разделу.
+ */
+const navWord =
+  'flex min-h-target items-center rounded-sm px-sm text-label tracking-label font-medium ' +
+  'text-link underline underline-offset-4 transition-colors duration-100 hover:bg-surface-container'
+
 const navLink =
   'flex size-target items-center justify-center rounded-sm text-link ' +
   'transition-colors duration-100 hover:bg-surface-container'
 
 /**
- * Оболочка знает две раскладки (§ Layout, правка 20.09).
+ * Оболочка знает три раскладки (§ Layout, правка 20.09).
  *
- * `document` — колонка 720: форма, предложение, карточка, тексты. Всё,
- * что читают сверху вниз.
+ * `document` — колонка 720: форма, предложение, тексты. Всё, что читают
+ * сверху вниз.
  *
  * `shelf` — витрина во всю раму: каталог. Сетка в колонке 720 превращается
  * в список из двух плиток в ряд, а справа остаётся полтора экрана пустоты.
+ *
+ * `item` — карточка предмета: та же колонка 720 плюс боковая колонка
+ * действий справа. Отличается от `document` только тем, что рядом
+ * с содержимым помещается панель; само содержимое остаётся колонкой.
+ * Панель передаётся в `aside`, на телефоне уходит вниз экрана.
  */
-export function PageShell({ children, layout = 'document' }: {
+export function PageShell({ children, layout = 'document', aside }: {
   children: React.ReactNode
-  layout?: 'document' | 'shelf'
+  layout?: 'document' | 'shelf' | 'item'
+  /** Панель действий карточки предмета. Только для layout="item". */
+  aside?: React.ReactNode
 }) {
+  /**
+   * Сессия читается один раз при монтировании: войти за время жизни
+   * страницы можно только уйдя на /login, а он перерисует шапку сам.
+   */
+  const [session] = useState(() => readSession())
   return (
     <div className="flex min-h-dvh flex-col bg-surface text-on-surface">
       {/* Link, а не <a>: полная перезагрузка страницы обнулила бы заявку. */}
@@ -69,6 +91,15 @@ export function PageShell({ children, layout = 'document' }: {
             aria-label={shell.nav.masters} title={shell.nav.masters}>
             <MastersIcon />
           </Link>
+          {/* Третий пункт — вход или кабинет (правка 20.09). Подписан
+              словом, а не иконкой: исключение § Иконок оговорено тремя
+              пунктами, четвёртый в него не входит, и «человечек» —
+              ровно та абстракция, которую человек угадывает, а не узнаёт.
+              Каталог при этом остаётся открытым: войти предлагают,
+              войти не требуют. */}
+          <Link to={session === null ? '/login' : '/me'} className={`ml-sm ${navWord}`}>
+            {session === null ? shell.nav.signIn : shell.nav.cabinet}
+          </Link>
         </nav>
       </header>
 
@@ -76,9 +107,28 @@ export function PageShell({ children, layout = 'document' }: {
           (§ Layout). Пока это было одним числом, на широком экране плашки
           растягивались во всю раму, а текст внутри обрывался на своей мере
           и висел слева в пустоте. */}
-      <main className={`mx-auto w-full flex-1 px-lg ${layout === 'shelf' ? 'max-w-shelf' : 'max-w-column'}`}>
-        {children}
-      </main>
+      {layout === 'item' ? (
+        /* Колонка содержимого и боковая колонка действий. На телефоне
+           колонка одна, панель уходит вниз экрана (§ Layout). Рама здесь
+           шире 720: в неё помещаются обе колонки и зазор между ними. */
+        <main className="mx-auto w-full max-w-shelf flex-1 px-lg">
+          <div className="flex flex-col gap-2xl lg:flex-row lg:items-start lg:justify-center">
+            <div className="w-full min-w-0 max-w-column">{children}</div>
+            {aside !== undefined && (
+              /* Единственное липкое в системе, и только на широком экране:
+                 панель несёт то, ради чего человек открыл карточку. Шапка,
+                 подвал и навигация липкими не становятся. */
+              <div className="hidden w-full shrink-0 lg:block lg:w-aside lg:sticky lg:top-xl">
+                {aside}
+              </div>
+            )}
+          </div>
+        </main>
+      ) : (
+        <main className={`mx-auto w-full flex-1 px-lg ${layout === 'shelf' ? 'max-w-shelf' : 'max-w-column'}`}>
+          {children}
+        </main>
+      )}
 
       {/* Подвал: разделитель там, где расстояния в конце длинной страницы
           не хватает, и одна приглушённая строка. Плашки нет — она несёт смысл

@@ -12,6 +12,7 @@ import {
   ResendLinkInput,
   LinkResent,
   OtpSent,
+  RequestForClientListItem,
 } from '../../contract'
 import type { RequestStatus } from '../../contract'
 import type {
@@ -21,6 +22,7 @@ import type {
   ResendOtpInputLike,
 } from '../types'
 import { ApiError, validationFailed } from '../errors'
+import { phoneOf } from './auth'
 import { covered } from './coverage'
 import { routeRequest } from './routing'
 import {
@@ -41,6 +43,7 @@ import {
   nextNumber,
   putRequest,
   type RequestRecord,
+  listConfirmedByPhone,
 } from './store'
 
 function notFound(): ApiError {
@@ -283,4 +286,26 @@ export function acceptEvents(input: unknown): void {
       ...(event.sessionId ? { sessionId: event.sessionId } : {}),
     })
   }
+}
+
+/**
+ * §5в — свои заявки в кабинете (US-29). Проекция строгая: `id` заказчице
+ * не уходит (§3), телефон тем более — он у неё и так есть. `token` есть:
+ * строка ведёт на ту же страницу предложений, что и ссылка из сообщения.
+ */
+export function listMine(token: string): RequestForClientListItem[] {
+  const phone = phoneOf(token, new Date())
+  return listConfirmedByPhone(phone).map((record) =>
+    RequestForClientListItem.parse({
+      number: record.number,
+      token: record.token,
+      status: record.status,
+      createdAt: record.createdAt,
+      routedAt: record.routedAt,
+      category: record.details.category,
+      mainSize: record.mainSize,
+      city: record.city,
+      quotesCount: record.quotes.length,
+    }),
+  )
 }

@@ -13,6 +13,7 @@ export const ErrorCode = z.enum([
   'TOKEN_INVALID',
   'RATE_LIMITED',
   'INTERNAL',
+  'UNAUTHORIZED',
   'MASTER_NOT_FOUND',
   'MASTER_UNAUTHORIZED',
   'NOT_ROUTED_TO_YOU',
@@ -54,8 +55,19 @@ export const ApiErrorBody = z.discriminatedUnion('code', [
   z.object({ code: z.literal('TOKEN_INVALID'), message }),
   z.object({ code: z.literal('RATE_LIMITED'), message, retryAfterSec: z.int().min(0) }),
   z.object({ code: z.literal('INTERNAL'), message }),
+  /**
+   * Сессии нет, она протухла или отозвана — любая зона кабинета (§5в, 20.09).
+   * Отделён от MASTER_UNAUTHORIZED намеренно: «войдите заново» и «этот
+   * кабинет не для вас» — разные сообщения и разные выходы.
+   */
+  z.object({ code: z.literal('UNAUTHORIZED'), message }),
   /** Кабинет мебельщика (§5б, §6). */
   z.object({ code: z.literal('MASTER_NOT_FOUND'), message }),
+  /**
+   * Сессия есть, роли master в ней нет. С одной дверью (20.09) этот код
+   * сузился: раньше он значил и «не вошёл», и «не мебельщик», и экран
+   * на оба случая отвечал одинаково — отправлял на вход того, кто уже вошёл.
+   */
   z.object({ code: z.literal('MASTER_UNAUTHORIZED'), message }),
   /** Чужая заявка и несуществующая отвечают одинаково — иначе id перебирается. */
   z.object({ code: z.literal('NOT_ROUTED_TO_YOU'), message }),

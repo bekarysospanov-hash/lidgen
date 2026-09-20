@@ -8,7 +8,8 @@ import { shell } from '../texts/shell'
 import { masterShell } from '../texts/master'
 import { BrandMark } from './icons'
 import { buttonText, hintText, link } from './ui'
-import { clearSession } from '../pages/master/session'
+import { api } from '../api/client'
+import { clearSession, readSession } from '../session'
 
 const brandLink =
   'flex min-h-target items-center gap-sm whitespace-nowrap text-subheading tracking-subheading ' +
@@ -73,6 +74,11 @@ export function MasterShell({
               type="button"
               className={buttonText}
               onClick={() => {
+                // Отзыв на сервере, а не только очистка вкладки (§5в):
+                // иначе токен остаётся действующим ключом до конца срока,
+                // а кабинет открывают и с чужого телефона.
+                const session = readSession()
+                if (session !== null) void api.signOut(session.token).catch(() => undefined)
                 clearSession()
                 navigate('/master', { replace: true })
               }}

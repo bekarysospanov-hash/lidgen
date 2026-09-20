@@ -18,7 +18,7 @@ import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { HoursIcon, LeadTimeIcon, WarrantyIcon } from '../../components/icons'
-import { blockRowDivider, buttonFilled, buttonText, chip, hintText, link, panel } from '../../components/ui'
+import { actionBarFixed, actionBarSide, blockRowDivider, buttonFilled, buttonText, chip, hintText, link, panel } from '../../components/ui'
 import type { CategoryId, MasterCardPublic, MasterPhoto } from '../../contract'
 import { z } from 'zod'
 import { cityName } from '../../questions/categories'
@@ -207,8 +207,29 @@ export default function MasterProfile() {
       : null,
   ].filter((item) => item !== null)
 
+  /**
+   * Панель действий: одно главное действие и строка под ним (§ Components).
+   * Одна и та же разметка стоит в боковой колонке на широком экране
+   * и в полосе внизу на телефоне — расходиться им нельзя, иначе человек,
+   * открывший карточку с ноутбука и с телефона, увидит два разных продукта.
+   */
+  const actionPanel = (
+    <>
+      <Link to="/request" className={`w-full justify-center ${buttonFilled}`}>
+        {masterCardPage.actionRequest}
+      </Link>
+      <p className={`mt-sm ${hintText}`}>{masterCardPage.fanNote}</p>
+    </>
+  )
+
   return (
-    <PageShell>
+    <PageShell
+      layout="item"
+      aside={
+        <section className={actionBarSide} aria-label={masterCardPage.actionsTitle}>
+          {actionPanel}
+        </section>
+      }>
       <p className={hintText}>
         <Link to="/masters" className={link}>
           {masterCardPage.back}
@@ -325,49 +346,44 @@ export default function MasterProfile() {
       <SectionTitle>{masterCardPage.aboutLabel}</SectionTitle>
       <p className="mt-md max-w-measure text-body tracking-body">{card.about}</p>
 
-      {/* Действия в конце экрана (§ Порядок важнее полноты): человек сначала
-          смотрит работы и условия, потом решает. Заявка — главная кнопка:
-          несколько предложений выгоднее одного разговора, и строка под ней
-          говорит об этом прямо. Звонок и сообщение — для того, кто уже выбрал. */}
+      {/* Действия переехали в панель — боковую на широком экране, нижнюю
+          на телефоне (§ Layout, правка 20.09). Здесь остаётся раздел
+          со вторыми способами связи и объяснением: панель несёт одно
+          главное действие, а не меню. */}
       <SectionTitle>{masterCardPage.actionsTitle}</SectionTitle>
 
-      <div className="mt-md flex flex-col gap-md sm:flex-row sm:flex-wrap sm:items-center">
-        <Link to="/request"
-          className={`w-full justify-center sm:w-auto ${buttonFilled}`}>
-          {masterCardPage.actionRequest}
-        </Link>
-
-        {card.contactPhone !== null && (
-          <>
-            {/* tel: и wa.me — внешние переходы, и это <a>, а не Link:
-                роутер их не знает, а телефон открывает звонилку системы. */}
-            <a href={`tel:${card.contactPhone}`} className={buttonText}
+      {/* Ряд с переносом, а не столбик: кнопка-текст растягивалась на всю
+          ширину и вставала по центру колонки — читалось как случайное
+          выравнивание. Отрицательный отступ слева гасит внутреннее поле
+          кнопки, чтобы подпись встала по краю колонки. */}
+      {card.contactPhone !== null ? (
+        <div className="-ml-sm mt-md flex flex-wrap items-center gap-x-sm gap-y-xs">
+          {/* tel: и wa.me — внешние переходы, и это <a>, а не Link:
+              роутер их не знает, а телефон открывает звонилку системы. */}
+          <a href={`tel:${card.contactPhone}`} className={buttonText}
+            onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+            {masterCardPage.actionCall}
+          </a>
+          {card.messengers.includes('whatsapp') && (
+            <a href={`https://wa.me/${card.contactPhone.replace(/\D/g, '')}`}
+              target="_blank" rel="noreferrer noopener" className={buttonText}
               onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-              {masterCardPage.actionCall}
+              {masterCardPage.actionWrite}
             </a>
-            {card.messengers.includes('whatsapp') && (
-              <a href={`https://wa.me/${card.contactPhone.replace(/\D/g, '')}`}
-                target="_blank" rel="noreferrer noopener" className={buttonText}
-                onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-                {masterCardPage.actionWrite}
-              </a>
-            )}
-            {card.messengers.includes('telegram') && (
-              <a href={`https://t.me/+${card.contactPhone.replace(/\D/g, '')}`}
-                target="_blank" rel="noreferrer noopener" className={buttonText}
-                onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-                {masterCardPage.actionWriteTelegram}
-              </a>
-            )}
-          </>
-        )}
-      </div>
+          )}
+          {card.messengers.includes('telegram') && (
+            <a href={`https://t.me/+${card.contactPhone.replace(/\D/g, '')}`}
+              target="_blank" rel="noreferrer noopener" className={buttonText}
+              onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+              {masterCardPage.actionWriteTelegram}
+            </a>
+          )}
+        </div>
+      ) : (
+        <p className={`mt-md max-w-measure ${hintText}`}>{masterCardPage.contactMissing}</p>
+      )}
 
       <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.actionRequestNote}</p>
-
-      {card.contactPhone === null && (
-        <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.contactMissing}</p>
-      )}
 
       {/* Безопасная сделка помечена будущей и ведёт себя как будущая:
           механизма расчётов нет, и кнопка, за которой ничего не стоит, —
@@ -377,7 +393,14 @@ export default function MasterProfile() {
         <p className={`mt-xs max-w-measure ${hintText}`}>{masterCardPage.actionDealNote}</p>
       </section>
 
-      <p className={`mt-xl max-w-measure ${hintText}`}>{masterCardPage.fanNote}</p>
+      {/* Место под нижнюю панель: без него последняя строка прячется под
+          полосой, и человек не знает, что страница кончилась (§ Layout). */}
+      <div aria-hidden="true" className="h-4xl lg:hidden" />
+
+      {/* Та же панель полосой внизу экрана — только на телефоне. */}
+      <section className={actionBarFixed} aria-label={masterCardPage.actionsTitle}>
+        {actionPanel}
+      </section>
     </PageShell>
   )
 }

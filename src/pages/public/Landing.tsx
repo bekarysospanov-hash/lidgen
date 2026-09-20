@@ -19,7 +19,7 @@ import { buttonFilled, buttonText, hintText, link, panel } from '../../component
 import { landing, probePanel } from '../../texts/landing'
 import { probeText } from '../../texts/probe'
 import { lastRequest } from '../../probe-trail'
-import { clearSession, readSession } from '../master/session'
+import { clearSession, readSession } from '../../session'
 
 /**
  * Снимок — радиус 0 и без рамки (DESIGN.md § Components, § Shapes).
@@ -130,7 +130,7 @@ export default function Landing() {
               {/* Пока сессия жива, /master открывает кабинет вошедшего и поля
                   для номера не показывает. Смена мебельщика — единственное,
                   что нельзя сделать догадкой, поэтому выход стоит здесь же. */}
-              {master && (
+              {master?.master != null && (
                 <span>
                   <span className="block">{probePanel.signedInAs(master.master.name)}</span>
                   <button

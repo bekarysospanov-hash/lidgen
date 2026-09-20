@@ -312,6 +312,36 @@ export const RequestForMasterListItem = z.strictObject({
 export type RequestForMasterListItem = z.infer<typeof RequestForMasterListItem>
 
 /**
+ * Проекция строки кабинета заказчика (§5в, US-29) — то, что он видит
+ * в списке своих заявок.
+ *
+ * `id` сюда не уходит и не уйдёт: заказчица работает с номером и токеном,
+ * а внутренний идентификатор — дело сервера (§3). `phone` не уходит тем
+ * более: человек и так знает свой номер, а лишняя копия ПДн в ответе —
+ * лишнее место, где она утечёт.
+ *
+ * `token` здесь есть, и это осознанно: строка ведёт на ту же страницу
+ * предложений, которой человек пользовался по ссылке из сообщения.
+ * Уровень доверия тот же, что при выдаче токена в confirmOtp, только
+ * теперь ключи ко всем своим заявкам приходят разом — и владельцу номера,
+ * доказавшему владение кодом.
+ */
+export const RequestForClientListItem = z.strictObject({
+  number: RequestNumber,
+  token: Token,
+  status: RequestStatus,
+  createdAt: Iso,
+  /** Когда ушла мебельщикам. Пусто, пока не маршрутизирована. */
+  routedAt: Iso.nullable(),
+  category: CategoryId,
+  mainSize: MainSize,
+  city: City,
+  /** Сколько предложений уже пришло. Ноль — законное значение. */
+  quotesCount: z.int().min(0),
+})
+export type RequestForClientListItem = z.infer<typeof RequestForClientListItem>
+
+/**
  * Проекция карточки заявки (US-18, US-19a, §5б) — по ней называется вилка.
  *
  * Чего здесь нет и почему: `status` — восемь состояний §4 внутренняя кухня,

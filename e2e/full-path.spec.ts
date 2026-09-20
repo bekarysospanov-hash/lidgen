@@ -179,6 +179,9 @@ test('заявка доходит от формы до вилки на стра�
   await expect(page.getByRole('link', { name: 'Открыть свою карточку в каталоге' })).toBeVisible()
   await снимок(page, 'своя-карточка-мебельщика')
   await page.getByRole('button', { name: 'Редактировать карточку' }).click()
+  // Разделы анкеты свёрнуты (правка 20.09): их девять, и в один проход
+  // форма шла на 5600 пикселей. Поле живёт внутри своего раздела.
+  await page.getByRole('button', { name: /О мастерской/ }).click()
   await expect(page.getByLabel('О мастерской')).toBeVisible()
   await page.getByRole('button', { name: 'Отменить' }).click()
   await page.goBack()
@@ -190,9 +193,11 @@ test('заявка доходит от формы до вилки на стра�
   await expect(page.getByText('Исправлено')).toBeVisible()
   await снимок(page, 'кп-исправлено')
 
-  // 7 · Выход и вход второй мастерской
+  // 7 · Выход и вход второй мастерской. Дверь с 20.09 одна на обе роли,
+  // и заголовок у неё нейтральный: «Вход для мастерских» на общей двери
+  // сказал бы заказчице, что ей сюда нельзя.
   await page.getByRole('button', { name: 'Выйти' }).click()
-  await expect(page.getByRole('heading', { name: 'Вход для мастерских' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Вход', exact: true })).toBeVisible()
   await войти(page, МАСТЕР_ДВА)
   await ответить(
     page,
@@ -324,12 +329,15 @@ test('мебельщик правит карточку — и правка ви�
   await снимок(page, 'кабинет-моя-карточка')
   await page.getByRole('button', { name: 'Редактировать карточку' }).click()
 
+  // Разделы свёрнуты (правка 20.09): открываем те, в которых правим.
   const отличие = 'Работаем по субботам без наценки'
+  await page.getByRole('button', { name: /Чем отличаетесь/ }).click()
   await page.getByRole('button', { name: 'Добавить пункт' }).click()
   await page.getByLabel('Чем отличаетесь, 3').fill(отличие)
 
   // Условие услуги — то, ради чего услуги вообще стали объектами: «в цене»
   // и «отдельно» должны доезжать до каталога по отдельности (контракт §2).
+  await page.getByRole('button', { name: /Что обычно входит в цену/ }).click()
   await page.locator('label', { hasText: 'Разбираю и вывожу старую' }).first().click()
   // Условие ищется внутри группы своей услуги: чипсов «Отдельно» на экране
   // столько же, сколько отмеченных услуг, и «последний» — не признак.
@@ -411,4 +419,52 @@ test('политика открывается и честно помечена �
   ).toBeVisible()
   await expect(page.getByText('Текст не прошёл юридическую проверку')).toBeVisible()
   await page.screenshot({ path: `${ПАПКА}/10-политика-черновик.png`, fullPage: true })
+})
+
+/**
+ * US-29, §5в — одна дверь на обе роли (решение PM 20.09). Сценарий проверяет
+ * то, ради чего дверь и сводили в одну: человек, не состоящий в реестре
+ * мастерских, не упирается в тупик, а входит заказчиком и видит свои заявки.
+ *
+ * Страница не перезагружается: мок-стор живёт в памяти вкладки, и заявка,
+ * оставленная в начале, должна дожить до кабинета.
+ */
+test('заказчик входит той же дверью и видит свою заявку в кабинете @shots', async ({ page }) => {
+  await page.goto('/request')
+
+  // 1 · Заявка. Тот же путь, что и в главном сценарии, но короче.
+  await page.getByText('Кухня', { exact: true }).click()
+  await page.getByLabel('Сколько метров вдоль стены?').fill('2,8')
+  await page.getByText('Прямая', { exact: true }).click()
+  await page.getByText('Пока не решили', { exact: true }).click()
+  await page.getByLabel('Расскажите своими словами').fill('Небольшая кухня, окно слева')
+  await page.getByText('Эконом', { exact: true }).click()
+  await page.getByText('Алматы', { exact: true }).click()
+  await page.getByLabel('Куда прислать ответ?').fill('7051112233')
+  await page.getByText('Согласен на обработку своих данных').click()
+  await page.getByRole('button', { name: 'Отправить заявку' }).click()
+  await page.getByLabel('Код из сообщения').fill(КОД)
+  await page.getByRole('button', { name: 'Подтвердить' }).click()
+  await expect(page.getByRole('heading', { name: 'Заявка принята' })).toBeVisible()
+
+  // 2 · Вход тем же номером — той же дверью, что и мебельщик.
+  await page.getByRole('link', { name: 'Капибара' }).click()
+  await page.getByRole('link', { name: 'Войти' }).first().click()
+  await expect(page.getByRole('heading', { name: 'Вход', exact: true })).toBeVisible()
+  await снимок(page, 'вход-одна-дверь')
+  await page.getByLabel('Номер телефона').fill('+7 (705) 111-22-33')
+  await page.getByRole('button', { name: 'Получить код' }).click()
+  await page.getByLabel('Код из сообщения').fill(КОД)
+  await page.getByRole('button', { name: 'Войти' }).click()
+
+  // 3 · Кабинет заказчика: заявка, оставленная ДО входа, здесь сама.
+  await expect(page.getByRole('heading', { name: 'Мои заявки' })).toBeVisible()
+  await expect(page.getByText('Кухня, 2,8 метра')).toBeVisible()
+  await expect(page.getByText('Предложений пока нет')).toBeVisible()
+  await снимок(page, 'кабинет-заказчика')
+
+  // 4 · Дверь мастерской заказчику объясняют словами, а не тупиком.
+  await page.goto('/master')
+  await expect(page.getByRole('heading', { name: 'Вы вошли как заказчик' })).toBeVisible()
+  await снимок(page, 'заказчик-на-двери-мастерской')
 })

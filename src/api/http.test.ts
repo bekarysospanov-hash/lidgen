@@ -400,8 +400,10 @@ describe('кабинет мебельщика (§5б)', () => {
   const MASTER_TOKEN = 'b'.repeat(32)
 
   const sessionBody = () => ({
-    master: { id: MASTER_ID, name: 'Мастерская на Сайране', city: { code: 'almaty', name: null } },
     token: MASTER_TOKEN,
+    roles: ['client', 'master'],
+    expiresAt: '2026-09-16T22:00:00.000Z',
+    master: { id: MASTER_ID, name: 'Мастерская на Сайране', city: { code: 'almaty', name: null } },
   })
 
   const listItemBody = () => ({
@@ -437,25 +439,29 @@ describe('кабинет мебельщика (§5б)', () => {
     return (options?.headers ?? {}) as Record<string, string>
   }
 
-  it('запрос кода: POST на /api/master/otp/request', async () => {
+  it('запрос кода: POST на /api/auth/otp/request — одна дверь на обе роли', async () => {
     fetchMock.mockResolvedValueOnce(
       fakeResponse(200, { channel: 'sms', codeLength: 4, retryAfterSec: 0 }),
     )
 
-    await httpApi.masterRequestCode({ phone: '+77010000001' })
+    await httpApi.authRequestCode({
+      phone: '+77010000001',
+      consent: { policyVersion: '2026-09-16', acceptedAt: '2026-09-16T10:00:00.000Z' },
+    })
 
     const [url, options] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(String(url)).toContain('/api/master/otp/request')
+    expect(String(url)).toContain('/api/auth/otp/request')
     expect(options?.method).toBe('POST')
   })
 
   it('подтверждение кода отдаёт сессию по контракту', async () => {
     fetchMock.mockResolvedValueOnce(fakeResponse(200, sessionBody()))
 
-    const session = await httpApi.masterConfirmCode({ phone: '+77010000001', code: '1234' })
+    const session = await httpApi.authConfirmCode({ phone: '+77010000001', code: '1234' })
 
     expect(session.token).toBe(MASTER_TOKEN)
-    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/master/otp/confirm')
+    expect(session.roles).toContain('master')
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/auth/otp/confirm')
   })
 
   it('токен уходит заголовком Authorization, а не в URL', async () => {

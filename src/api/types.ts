@@ -5,13 +5,13 @@ import type {
   ConfirmOtpInput,
   CreateQuote,
   CreateRequest,
-  MasterConfirmCodeInput,
-  MasterRequestCodeInput,
+  AuthConfirmCodeInput,
+  AuthRequestCodeInput,
   LinkResent,
   MasterCardPublic,
   MyCard,
   UpdateMyCard,
-  MasterSession,
+  Session,
   OtpSent,
   SendEventsInput,
   Photo,
@@ -20,6 +20,7 @@ import type {
   RequestCreated,
   RequestForClient,
   RequestForMaster,
+  RequestForClientListItem,
   RequestForMasterListItem,
   ResendLinkInput,
 } from '../contract'
@@ -41,8 +42,8 @@ export type ConfirmOtpInputLike = ConfirmOtpInput | Record<string, unknown>
 export type UploadPhotoInputLike = File
 
 /** Вход операций кабинета — так же «сырой», как и остальные (§5б). */
-export type MasterCodeInputLike = MasterRequestCodeInput | Record<string, unknown>
-export type MasterConfirmInputLike = MasterConfirmCodeInput | Record<string, unknown>
+export type AuthCodeInputLike = AuthRequestCodeInput | Record<string, unknown>
+export type AuthConfirmInputLike = AuthConfirmCodeInput | Record<string, unknown>
 export type CreateQuoteInputLike = CreateQuote | Record<string, unknown>
 export type UpdateMyCardInputLike = UpdateMyCard | Record<string, unknown>
 export type ResendLinkInputLike = ResendLinkInput | Record<string, unknown>
@@ -85,14 +86,22 @@ export interface Api {
   /** US-03 — карточка одной мастерской (§5). */
   getMasterCard(id: string): Promise<MasterCardPublic>
 
-  // --- Кабинет мебельщика (§5б). masterToken уходит заголовком
+  // --- Вход и кабинет (§5в, §5б). sessionToken уходит заголовком
   // Authorization: Bearer, а не в пути и не в теле: в URL он попал бы
   // в логи прокси и в Referer, а за ним — список чужих заявок (§3).
 
-  /** POST /api/master/otp/request — код на номер мебельщика (US-17). */
-  masterRequestCode(input: MasterCodeInputLike): Promise<OtpSent>
-  /** POST /api/master/otp/confirm — выдаёт masterToken на 12 часов. */
-  masterConfirmCode(input: MasterConfirmInputLike): Promise<MasterSession>
+  /**
+   * POST /api/auth/otp/request — код на номер (US-17, US-29). Одна дверь
+   * на обе роли: ответ одинаков для любого номера, и «есть ли такой
+   * мебельщик» по нему не узнать.
+   */
+  authRequestCode(input: AuthCodeInputLike): Promise<OtpSent>
+  /** POST /api/auth/otp/confirm — выдаёт сессию с ролями на 12 часов. */
+  authConfirmCode(input: AuthConfirmInputLike): Promise<Session>
+  /** POST /api/auth/signout — отзывает сессию на сервере. */
+  signOut(token: string): Promise<void>
+  /** GET /api/me/requests — свои заявки, новые первыми (US-29). */
+  listMyRequests(token: string): Promise<RequestForClientListItem[]>
   /** GET /api/master/requests — маршрутизированные ему, новые первыми (US-18). */
   listRequestsForMaster(token: string): Promise<RequestForMasterListItem[]>
   /** GET /api/master/requests/{id} — карточка, по ней называется вилка. */

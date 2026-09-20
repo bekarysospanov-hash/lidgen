@@ -12,9 +12,9 @@ import {
   ResendLinkInput,
   MyCard,
   UpdateMyCard,
-  MasterConfirmCodeInput,
-  MasterRequestCodeInput,
-  MasterSession,
+  AuthConfirmCodeInput,
+  AuthRequestCodeInput,
+  Session,
   OtpSent,
   Photo,
   Quote,
@@ -22,6 +22,7 @@ import {
   RequestCreated,
   RequestForClient,
   RequestForMaster,
+  RequestForClientListItem,
   RequestForMasterListItem,
   ResendOtpInput,
   SendEventsInput,
@@ -35,8 +36,8 @@ import type {
   ResendLinkInputLike,
   UpdateMyCardInputLike,
   CreateRequestInput,
-  MasterCodeInputLike,
-  MasterConfirmInputLike,
+  AuthCodeInputLike,
+  AuthConfirmInputLike,
   ResendOtpInputLike,
   SendEventsInputLike,
   UploadPhotoInputLike,
@@ -130,6 +131,7 @@ const bearer = (token: string) => ({ ...jsonHeaders, Authorization: `Bearer ${to
 
 /** Список заявок кабинета: массив проекций, а не объект с полем (§5б). */
 const RequestsForMaster = z.array(RequestForMasterListItem)
+const MyRequests = z.array(RequestForClientListItem)
 
 /** Каталог: массив публичных карточек (§5, listMasters). */
 const Catalogue = z.array(MasterCardPublic)
@@ -220,22 +222,33 @@ export const httpApi: Api = {
     return call(`/api/masters/${encodeURIComponent(id)}`, { method: 'GET' }, MasterCardPublic)
   },
 
-  async masterRequestCode(input: MasterCodeInputLike) {
-    const payload = parseInput<MasterRequestCodeInput>(MasterRequestCodeInput, input)
-    return call('/api/master/otp/request', {
+  async authRequestCode(input: AuthCodeInputLike) {
+    const payload = parseInput<AuthRequestCodeInput>(AuthRequestCodeInput, input)
+    return call('/api/auth/otp/request', {
       method: 'POST',
       headers: jsonHeaders,
       body: JSON.stringify(payload),
     }, OtpSent)
   },
 
-  async masterConfirmCode(input: MasterConfirmInputLike) {
-    const payload = parseInput<MasterConfirmCodeInput>(MasterConfirmCodeInput, input)
-    return call('/api/master/otp/confirm', {
+  async authConfirmCode(input: AuthConfirmInputLike) {
+    const payload = parseInput<AuthConfirmCodeInput>(AuthConfirmCodeInput, input)
+    return call('/api/auth/otp/confirm', {
       method: 'POST',
       headers: jsonHeaders,
       body: JSON.stringify(payload),
-    }, MasterSession)
+    }, Session)
+  },
+
+  async signOut(token: string) {
+    await call('/api/auth/signout', { method: 'POST', headers: bearer(token) }, z.unknown())
+  },
+
+  async listMyRequests(token: string) {
+    return call('/api/me/requests', {
+      method: 'GET',
+      headers: bearer(token),
+    }, MyRequests)
   },
 
   async listRequestsForMaster(token: string) {

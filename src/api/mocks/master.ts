@@ -2,11 +2,11 @@
 // Мок реализует контракт, а не обходит его: каждый ответ проходит свою
 // zod-схему перед отдачей, ошибки — те же, что обязан вернуть сервер (§1).
 import {
+  AuthConfirmCodeInput,
+  AuthRequestCodeInput,
   CreateQuote,
-  MasterConfirmCodeInput,
-  MasterRequestCodeInput,
-  MasterSession,
   OtpSent,
+  Session,
   Quote,
   RequestForMaster,
   RequestForMasterListItem,
@@ -14,17 +14,19 @@ import {
   type Master,
   type MyCard,
 } from '../../contract'
-import type { CreateQuoteInputLike, MasterCodeInputLike, MasterConfirmInputLike } from '../types'
+import type { AuthCodeInputLike, AuthConfirmInputLike, CreateQuoteInputLike } from '../types'
 import { ApiError, validationFailed } from '../errors'
+import { findMasterByPhone, newQuoteId, readMyCard, writeMyCard } from './masters'
 import {
-  findMasterByPhone,
-  newQuoteId,
+  closeSession,
+  lastCodeSentAt,
   openSession,
-  readMyCard,
-  resolveSession,
-  resetSessions,
-  writeMyCard,
-} from './masters'
+  phoneOf,
+  rememberCodeSent,
+  rememberIdentity,
+  resetAuthState,
+  rolesFor,
+} from './auth'
 import { OTP_CHANNEL, OTP_CODE_LENGTH, isOtpValid, resendRetryAfterSec } from './otp'
 import { listRoutedTo, routingFor } from './routing'
 import { addEvent, getRequestRecord, onReset, putRequest, type RequestRecord } from './store'
@@ -34,16 +36,12 @@ function ensure<T>(schema: { parse: (value: unknown) => T }, value: unknown): T 
   return schema.parse(value)
 }
 
-/** Когда последний раз уходил код на этот номер — от него считается кулдаун. */
-const otpSentAt = new Map<string, string>()
-
 export function resetMasterState(): void {
-  resetSessions()
-  otpSentAt.clear()
+  resetAuthState()
 }
 
 function unauthorized(): ApiError {
-  return new ApiError('MASTER_UNAUTHORIZED', 'Нужно войти заново')
+  return new ApiError('MASTER_UNAUTHORIZED', 'Кабинет мастерской — для мастерских')
 }
 
 /**
@@ -55,24 +53,35 @@ function notYours(): ApiError {
   return new ApiError('NOT_ROUTED_TO_YOU', 'Эта заявка не ваша')
 }
 
+/**
+ * Мастерская вошедшего. Два разных отказа вместо одного (§5в, 20.09):
+ * нет сессии — UNAUTHORIZED, «войдите заново»; сессия есть, а роли нет —
+ * MASTER_UNAUTHORIZED, «этот кабинет не для вас». Раньше оба случая
+ * отвечали одинаково, и вошедший заказчик отправлялся на вход повторно.
+ *
+ * Роль проверяется здесь, при каждом вызове, а не берётся снимком
+ * из сессии: снятая с публикации мастерская теряет доступ сразу.
+ */
 function session(token: string, now: Date): Master {
-  const master = resolveSession(token, now)
+  const phone = phoneOf(token, now)
+  const master = findMasterByPhone(phone)
   if (!master) throw unauthorized()
   return master
 }
 
-export function requestCode(input: MasterCodeInputLike): OtpSent {
-  const parsed = MasterRequestCodeInput.safeParse(input)
+/**
+ * §5в — шаг 1 входа. Отвечает ОДИНАКОВО любому номеру: есть он в реестре
+ * мастерских или нет, вызывающий этого не узнаёт. До 20.09 здесь стоял
+ * MASTER_NOT_FOUND, и дверь кабинета работала перечислением мастерских
+ * по номеру — PROBE-оговорка снята вместе с ним.
+ */
+export function authRequestCode(input: AuthCodeInputLike): OtpSent {
+  const parsed = AuthRequestCodeInput.safeParse(input)
   if (!parsed.success) throw validationFailed(parsed.error)
 
-  const master = findMasterByPhone(parsed.data.phone)
-  // PROBE: прод обязан отвечать одинаково, есть номер или нет, — иначе это
-  // перечисление пользователей по номеру (§5б). На скелете мебельщиков семь,
-  // они заведены нами и знают об этом.
-  if (!master) throw new ApiError('MASTER_NOT_FOUND', 'Этого номера нет в списке мастерских')
-
+  const phone = parsed.data.phone
   const now = new Date()
-  const previous = otpSentAt.get(master.phone)
+  const previous = lastCodeSentAt(phone)
   if (previous) {
     const retryAfterSec = resendRetryAfterSec(previous, now)
     if (retryAfterSec > 0) {
@@ -81,8 +90,15 @@ export function requestCode(input: MasterCodeInputLike): OtpSent {
       })
     }
   }
-  otpSentAt.set(master.phone, now.toISOString())
-  addEvent('otp_requested', null, 'master', { channel: OTP_CHANNEL })
+  rememberCodeSent(phone, now.toISOString())
+  // Согласие запоминается на шаге запроса: человек нажал кнопку, прочитав
+  // строку о политике, и дальше может не дойти — но телефон у нас уже есть.
+  rememberIdentity(phone, parsed.data.consent)
+  // Роль в событии — та, под которой человек войдёт: метрика US-17
+  // (сколько мебельщиков дошло до кабинета) от одной двери не ломается.
+  addEvent('otp_requested', null, rolesFor(phone).includes('master') ? 'master' : 'client', {
+    channel: OTP_CHANNEL,
+  })
 
   return ensure(OtpSent, {
     channel: OTP_CHANNEL,
@@ -91,30 +107,31 @@ export function requestCode(input: MasterCodeInputLike): OtpSent {
   })
 }
 
-export function confirmCode(input: MasterConfirmInputLike): MasterSession {
-  const parsed = MasterConfirmCodeInput.safeParse(input)
+/**
+ * §5в — шаг 2 входа. Роли выводятся из номера сервером; человек их
+ * не выбирает и фронт их не решает. Каждый успешный вход — новая сессия:
+ * состояния «уже подтверждена» у неё нет.
+ */
+export function authConfirmCode(input: AuthConfirmInputLike): Session {
+  const parsed = AuthConfirmCodeInput.safeParse(input)
   if (!parsed.success) throw validationFailed(parsed.error)
 
-  const master = findMasterByPhone(parsed.data.phone)
-  if (!master) throw new ApiError('MASTER_NOT_FOUND', 'Этого номера нет в списке мастерских')
-
+  const phone = parsed.data.phone
   // Подтверждать можно только тот код, который сервер сам выслал на этот
-  // номер (§5б): иначе лимит отправок ничего не защищает — код подбирается
-  // в обход отправки вовсе. Ответ тот же, что на неверный код: существование
-  // выданного кода — не то, что стоит сообщать вызывающему.
-  if (!otpSentAt.has(master.phone)) throw new ApiError('OTP_INVALID', 'Код не подошёл')
+  // номер: иначе лимит отправок ничего не защищает — код подбирается
+  // в обход отправки вовсе. Ответ тот же, что на неверный код.
+  if (lastCodeSentAt(phone) === undefined) throw new ApiError('OTP_INVALID', 'Код не подошёл')
   if (!isOtpValid(parsed.data.code)) throw new ApiError('OTP_INVALID', 'Код не подошёл')
 
   const now = new Date()
-  const token = openSession(master.id, now)
-  addEvent('otp_confirmed', null, 'master')
+  const session = openSession(phone, now)
+  addEvent('otp_confirmed', null, session.roles.includes('master') ? 'master' : 'client')
+  return ensure(Session, session)
+}
 
-  // ALREADY_CONFIRMED здесь не бывает: у сессии нет состояния «уже
-  // подтверждена», есть только «выдана» (§5б). Каждый вход — новая сессия.
-  return ensure(MasterSession, {
-    master: { id: master.id, name: master.name, city: master.city },
-    token,
-  })
+/** §5в — выход. Отзывает сессию на сервере, а не только чистит вкладку. */
+export function signOut(token: string): void {
+  closeSession(token)
 }
 
 function myQuote(record: RequestRecord, masterId: string): Quote | undefined {

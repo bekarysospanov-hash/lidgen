@@ -27,7 +27,7 @@ import {
   panelNested,
   stepPanel,
 } from '../../components/ui'
-import type { MasterSession, QuoteItem, RequestForMaster } from '../../contract'
+import type { Session, QuoteItem, RequestForMaster } from '../../contract'
 import {
   compositionAsk,
   compositionFor,
@@ -54,7 +54,7 @@ import {
 } from '../../questions/categories'
 import { errorText } from '../../texts/request'
 import { quotePage, requestsPage, routedAtLabel } from '../../texts/master'
-import { clearSession, readSession } from './session'
+import { clearSession, hasRole, readSession } from '../../session'
 
 type View =
   | { kind: 'loading' }
@@ -183,7 +183,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 export default function RequestCard() {
   const { id } = useParams()
-  const [session, setSession] = useState<MasterSession | null>(() => readSession())
+  const [session, setSession] = useState<Session | null>(() => readSession())
   const [view, setView] = useState<View>({ kind: 'loading' })
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({})
@@ -239,12 +239,14 @@ export default function RequestCard() {
   }, [session, id, load])
 
   // Сессии нет — на вход, а не на объяснение, почему сюда нельзя (US-17).
-  if (!session) return <Navigate to="/master" replace />
+  // Гейт по роли, а не по факту входа (§5в): вошедший заказчик
+  // не должен снова видеть форму входа — он уже вошёл.
+  if (!hasRole(session, 'master')) return <Navigate to="/master" replace />
   if (id === undefined) return <Navigate to="/master/requests" replace />
 
   if (view.kind === 'loading') {
     return (
-      <MasterShell masterName={session.master.name}>
+      <MasterShell masterName={session.master?.name}>
         <p className="text-body tracking-body" role="status">
           {quotePage.loading}
         </p>
@@ -255,7 +257,7 @@ export default function RequestCard() {
   if (view.kind === 'foreign' || view.kind === 'failed') {
     const foreign = view.kind === 'foreign'
     return (
-      <MasterShell masterName={session.master.name}>
+      <MasterShell masterName={session.master?.name}>
         <Title>{foreign ? quotePage.foreignTitle : quotePage.failedTitle}</Title>
         <p className="mt-lg max-w-measure text-body tracking-body">
           {foreign ? quotePage.foreignBody : view.message}
@@ -436,7 +438,7 @@ export default function RequestCard() {
   }
 
   return (
-    <MasterShell masterName={session.master.name}>
+    <MasterShell masterName={session.master?.name}>
       <p>
         <Link to="/master/requests" className={link}>
           {quotePage.back}

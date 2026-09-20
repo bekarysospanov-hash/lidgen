@@ -517,9 +517,11 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
   const ALMATY_PHONES = ['+77010000001', '+77010000002', '+77010000003']
   const ASTANA_PHONE = '+77010000004'
 
+  const CONSENT = { policyVersion: '2026-09-16', acceptedAt: '2026-09-16T10:00:00.000Z' }
+
   async function login(phone: string) {
-    await mockApi.masterRequestCode({ phone })
-    return mockApi.masterConfirmCode({ phone, code: VALID_CODE })
+    await mockApi.authRequestCode({ phone, consent: CONSENT })
+    return mockApi.authConfirmCode({ phone, code: VALID_CODE })
   }
 
   const quotePayload = (overrides: Record<string, unknown> = {}) => ({
@@ -533,50 +535,61 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
   })
 
   describe('вход по номеру и коду', () => {
-    it('номера нет в списке мастерских → MASTER_NOT_FOUND', async () => {
-      await expect(mockApi.masterRequestCode({ phone: '+77019999999' })).rejects.toSatisfy(
-        (e: unknown) => isApiError(e) && e.code === 'MASTER_NOT_FOUND',
-      )
+    it('чужой номер получает код так же, как свой: дверь одна (§5в)', async () => {
+      // До 20.09 здесь был MASTER_NOT_FOUND, и по двери кабинета
+      // перечислялся реестр мастерских. Ответ обязан быть одинаковым.
+      await expect(
+        mockApi.authRequestCode({ phone: '+77019999999', consent: CONSENT }),
+      ).resolves.toMatchObject({ codeLength: 4 })
+    })
+
+    it('чужой номер входит заказчиком: роль master ему не достаётся', async () => {
+      const session = await login('+77019999999')
+      expect(session.roles).toEqual(['client'])
+      expect(session.master).toBeNull()
     })
 
     it('верный код выдаёт сессию с именем мастерской, но без телефона', async () => {
       const session = await login(ALMATY_PHONES[0])
       expect(Token.safeParse(session.token).success).toBe(true)
-      expect(session.master.name).toBe('Мастерская на Сайране')
-      expect('phone' in session.master).toBe(false)
+      expect(session.roles).toContain('master')
+      expect(session.master?.name).toBe('Мастерская на Сайране')
+      expect(session.master !== null && 'phone' in session.master).toBe(false)
     })
 
     it('неверный код не пускает', async () => {
-      await mockApi.masterRequestCode({ phone: ALMATY_PHONES[0] })
+      await mockApi.authRequestCode({ phone: ALMATY_PHONES[0], consent: CONSENT })
       await expect(
-        mockApi.masterConfirmCode({ phone: ALMATY_PHONES[0], code: INVALID_CODE }),
+        mockApi.authConfirmCode({ phone: ALMATY_PHONES[0], code: INVALID_CODE }),
       ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'OTP_INVALID')
     })
 
     it('повторный запрос кода упирается в кулдаун — как и у заявки', async () => {
-      await mockApi.masterRequestCode({ phone: ALMATY_PHONES[0] })
-      await expect(mockApi.masterRequestCode({ phone: ALMATY_PHONES[0] })).rejects.toSatisfy(
+      await mockApi.authRequestCode({ phone: ALMATY_PHONES[0], consent: CONSENT })
+      await expect(mockApi.authRequestCode({ phone: ALMATY_PHONES[0], consent: CONSENT })).rejects.toSatisfy(
         (e: unknown) => isApiError(e) && e.code === 'OTP_RESEND_TOO_SOON',
       )
     })
 
     it('код нельзя подтвердить, если его не запрашивали', async () => {
       await expect(
-        mockApi.masterConfirmCode({ phone: ALMATY_PHONES[0], code: VALID_CODE }),
+        mockApi.authConfirmCode({ phone: ALMATY_PHONES[0], code: VALID_CODE }),
       ).rejects.toSatisfy((e: unknown) => isApiError(e) && e.code === 'OTP_INVALID')
     })
 
+    // Отказов теперь два (§5в, 20.09): нет сессии — UNAUTHORIZED,
+    // есть сессия без роли — MASTER_UNAUTHORIZED. Здесь сессии нет.
     it('reset уносит сессию: заявок прошлого прогона она не откроет', async () => {
       const { token } = await login(ALMATY_PHONES[0])
       reset()
       await expect(mockApi.listRequestsForMaster(token)).rejects.toSatisfy(
-        (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+        (e: unknown) => isApiError(e) && e.code === 'UNAUTHORIZED',
       )
     })
 
     it('мусорный токен не открывает список', async () => {
       await expect(mockApi.listRequestsForMaster('нетакойтокен')).rejects.toSatisfy(
-        (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+        (e: unknown) => isApiError(e) && e.code === 'UNAUTHORIZED',
       )
     })
   })
@@ -868,7 +881,7 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
 
     it('чужой токен карточку не отдаёт', async () => {
       await expect(mockApi.getMyCard('не-токен')).rejects.toSatisfy(
-        (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+        (e: unknown) => isApiError(e) && e.code === 'UNAUTHORIZED',
       )
     })
   })
@@ -965,5 +978,78 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
       expect(sent[0].actor.role).toBe('master')
       expect(sent[0].requestId).toBe(created.id)
     })
+  })
+})
+
+describe('вход и кабинет заказчика — US-29, §5в', () => {
+  const CONSENT = { policyVersion: '2026-09-16', acceptedAt: '2026-09-16T10:00:00.000Z' }
+  const CLIENT_PHONE = '+77015550001'
+
+  async function signIn(phone: string) {
+    await mockApi.authRequestCode({ phone, consent: CONSENT })
+    return mockApi.authConfirmCode({ phone, code: VALID_CODE })
+  }
+
+  it('вошедший заказчик в кабинет мастерской не попадает', async () => {
+    const session = await signIn(CLIENT_PHONE)
+    // Сессия есть, роли нет — это НЕ «войдите заново»: человек уже вошёл.
+    await expect(mockApi.listRequestsForMaster(session.token)).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'MASTER_UNAUTHORIZED',
+    )
+  })
+
+  it('без сессии кабинет заказчика отвечает UNAUTHORIZED', async () => {
+    await expect(mockApi.listMyRequests('не-токен')).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'UNAUTHORIZED',
+    )
+  })
+
+  it('пустой кабинет — законный ответ, а не ошибка', async () => {
+    const session = await signIn(CLIENT_PHONE)
+    await expect(mockApi.listMyRequests(session.token)).resolves.toEqual([])
+  })
+
+  it('заявка, оставленная ДО входа, попадает в кабинет сама', async () => {
+    const { created } = await createAndConfirm({
+      phone: CLIENT_PHONE,
+      clientRequestId: '22222222-2222-4222-8222-222222222222',
+    })
+
+    const session = await signIn(CLIENT_PHONE)
+    const mine = await mockApi.listMyRequests(session.token)
+
+    expect(mine).toHaveLength(1)
+    expect(mine[0].number).toBe(created.number)
+    // Токен тот же, что пришёл ссылкой: кабинет ведёт на ту же страницу.
+    expect(Token.safeParse(mine[0].token).success).toBe(true)
+  })
+
+  it('неподтверждённая заявка в кабинет не попадает', async () => {
+    await mockApi.createRequest(
+      createPayload({ phone: CLIENT_PHONE, clientRequestId: '33333333-3333-4333-8333-333333333333' }),
+    )
+    const session = await signIn(CLIENT_PHONE)
+    // Номер в форме вписывает кто угодно: чужая кухня в чужом кабинете
+    // появиться не должна.
+    await expect(mockApi.listMyRequests(session.token)).resolves.toEqual([])
+  })
+
+  it('id заявки заказчице не уходит даже в своём кабинете (§3)', async () => {
+    await createAndConfirm({
+      phone: CLIENT_PHONE,
+      clientRequestId: '44444444-4444-4444-8444-444444444444',
+    })
+    const session = await signIn(CLIENT_PHONE)
+    const [item] = await mockApi.listMyRequests(session.token)
+    expect('id' in item).toBe(false)
+    expect('phone' in item).toBe(false)
+  })
+
+  it('выход отзывает сессию на сервере, а не только во вкладке', async () => {
+    const session = await signIn(CLIENT_PHONE)
+    await mockApi.signOut(session.token)
+    await expect(mockApi.listMyRequests(session.token)).rejects.toSatisfy(
+      (e: unknown) => isApiError(e) && e.code === 'UNAUTHORIZED',
+    )
   })
 })

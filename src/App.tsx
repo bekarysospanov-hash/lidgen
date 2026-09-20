@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 import Offers from './pages/client/Offers'
-import MasterLogin from './pages/master/Login'
+import SignIn from './pages/auth/SignIn'
+import MyRequests from './pages/client/MyRequests'
 import MasterProfileEdit from './pages/master/Profile'
 import RequestCard from './pages/master/RequestCard'
 import MasterRequests from './pages/master/Requests'
@@ -34,11 +35,23 @@ export default function App() {
       {/* US-21 — вход для потерявшей ссылку: заявка есть, дойти до неё нечем. */}
       <Route path="/link" element={<LostLink />} />
 
-      {/* Заказчица — по токену из ссылки, без регистрации (US-21) */}
+      {/* Заказчица — по токену из ссылки, без регистрации (US-21).
+          Кабинет её не отменяет: по ссылке заявку открывает и тот, кому
+          её переслали, и тот, кто не хочет вводить никаких кодов. */}
       <Route path="/offers/:token" element={<Offers />} />
 
-      {/* Мебельщик — кабинет */}
-      <Route path="/master" element={<MasterLogin />} />
+      {/* Вход — одна дверь на обе роли (решение PM 20.09). Роль решает
+          сервер по номеру; /master остался адресом и ведёт на ту же дверь
+          с подсказкой, куда человек шёл: на него ссылаются уведомления
+          мебельщикам (US-15) и визитки, розданные до 20.09. */}
+      <Route path="/login" element={<SignIn />} />
+      <Route path="/master" element={<SignIn />} />
+
+      {/* Кабинет заказчика (US-29) */}
+      <Route path="/me" element={<MyRequests />} />
+      <Route path="/me/requests" element={<MyRequests />} />
+
+      {/* Кабинет мебельщика */}
       <Route path="/master/requests" element={<MasterRequests />} />
       <Route path="/master/requests/:id" element={<RequestCard />} />
       <Route path="/master/profile" element={<MasterProfileEdit />} />

@@ -116,6 +116,17 @@ export function findLatestConfirmedByPhone(phone: string): RequestRecord | undef
   return latest
 }
 
+/**
+ * Все подтверждённые заявки номера, новые первыми (§5в, US-29) — кабинет
+ * заказчика. Неподтверждённые не отдаются: номер в форме вписывает кто
+ * угодно, и в чужом кабинете появилась бы «его» кухня.
+ */
+export function listConfirmedByPhone(phone: string): RequestRecord[] {
+  return [...requests.values()]
+    .filter((record) => record.phone === phone && record.phoneConfirmedAt !== null)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+}
+
 export function listEvents(): Event[] {
   return [...events]
 }

@@ -20,7 +20,7 @@ import { Box, CheckRows, ChoiceRows } from '../../components/Choice'
 import { MasterTile } from '../../components/MasterTile'
 import { MasterShell } from '../../components/MasterShell'
 import { ServiceIcon } from '../../components/ServiceIcon'
-import { CameraIcon, CloseIcon } from '../../components/icons'
+import { CameraIcon, ChevronIcon, CloseIcon } from '../../components/icons'
 import {
   blockRow,
   blockRowDivider,
@@ -44,7 +44,7 @@ import {
   type CategoryId,
   type MasterCardPublic,
   type MasterPhoto,
-  type MasterSession,
+  type Session,
   type Messenger,
   type MyCard,
   type ServiceOffer,
@@ -54,7 +54,8 @@ import { categories, cityName } from '../../questions/categories'
 import { doesSuggestions, extrasSuggestions, serviceText } from '../../questions/services'
 import { errorText, validationUnmapped } from '../../texts/request'
 import { profilePage } from '../../texts/master'
-import { readSession } from './session'
+import { format as formatPhone } from '../../components/phone'
+import { hasRole, readSession } from '../../session'
 
 type View =
   | { kind: 'loading' }
@@ -190,17 +191,64 @@ function draftFrom(card: MyCard): Draft {
   }
 }
 
-/** Заголовок раздела — над плашкой, а не внутри неё (чек-лист, п. 1). */
-function Part({ title, hint, children }: {
+/**
+ * Раздел анкеты — заголовок над плашкой (чек-лист, п. 1) плюс сворачивание
+ * (§ Components, правка 20.09).
+ *
+ * Зачем сворачивание. Разделов девять, и мебельщик, поправляющий одну
+ * строку про гарантию, пролистывал остальные восемь — форма в один проход
+ * идёт на 5600 пикселей. Свёрнутый раздел показывает заголовок и сводку
+ * того, что внутри; раскрытый — обычный блок. Закрывать соседний
+ * при раскрытии нельзя: человек сравнивает два раздела.
+ *
+ * Разделы, где лежит ошибка, раскрываются сами — иначе сообщение о ней
+ * прячется, и человек жмёт «Сохранить» второй раз, не понимая, что не так.
+ */
+function Part({ title, hint, summary, invalid = false, children }: {
   title: string
   hint?: string
+  /** Что внутри, одной строкой: «4 из 7», «Заполнено», «Пусто». */
+  summary?: string
+  /** В разделе есть поле с ошибкой — раздел раскрывается и не закрывается. */
+  invalid?: boolean
   children: React.ReactNode
 }) {
+  const [open, setOpen] = useState(false)
+  const shown = open || invalid
+
   return (
     <section className="mt-3xl">
-      <h2 className="text-subheading tracking-subheading font-medium">{title}</h2>
-      {hint !== undefined && <p className={`mt-xs max-w-measure ${hintText}`}>{hint}</p>}
-      <div className={`mt-md ${panel}`}>{children}</div>
+      {/* Заголовок остаётся заголовком и снаружи плашки: втянутый внутрь,
+          он превратил бы раздел в карточку с шапкой (чек-лист, п. 1). */}
+      <button type="button" onClick={() => setOpen((it) => !it)} aria-expanded={shown}
+        className="group flex w-full min-h-target items-center gap-md text-left
+          focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary
+          focus-visible:outline-offset-2">
+        <span className="min-w-0 flex-1">
+          <span className="block text-subheading tracking-subheading font-medium
+            underline-offset-4 group-hover:underline">
+            {title}
+          </span>
+          {/* Сводка видна только у свёрнутого: у раскрытого её место
+              занимает подсказка, и два пояснения подряд — дубль. */}
+          {!shown && summary !== undefined && (
+            <span className={`mt-xs block ${hintText}`}>{summary}</span>
+          )}
+        </span>
+        {/* Шеврон — один из прототипов, которым § Иконки разрешает жить
+            без подписи; подпись здесь и так рядом, это сам заголовок. */}
+        <span className={`shrink-0 text-on-surface-muted transition-transform duration-100
+          ${shown ? 'rotate-90' : ''}`}>
+          <ChevronIcon />
+        </span>
+      </button>
+
+      {shown && (
+        <>
+          {hint !== undefined && <p className={`mt-xs max-w-measure ${hintText}`}>{hint}</p>}
+          <div className={`mt-md ${panel}`}>{children}</div>
+        </>
+      )}
     </section>
   )
 }
@@ -221,7 +269,7 @@ function toggle<T>(list: readonly T[], id: T): T[] {
 }
 
 export default function MasterProfileEdit() {
-  const [session] = useState<MasterSession | null>(() => readSession())
+  const [session] = useState<Session | null>(() => readSession())
   const [view, setView] = useState<View>({ kind: 'loading' })
   const [draft, setDraft] = useState<Draft>(EMPTY)
   /**
@@ -265,11 +313,17 @@ export default function MasterProfileEdit() {
     )
   }, [session, attempt])
 
-  if (session === null) return <Navigate to="/master" replace />
+  // Гейт по роли, а не по факту входа (§5в): вошедший заказчик
+  // не должен снова видеть форму входа — он уже вошёл.
+  if (!hasRole(session, 'master')) return <Navigate to="/master" replace />
+  // Роль master и непустой профиль приходят парой (контракт §5в), но схема
+  // этого не выражает — проверяем здесь, чтобы ниже работать с ним прямо.
+  const mine = session.master
+  if (mine === null) return <Navigate to="/master" replace />
 
   if (view.kind === 'loading') {
     return (
-      <MasterShell masterName={session.master.name}>
+      <MasterShell masterName={session.master?.name}>
         <p className="text-body tracking-body" role="status">
           {profilePage.loading}
         </p>
@@ -279,7 +333,7 @@ export default function MasterProfileEdit() {
 
   if (view.kind === 'failed') {
     return (
-      <MasterShell masterName={session.master.name}>
+      <MasterShell masterName={session.master?.name}>
         <h1 className="text-heading tracking-heading font-semibold">{profilePage.failedTitle}</h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{view.message}</p>
         <button
@@ -461,7 +515,7 @@ export default function MasterProfileEdit() {
    * даже у наполовину заполненного черновика.
    */
   const preview: MasterCardPublic = {
-    id: session.master.id,
+    id: mine.id,
     name: card.name,
     city: card.city,
     card: {
@@ -507,6 +561,39 @@ export default function MasterProfileEdit() {
     draft.extras.length === 0 ? profilePage.gapExtras : null,
     draft.area.trim() === '' ? profilePage.gapArea : null,
   ].filter((item) => item !== null)
+
+  /**
+   * Что лежит в свёрнутом разделе — одной строкой (§ Components, 20.09).
+   * Сводка считается из черновика, а не пишется руками: строка «Заполнено»
+   * над пустым разделом врёт ровно один раз, после чего человек перестаёт
+   * ей верить и раскрывает все девять.
+   */
+  const partSummary = {
+    about: draft.about.trim() === '' ? profilePage.sumEmpty : profilePage.sumFilled,
+    services: profilePage.sumOf(draft.services.length, SERVICE_ROWS.length),
+    area: draft.area.trim() === '' ? profilePage.sumEmpty : draft.area.trim(),
+    extras: draft.extras.filter((item) => item.trim() !== '').length === 0
+      ? profilePage.sumEmpty
+      : profilePage.sumCount(draft.extras.filter((item) => item.trim() !== '').length),
+    terms: draft.warranty.trim() === '' && draft.leadFrom.trim() === ''
+      ? profilePage.sumEmpty
+      : profilePage.sumFilled,
+    hours: draft.days.length === 0 ? profilePage.sumEmpty : profilePage.sumDays(draft.days.length),
+    // Телефон в сводке — в том же виде, в каком его набирают, а не сырыми
+    // цифрами: «+77010000001» человек читает по одной цифре.
+    contact: draft.phone.trim() === ''
+      ? profilePage.sumEmpty
+      : formatPhone(draft.phone.replace(/\D/g, '').replace(/^7/, '')),
+    works: draft.photos.length === 0
+      ? profilePage.sumEmpty
+      : profilePage.sumPhotos(draft.photos.length),
+    logo: draft.logo === null ? profilePage.sumEmpty : profilePage.sumFilled,
+  }
+
+  /** Есть ли в разделе поле с ошибкой: такой раздел раскрывается сам. */
+  function touches(fields: readonly ErrorField[]): boolean {
+    return fields.some((field) => errors[field] !== undefined)
+  }
 
   function save() {
     if (!validate() || session === null) return
@@ -569,7 +656,7 @@ export default function MasterProfileEdit() {
   // посмотреть на себя тем же экраном, каким его видит заказчик.
   if (!editing) {
     return (
-      <MasterShell masterName={session.master.name}>
+      <MasterShell masterName={session.master?.name}>
         <p className={hintText}>{profilePage.label}</p>
         <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
           {profilePage.title}
@@ -607,7 +694,7 @@ export default function MasterProfileEdit() {
                 <MasterTile master={preview} />
               </div>
               <p className="mt-md">
-                <Link to={`/masters/${session.master.id}`} className={`text-body tracking-body ${link}`}>
+                <Link to={`/masters/${mine.id}`} className={`text-body tracking-body ${link}`}>
                   {profilePage.openPublic}
                 </Link>
               </p>
@@ -656,7 +743,7 @@ export default function MasterProfileEdit() {
   }
 
   return (
-    <MasterShell masterName={session.master.name}>
+    <MasterShell masterName={session.master?.name}>
       <p className={hintText}>{profilePage.label}</p>
       <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
         {profilePage.editTitle}
@@ -668,7 +755,8 @@ export default function MasterProfileEdit() {
           без карточки видел объяснение, почему её нет, — но не поля. */}
       {
         <>
-          <Part title={profilePage.aboutLabel} hint={profilePage.aboutHint}>
+          <Part title={profilePage.aboutLabel} hint={profilePage.aboutHint}
+            summary={partSummary.about} invalid={touches(['about', 'years', 'does', 'categories'])}>
             {/* Метки у поля нет: её слово в слово произносит заголовок
                 раздела над плашкой, а дубль человек читает как две разные
                 вещи и ищет между ними разницу (чек-лист, п. 3). */}
@@ -744,7 +832,8 @@ export default function MasterProfileEdit() {
           {/* Услуги — закрытый список: под каждую нарисован знак (контракт §2).
               У отмеченной спрашивается условие: без него два одинаковых
               списка несравнимы (бенчмарк 18.09). */}
-          <Part title={profilePage.servicesLabel} hint={profilePage.servicesHint}>
+          <Part title={profilePage.servicesLabel} hint={profilePage.servicesHint}
+            summary={partSummary.services} invalid={touches(['services'])}>
             <div className="-mx-md">
               {SERVICE_ROWS.map((row) => {
                 const chosen = draft.services.find((service) => service.id === row.id)
@@ -804,7 +893,8 @@ export default function MasterProfileEdit() {
           </Part>
 
           {/* Куда выезжают. Свой город известен и так — здесь пригород. */}
-          <Part title={profilePage.areaLabel} hint={profilePage.areaHint}>
+          <Part title={profilePage.areaLabel} hint={profilePage.areaHint}
+            summary={partSummary.area} invalid={touches(['area'])}>
             <input value={draft.area}
               aria-label={profilePage.areaLabel}
               placeholder={profilePage.areaPlaceholder}
@@ -817,7 +907,8 @@ export default function MasterProfileEdit() {
           {/* Отличия своими словами. По строке на пункт, а не одним полем
               через запятую: пункты показываются списком, и запятая внутри
               фразы разорвала бы её посередине. */}
-          <Part title={profilePage.extrasLabel} hint={profilePage.extrasHint}>
+          <Part title={profilePage.extrasLabel} hint={profilePage.extrasHint}
+            summary={partSummary.extras} invalid={touches(['extras'])}>
             {draft.extras.map((item, index) => (
               <div key={index} className={`flex items-start gap-sm ${index > 0 ? 'mt-md' : ''}`}>
                 {/* Поле на две строки, а не однострочное: пункт длиной
@@ -863,7 +954,8 @@ export default function MasterProfileEdit() {
 
           {/* Гарантия и срок — один раздел: это одно обещание, названное
               двумя числами, и порознь они читались бы как два требования. */}
-          <Part title={profilePage.termsLabel} hint={profilePage.termsHint}>
+          <Part title={profilePage.termsLabel} hint={profilePage.termsHint}
+            summary={partSummary.terms} invalid={touches(['warranty', 'lead'])}>
             <p className={fieldLabel}>{profilePage.warrantyLabel}</p>
             <input id="warranty" inputMode="numeric" value={draft.warranty}
               aria-label={profilePage.warrantyLabel}
@@ -903,7 +995,8 @@ export default function MasterProfileEdit() {
             {errors.lead !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.lead}</p>}
           </Part>
 
-          <Part title={profilePage.hoursLabel} hint={profilePage.hoursHint}>
+          <Part title={profilePage.hoursLabel} hint={profilePage.hoursHint}
+            summary={partSummary.hours} invalid={touches(['hours'])}>
             <CheckRows options={WEEK} chosen={draft.days}
               onToggle={(id) => set({ days: toggle(draft.days, id) })} />
 
@@ -933,7 +1026,8 @@ export default function MasterProfileEdit() {
             {errors.hours !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.hours}</p>}
           </Part>
 
-          <Part title={profilePage.contactLabel} hint={profilePage.contactHint}>
+          <Part title={profilePage.contactLabel} hint={profilePage.contactHint}
+            summary={partSummary.contact} invalid={touches(['phone'])}>
             <input id="contact-phone" inputMode="tel" value={draft.phone}
               aria-label={profilePage.contactLabel}
               onChange={(event) => set({ phone: event.target.value })}
@@ -951,7 +1045,8 @@ export default function MasterProfileEdit() {
 
           {/* Работы. Свои, снятые у своих заказчиков: строка под блоком —
               единственное, что об этом теперь напоминает (контракт §5б). */}
-          <Part title={profilePage.worksLabel} hint={profilePage.worksNote}>
+          <Part title={profilePage.worksLabel} hint={profilePage.worksNote}
+            summary={partSummary.works} invalid={touches(['photos'])}>
             {draft.photos.length === 0 ? (
               <p className={`max-w-measure ${hintText}`}>{profilePage.worksEmpty}</p>
             ) : (
@@ -1038,7 +1133,8 @@ export default function MasterProfileEdit() {
             )}
           </Part>
 
-          <Part title={profilePage.logoLabel} hint={profilePage.logoHint}>
+          <Part title={profilePage.logoLabel} hint={profilePage.logoHint}
+            summary={partSummary.logo}>
             {draft.logo !== null && (
               <img src={draft.logo} alt="" className="h-icon-lg w-auto" />
             )}
@@ -1067,7 +1163,7 @@ export default function MasterProfileEdit() {
           {/* Главное действие в конце экрана (§ Порядок важнее полноты).
               Рядом отказ: без него из правки нет выхода, кроме как сохранить
               то, что начал менять. */}
-          <div className="mt-xl flex flex-wrap items-center gap-lg">
+          <div className="mt-3xl flex flex-wrap items-center gap-lg">
             <button type="button" onClick={save} disabled={saving} className={buttonFilled}>
               {saving ? profilePage.saving : profilePage.save}
             </button>
