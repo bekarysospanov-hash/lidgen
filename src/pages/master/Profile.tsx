@@ -34,6 +34,8 @@ import {
   link,
   panel,
   shelf,
+  stepBar,
+  stepBarDone,
 } from '../../components/ui'
 import {
   CARD_LIMITS,
@@ -192,6 +194,64 @@ function draftFrom(card: MyCard): Draft {
 }
 
 /**
+ * Считаемых шагов восемь: логотип в счёт не идёт (решение PM, 21.09).
+ * Раздел под него остаётся, но подсказка в нём говорит «если есть, нет —
+ * ничего страшного», и шаг, который продукт сам называет необязательным,
+ * не должен держать полосу недозаполненной. У семи мастерских пробы
+ * логотипа нет и, скорее всего, не будет: это цеха, а не бренды, —
+ * то есть полоса не дошла бы до конца ни у кого.
+ */
+const COUNTED_STEPS = [
+  'about', 'services', 'area', 'extras', 'terms', 'hours', 'contact', 'works',
+] as const
+type CountedKey = (typeof COUNTED_STEPS)[number]
+
+/**
+ * Девять разделов анкеты в том порядке, в каком они идут на экране.
+ * Ключ нужен разделу как якорь: по нему полоса шагов приводит к делу.
+ * Логотип идёт последним и только здесь — в счёте шагов его нет.
+ */
+const PART_ORDER = [...COUNTED_STEPS, 'logo'] as const
+type StepKey = (typeof PART_ORDER)[number]
+
+/**
+ * Полоса шагов (§ Components, 21.09). Счётчик называет ближайшее
+ * незаполненное, дорожка показывает пройденное долей.
+ *
+ * Считаются заполненные разделы, а не открытые: человек, пролиставший
+ * девять пустых разделов, не прошёл девять шагов.
+ */
+function StepBar({ done, total, action }: {
+  done: number
+  total: number
+  /** Действие к ближайшему делу; у заполненной карточки его нет. */
+  action?: { label: string; onClick: () => void }
+}) {
+  return (
+    <div className="mt-lg max-w-measure">
+      <p className={hintText} role="status">
+        {done === total ? profilePage.stepsDone : profilePage.stepCount(done, total)}
+      </p>
+      {/* Дорожка собрана из отрезков по числу шагов, а не из одной полосы
+          с вычисленной шириной: доля в процентах — инлайновый стиль, то есть
+          значение мимо системы. Отрезки равные и без зазора, поэтому
+          пройденные сливаются в сплошную линию — ровно то, что описано
+          в § Components. */}
+      <div className={`mt-xs flex ${stepBar}`} aria-hidden="true">
+        {COUNTED_STEPS.slice(0, total).map((key, index) => (
+          <div key={key} className={index < done ? `flex-1 ${stepBarDone}` : 'flex-1'} />
+        ))}
+      </div>
+      {action !== undefined && (
+        <button type="button" onClick={action.onClick} className={`mt-md ${buttonText}`}>
+          {action.label}
+        </button>
+      )}
+    </div>
+  )
+}
+
+/**
  * Раздел анкеты — заголовок над плашкой (чек-лист, п. 1) плюс сворачивание
  * (§ Components, правка 20.09).
  *
@@ -204,23 +264,28 @@ function draftFrom(card: MyCard): Draft {
  * Разделы, где лежит ошибка, раскрываются сами — иначе сообщение о ней
  * прячется, и человек жмёт «Сохранить» второй раз, не понимая, что не так.
  */
-function Part({ title, hint, summary, invalid = false, children }: {
+function Part({ id, title, hint, summary, invalid = false, open, onToggle, children }: {
+  /** Якорь раздела: по нему полоса шагов приводит человека к делу. */
+  id: StepKey
   title: string
   hint?: string
   /** Что внутри, одной строкой: «4 из 7», «Заполнено», «Пусто». */
   summary?: string
   /** В разделе есть поле с ошибкой — раздел раскрывается и не закрывается. */
   invalid?: boolean
+  /** Раскрыт ли: состояние держит страница, потому что раскрывать умеет
+   *  не только сам заголовок, но и кнопка шага. */
+  open: boolean
+  onToggle: () => void
   children: React.ReactNode
 }) {
-  const [open, setOpen] = useState(false)
   const shown = open || invalid
 
   return (
-    <section className="mt-3xl">
+    <section id={`part-${id}`} className="mt-3xl scroll-mt-lg">
       {/* Заголовок остаётся заголовком и снаружи плашки: втянутый внутрь,
           он превратил бы раздел в карточку с шапкой (чек-лист, п. 1). */}
-      <button type="button" onClick={() => setOpen((it) => !it)} aria-expanded={shown}
+      <button type="button" onClick={onToggle} aria-expanded={shown}
         className="group flex w-full min-h-target items-center gap-md text-left
           focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary
           focus-visible:outline-offset-2">
@@ -285,6 +350,18 @@ export default function MasterProfileEdit() {
    */
   const [editing, setEditing] = useState(false)
   /**
+   * Раскрытые разделы держит страница, а не каждый раздел сам: раскрывать
+   * умеет и заголовок, и кнопка шага. Закрывать соседний при раскрытии
+   * нельзя (§ Components) — поэтому множество, а не один ключ.
+   */
+  const [openParts, setOpenParts] = useState<ReadonlySet<StepKey>>(() => new Set())
+  /**
+   * Раздел, к которому нужно подвести человека после раскрытия. Со счётчиком,
+   * а не голым ключом: второе нажатие на тот же раздел обязано сработать,
+   * а `{key}` дважды подряд — то же значение, и эффект не повторится.
+   */
+  const [jump, setJump] = useState<{ key: StepKey; n: number } | null>(null)
+  /**
    * Ключи ошибок перечислены, а не строкой: опечатка в `found.warrenty`
    * молча не показала бы человеку ничего, и поймать это можно было бы
    * только руками.
@@ -297,6 +374,19 @@ export default function MasterProfileEdit() {
   const [attempt, setAttempt] = useState(0)
   const photoPicker = useRef<HTMLInputElement>(null)
   const logoPicker = useRef<HTMLInputElement>(null)
+
+  /**
+   * Подвести к разделу после того, как он раскрылся. Без прокрутки кнопка
+   * шага раскрывала бы восьмой раздел за пределами экрана, и человек видел
+   * бы, что «ничего не произошло».
+   *
+   * Прокрутка мгновенная: плавная здесь была бы движением ради движения,
+   * а § Layout оставляет движение состояниям.
+   */
+  useEffect(() => {
+    if (jump === null) return
+    document.getElementById(`part-${jump.key}`)?.scrollIntoView()
+  }, [jump])
 
   useEffect(() => {
     if (session === null) return
@@ -563,6 +653,27 @@ export default function MasterProfileEdit() {
   ].filter((item) => item !== null)
 
   /**
+   * Заполнен ли раздел — единственный расчёт заполненности на экране.
+   * Ниже из него берут и сводка раздела, и счётчик шагов: пока условий
+   * было два, сводка «Заполнено» стояла под разделом, к которому звала
+   * кнопка «Назвать гарантию и срок» (находка ревью 21.09).
+   *
+   * Логотипа здесь нет: он не шаг и сводку считает сам по себе.
+   */
+  const stepDone: Record<CountedKey, boolean> = {
+    about: draft.about.trim() !== '',
+    services: draft.services.length > 0,
+    area: draft.area.trim() !== '',
+    extras: draft.extras.filter((item) => item.trim() !== '').length > 0,
+    terms: draft.warranty.trim() !== '' && draft.leadFrom.trim() !== '' && draft.leadTo.trim() !== '',
+    hours: draft.days.length > 0,
+    contact: draft.phone.trim() !== '',
+    works: draft.photos.length > 0,
+  }
+  const doneCount = COUNTED_STEPS.filter((key) => stepDone[key]).length
+  const nextStep = COUNTED_STEPS.find((key) => !stepDone[key])
+
+  /**
    * Что лежит в свёрнутом разделе — одной строкой (§ Components, 20.09).
    * Сводка считается из черновика, а не пишется руками: строка «Заполнено»
    * над пустым разделом врёт ровно один раз, после чего человек перестаёт
@@ -575,9 +686,9 @@ export default function MasterProfileEdit() {
     extras: draft.extras.filter((item) => item.trim() !== '').length === 0
       ? profilePage.sumEmpty
       : profilePage.sumCount(draft.extras.filter((item) => item.trim() !== '').length),
-    terms: draft.warranty.trim() === '' && draft.leadFrom.trim() === ''
-      ? profilePage.sumEmpty
-      : profilePage.sumFilled,
+    // Тот же расчёт, что у шага: «Заполнено» означает названную гарантию
+    // и обе границы срока, а не одно из трёх полей.
+    terms: stepDone.terms ? profilePage.sumFilled : profilePage.sumEmpty,
     hours: draft.days.length === 0 ? profilePage.sumEmpty : profilePage.sumDays(draft.days.length),
     // Телефон в сводке — в том же виде, в каком его набирают, а не сырыми
     // цифрами: «+77010000001» человек читает по одной цифре.
@@ -588,6 +699,22 @@ export default function MasterProfileEdit() {
       ? profilePage.sumEmpty
       : profilePage.sumPhotos(draft.photos.length),
     logo: draft.logo === null ? profilePage.sumEmpty : profilePage.sumFilled,
+  }
+
+  /** Открыть раздел и подвести к нему: одно действие кнопки шага. */
+  function goToStep(key: StepKey) {
+    setEditing(true)
+    setOpenParts((open) => new Set(open).add(key))
+    setJump((prev) => ({ key, n: (prev?.n ?? 0) + 1 }))
+  }
+
+  function togglePart(key: StepKey) {
+    setOpenParts((open) => {
+      const next = new Set(open)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
   }
 
   /** Есть ли в разделе поле с ошибкой: такой раздел раскрывается сам. */
@@ -663,6 +790,12 @@ export default function MasterProfileEdit() {
         </h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{profilePage.lede}</p>
 
+        {/* Путь заполнения — сразу под шапкой: человек видит, где он
+            и сколько осталось, до того как начнёт листать. Само действие
+            стоит в конце экрана (§ Порядок важнее полноты), поэтому
+            кнопки у полосы здесь нет. */}
+        {card.card !== null && <StepBar done={doneCount} total={COUNTED_STEPS.length} />}
+
         {card.card === null ? (
           // Карточки ещё нет — законное состояние, а не ошибка: приём заявок
           // и публикация в каталоге разные решения (контракт §2).
@@ -680,26 +813,6 @@ export default function MasterProfileEdit() {
           </section>
         ) : (
           <>
-            {/* Своё лицо — первым, и ровно той плиткой, что стоит в каталоге:
-                вторая карточка «для кабинета» разошлась бы с настоящей
-                через неделю. Нажатие открывает публичную карточку. */}
-            <section className="mt-3xl">
-              <h2 className="text-subheading tracking-subheading font-medium">
-                {profilePage.previewTitle}
-              </h2>
-              <p className={`mt-xs max-w-measure ${hintText}`}>{profilePage.previewHint}</p>
-              {/* Сетка витрины, а не своя ширина: плитка обязана быть
-                  того же размера, что в каталоге (§ Layout). */}
-              <div className={`mt-md ${shelf}`}>
-                <MasterTile master={preview} />
-              </div>
-              <p className="mt-md">
-                <Link to={`/masters/${mine.id}`} className={`text-body tracking-body ${link}`}>
-                  {profilePage.openPublic}
-                </Link>
-              </p>
-            </section>
-
             {/* Чего не хватает — делами, а не процентом: «заполнено на 68%»
                 не говорит, что делать (бенчмарк 18.09). */}
             <section className="mt-3xl">
@@ -730,11 +843,36 @@ export default function MasterProfileEdit() {
               <p className={`mt-lg max-w-measure ${hintText}`}>{profilePage.fixedNote}</p>
             </div>
 
+            {/* Своё лицо — в конце пути, а не в его начале (правка 21.09):
+                карточка показывается как итог заполнения. Плитка ровно та,
+                что стоит в каталоге, — вторая «для кабинета» разошлась бы
+                с настоящей через неделю. */}
+            <section className="mt-3xl">
+              <h2 className="text-subheading tracking-subheading font-medium">
+                {profilePage.previewTitle}
+              </h2>
+              <p className={`mt-xs max-w-measure ${hintText}`}>{profilePage.previewHint}</p>
+              {/* Сетка витрины, а не своя ширина: плитка обязана быть
+                  того же размера, что в каталоге (§ Layout). */}
+              <div className={`mt-md ${shelf}`}>
+                <MasterTile master={preview} />
+              </div>
+              <p className="mt-md">
+                <Link to={`/masters/${mine.id}`} className={`text-body tracking-body ${link}`}>
+                  {profilePage.openPublic}
+                </Link>
+              </p>
+            </section>
+
             {saved && <p className={`mt-xl ${hintText}`} role="status">{profilePage.saved}</p>}
 
-            {/* Главное действие в конце экрана (§ Порядок важнее полноты). */}
-            <button type="button" onClick={() => setEditing(true)} className={`mt-xl ${buttonFilled}`}>
-              {profilePage.edit}
+            {/* Одна главная кнопка на экран, и она в конце (§ Порядок важнее
+                полноты). Надпись называет ближайшее дело, пока оно есть:
+                «Отметить, что входит в работу» говорит о действии, а общее
+                «Править карточку» — только о режиме (§ Content). */}
+            <button type="button" className={`mt-xl ${buttonFilled}`}
+              onClick={() => (nextStep === undefined ? setEditing(true) : goToStep(nextStep))}>
+              {nextStep === undefined ? profilePage.edit : profilePage.stepAction[nextStep]}
             </button>
           </>
         )}
@@ -750,12 +888,23 @@ export default function MasterProfileEdit() {
       </h1>
       <p className="mt-lg max-w-measure text-body tracking-body">{profilePage.lede}</p>
 
+      {/* Та же полоса, что в обзоре. Здесь у неё есть кнопка: главное
+          действие экрана — «Сохранить» внизу, а переход к ближайшему
+          незаполненному разделу — второстепенное действие рядом с ним,
+          то есть кнопка-текст (§ Components). */}
+      <StepBar done={doneCount} total={COUNTED_STEPS.length}
+        action={nextStep === undefined ? undefined : {
+          label: profilePage.stepAction[nextStep],
+          onClick: () => goToStep(nextStep),
+        }} />
+
       {/* Форма рисуется и тогда, когда карточки ещё нет: с пустой её
           и заводят. Раньше на этом месте стояло условие, и мебельщик
           без карточки видел объяснение, почему её нет, — но не поля. */}
       {
         <>
-          <Part title={profilePage.aboutLabel} hint={profilePage.aboutHint}
+          <Part id="about" open={openParts.has('about')} onToggle={() => togglePart('about')}
+            title={profilePage.aboutLabel} hint={profilePage.aboutHint}
             summary={partSummary.about} invalid={touches(['about', 'years', 'does', 'categories'])}>
             {/* Метки у поля нет: её слово в слово произносит заголовок
                 раздела над плашкой, а дубль человек читает как две разные
@@ -832,7 +981,8 @@ export default function MasterProfileEdit() {
           {/* Услуги — закрытый список: под каждую нарисован знак (контракт §2).
               У отмеченной спрашивается условие: без него два одинаковых
               списка несравнимы (бенчмарк 18.09). */}
-          <Part title={profilePage.servicesLabel} hint={profilePage.servicesHint}
+          <Part id="services" open={openParts.has('services')} onToggle={() => togglePart('services')}
+            title={profilePage.servicesLabel} hint={profilePage.servicesHint}
             summary={partSummary.services} invalid={touches(['services'])}>
             <div className="-mx-md">
               {SERVICE_ROWS.map((row) => {
@@ -893,7 +1043,8 @@ export default function MasterProfileEdit() {
           </Part>
 
           {/* Куда выезжают. Свой город известен и так — здесь пригород. */}
-          <Part title={profilePage.areaLabel} hint={profilePage.areaHint}
+          <Part id="area" open={openParts.has('area')} onToggle={() => togglePart('area')}
+            title={profilePage.areaLabel} hint={profilePage.areaHint}
             summary={partSummary.area} invalid={touches(['area'])}>
             <input value={draft.area}
               aria-label={profilePage.areaLabel}
@@ -907,7 +1058,8 @@ export default function MasterProfileEdit() {
           {/* Отличия своими словами. По строке на пункт, а не одним полем
               через запятую: пункты показываются списком, и запятая внутри
               фразы разорвала бы её посередине. */}
-          <Part title={profilePage.extrasLabel} hint={profilePage.extrasHint}
+          <Part id="extras" open={openParts.has('extras')} onToggle={() => togglePart('extras')}
+            title={profilePage.extrasLabel} hint={profilePage.extrasHint}
             summary={partSummary.extras} invalid={touches(['extras'])}>
             {draft.extras.map((item, index) => (
               <div key={index} className={`flex items-start gap-sm ${index > 0 ? 'mt-md' : ''}`}>
@@ -954,7 +1106,8 @@ export default function MasterProfileEdit() {
 
           {/* Гарантия и срок — один раздел: это одно обещание, названное
               двумя числами, и порознь они читались бы как два требования. */}
-          <Part title={profilePage.termsLabel} hint={profilePage.termsHint}
+          <Part id="terms" open={openParts.has('terms')} onToggle={() => togglePart('terms')}
+            title={profilePage.termsLabel} hint={profilePage.termsHint}
             summary={partSummary.terms} invalid={touches(['warranty', 'lead'])}>
             <p className={fieldLabel}>{profilePage.warrantyLabel}</p>
             <input id="warranty" inputMode="numeric" value={draft.warranty}
@@ -995,7 +1148,8 @@ export default function MasterProfileEdit() {
             {errors.lead !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.lead}</p>}
           </Part>
 
-          <Part title={profilePage.hoursLabel} hint={profilePage.hoursHint}
+          <Part id="hours" open={openParts.has('hours')} onToggle={() => togglePart('hours')}
+            title={profilePage.hoursLabel} hint={profilePage.hoursHint}
             summary={partSummary.hours} invalid={touches(['hours'])}>
             <CheckRows options={WEEK} chosen={draft.days}
               onToggle={(id) => set({ days: toggle(draft.days, id) })} />
@@ -1026,7 +1180,8 @@ export default function MasterProfileEdit() {
             {errors.hours !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.hours}</p>}
           </Part>
 
-          <Part title={profilePage.contactLabel} hint={profilePage.contactHint}
+          <Part id="contact" open={openParts.has('contact')} onToggle={() => togglePart('contact')}
+            title={profilePage.contactLabel} hint={profilePage.contactHint}
             summary={partSummary.contact} invalid={touches(['phone'])}>
             <input id="contact-phone" inputMode="tel" value={draft.phone}
               aria-label={profilePage.contactLabel}
@@ -1045,7 +1200,8 @@ export default function MasterProfileEdit() {
 
           {/* Работы. Свои, снятые у своих заказчиков: строка под блоком —
               единственное, что об этом теперь напоминает (контракт §5б). */}
-          <Part title={profilePage.worksLabel} hint={profilePage.worksNote}
+          <Part id="works" open={openParts.has('works')} onToggle={() => togglePart('works')}
+            title={profilePage.worksLabel} hint={profilePage.worksNote}
             summary={partSummary.works} invalid={touches(['photos'])}>
             {draft.photos.length === 0 ? (
               <p className={`max-w-measure ${hintText}`}>{profilePage.worksEmpty}</p>
@@ -1133,7 +1289,8 @@ export default function MasterProfileEdit() {
             )}
           </Part>
 
-          <Part title={profilePage.logoLabel} hint={profilePage.logoHint}
+          <Part id="logo" open={openParts.has('logo')} onToggle={() => togglePart('logo')}
+            title={profilePage.logoLabel} hint={profilePage.logoHint}
             summary={partSummary.logo}>
             {draft.logo !== null && (
               <img src={draft.logo} alt="" className="h-icon-lg w-auto" />

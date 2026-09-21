@@ -80,14 +80,20 @@ export default function SignIn() {
     return () => clearTimeout(timer)
   }, [cooldown])
 
-  // Вошедшему на этом экране делать нечего. Куда именно — по его ролям:
-  // мебельщик к заявкам, заказчик к своим.
+  // Вошедшему на этом экране делать нечего. Куда именно — по его ролям,
+  // а НЕ по двери, в которую он вошёл (правка 21.09).
+  //
+  // Раньше здесь стояло `&& asMaster`, и мебельщик, нажавший «Войти»
+  // в шапке, уезжал в кабинет заказчика. Обратной дороги оттуда нет:
+  // из /me в мастерскую не ведёт ни одна ссылка, а возврат на /login
+  // снова отправляет в /me. Учётки раздаём мы, и человек с ролью master
+  // приходит принимать заявки — значит, дверь роли не выбирает.
   //
   // Кроме одного случая: пришёл на дверь мастерской, а роли нет. Молча
   // увезти его в свой кабинет нельзя — он шёл в другое место и не поймёт,
   // куда попал. Стадия ниже говорит это словами.
   if (session !== null && !(asMaster && !hasRole(session, 'master'))) {
-    return <Navigate to={hasRole(session, 'master') && asMaster ? '/master/requests' : '/me'} replace />
+    return <Navigate to={hasRole(session, 'master') ? '/master/requests' : '/me'} replace />
   }
 
   const phone = `+7${digits}`
@@ -158,7 +164,10 @@ export default function SignIn() {
         if (asMaster && !opened.roles.includes('master')) {
           return setStage({ kind: 'notMaster' })
         }
-        navigate(opened.roles.includes('master') && asMaster ? '/master/requests' : '/me', {
+        // Роль решает, куда вести, дверь — нет (правка 21.09): мебельщик,
+        // вошедший через «Войти», попадает к заявкам, а не в /me, откуда
+        // в мастерскую нет ни одного перехода.
+        navigate(opened.roles.includes('master') ? '/master/requests' : '/me', {
           replace: true,
         })
       },

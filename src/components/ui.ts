@@ -217,6 +217,19 @@ export const badge =
   'inline-flex items-center rounded-sm bg-accent px-sm py-xs ' +
   'text-label tracking-label font-medium text-on-accent'
 
+/**
+ * Полоса шагов — дорожка и её пройденная часть (§ Components, 21.09).
+ * Живёт только в кабинете мебельщика: в форме заявки счётчика шагов
+ * нет и не будет — основание в «Записанных противоречиях» DESIGN.md.
+ *
+ * Радиус 0: это линия измерения, а не предмет. Ширина пройденной части
+ * меняется мгновенно и не анимируется — движение разрешено цвету,
+ * прозрачности и `transform`, а переход ширины пересчитывает раскладку
+ * каждый кадр (§ Layout).
+ */
+export const stepBar = 'h-xs w-full bg-surface-container-high'
+export const stepBarDone = 'h-full bg-primary'
+
 /** link — синяя, с подчёркиванием. Подчёркивание не убирать (§ Components). */
 export const link = 'text-link underline underline-offset-4'
 
