@@ -18,6 +18,7 @@ import {
   buttonFilled,
   buttonText,
   choiceBox,
+  choiceDot,
   errorTextClass,
   field,
   fieldLabel,
@@ -27,12 +28,21 @@ import {
   panelNested,
   stepPanel,
 } from '../../components/ui'
-import type { Session, QuoteItem, RequestForMaster } from '../../contract'
+import type {
+  Session,
+  QuoteCountertop,
+  QuoteFacade,
+  QuoteItem,
+  RequestForMaster,
+} from '../../contract'
 import {
   compositionAsk,
   compositionFor,
   compositionLabels,
   compositionShown,
+  countertopLabels,
+  facadeLabels,
+  materialsAsk,
   splitComposition,
 } from '../../questions/composition'
 import {
@@ -65,6 +75,13 @@ type View =
 interface Draft {
   /** Отмеченные позиции состава. Порядок отметки не важен — важен факт. */
   items: QuoteItem[]
+  /**
+   * Материалы (контракт §2, 21.09). `null` — не ответил, и это законно:
+   * вилка и срок важнее, а требовать материалы значило бы задержать ответ.
+   */
+  facade: QuoteFacade | null
+  countertop: QuoteCountertop | null
+  moistureGuard: boolean
   extra: string
   excluded: string
   priceFrom: string
@@ -72,7 +89,31 @@ interface Draft {
   leadTimeDays: string
 }
 
-const EMPTY: Draft = { items: [], extra: '', excluded: '', priceFrom: '', priceTo: '', leadTimeDays: '' }
+const EMPTY: Draft = {
+  items: [],
+  facade: null,
+  countertop: null,
+  moistureGuard: false,
+  extra: '',
+  excluded: '',
+  priceFrom: '',
+  priceTo: '',
+  leadTimeDays: '',
+}
+
+/**
+ * Варианты материалов в порядке от самого частого к редкому: плёнка стоит
+ * в большинстве кухонь Алматы, шпон — в единицах. Самый частый первым —
+ * § Принципы, «порядок важнее полноты».
+ */
+const FACADE_OPTIONS = (['film', 'paintedMdf', 'acrylic', 'wood'] as const).map((id) => ({
+  id,
+  label: facadeLabels[id].shop,
+}))
+const COUNTERTOP_OPTIONS = (['chipboard', 'hpl', 'stone'] as const).map((id) => ({
+  id,
+  label: countertopLabels[id].shop,
+}))
 
 /** Ввод денег: в состоянии живут только цифры, пробелы — способ показа. */
 /** Девять разрядов — миллиард тенге; больше в вилке за кухню не бывает. */
@@ -149,6 +190,60 @@ function ItemList({ question, hint, items, chosen, onToggle, className }: {
                   <span aria-hidden="true" className={choiceBox(on)}>
                     {on && <CheckMark />}
                   </span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </fieldset>
+  )
+}
+
+/**
+ * Выбор одного значения — тот же каркас, что у списка позиций выше, только
+ * отметка круглая: круг означает «одно из», квадрат — «сколько нужно»
+ * (§ Components). Заведён 21.09 под материалы.
+ *
+ * Чипсами материалы тоже собрались бы — четыре значения по 15 знаков
+ * в пределе, — но состав над ними уже собран строками, и два разных
+ * компонента для однотипных ответов подряд читаются как разные по смыслу
+ * вопросы. Выделяется то, что одно (§ Принципы).
+ *
+ * Снять выбор нельзя, и это не упущение: материал не ответить — значит
+ * не нажимать вовсе, а «передумал» решается выбором другого варианта.
+ * Так же устроен необязательный вопрос об этапе в форме заявки.
+ */
+function PickList<T extends string>({ question, hint, options, value, onPick, className }: {
+  question: string
+  hint: string
+  options: readonly { id: T; label: string }[]
+  value: T | null
+  onPick: (id: T) => void
+  className: string
+}) {
+  return (
+    <fieldset className={className}>
+      <legend className="text-subheading tracking-subheading font-medium text-balance">
+        {question}
+      </legend>
+      <p className={`mt-sm max-w-measure ${hintText}`}>{hint}</p>
+      <div className={`mt-lg max-w-measure ${stepPanel}`}>
+        <div className="-mx-md">
+          {options.map((option) => {
+            const on = value === option.id
+            return (
+              <div key={option.id} className={blockRowDivider()}>
+                <label className={blockRow(on)}>
+                  <input
+                    type="radio"
+                    name={question}
+                    className="sr-only"
+                    checked={on}
+                    onChange={() => onPick(option.id)}
+                  />
+                  <span className="min-w-0">{option.label}</span>
+                  <span aria-hidden="true" className={choiceDot(on)} />
                 </label>
               </div>
             )
@@ -402,6 +497,11 @@ export default function RequestCard() {
     sendQuote(session.token, id, {
         composition: {
           items: draft.items,
+          materials: {
+            facade: draft.facade,
+            countertop: draft.countertop,
+            moistureGuard: draft.moistureGuard,
+          },
           // Пустое «ещё своими словами» не отправляется вовсе: схема ждёт
           // либо текст, либо отсутствие поля, а не пустую строку.
           ...(draft.extra.trim() === '' ? {} : { extra: draft.extra.trim() }),
@@ -586,6 +686,9 @@ export default function RequestCard() {
               const mine = request.myQuote!
               setDraft({
                 items: [...mine.composition.items],
+                facade: mine.composition.materials.facade,
+                countertop: mine.composition.materials.countertop,
+                moistureGuard: mine.composition.materials.moistureGuard,
                 extra: mine.composition.extra ?? '',
                 excluded: mine.composition.excluded,
                 priceFrom: String(mine.price.minKzt),
@@ -641,6 +744,57 @@ export default function RequestCard() {
             onToggle={toggleItem}
           />
           {errors.items && <p className={`mt-md ${errorTextClass}`}>{errors.items}</p>}
+
+          {/* Материалы (контракт §2, 21.09) — вторая половина разницы в цене:
+              первая в составе выше. Подписи здесь цеховые: отмечает их
+              мебельщик, и «крашеный МДФ» он узнаёт, а «крашеные фасады»
+              может не связать со своим вариантом. Заказчице те же значения
+              показываются простыми словами (§ Content). */}
+          <PickList
+            className="mt-3xl"
+            question={materialsAsk.facadeQuestion}
+            hint={materialsAsk.facadeHint}
+            options={FACADE_OPTIONS}
+            value={draft.facade}
+            onPick={(id) => setDraft((current) => ({ ...current, facade: id }))}
+          />
+          <PickList
+            className="mt-3xl"
+            question={materialsAsk.countertopQuestion}
+            hint={materialsAsk.countertopHint}
+            options={COUNTERTOP_OPTIONS}
+            value={draft.countertop}
+            onPick={(id) => setDraft((current) => ({ ...current, countertop: id }))}
+          />
+
+          {/* Булево спрашивается вопросом и одной отметкой: «нет» здесь —
+              отсутствие обещания, а не обещание обратного. */}
+          <fieldset className="mt-3xl">
+            <legend className="text-subheading tracking-subheading font-medium text-balance">
+              {materialsAsk.moistureQuestion}
+            </legend>
+            <div className={`mt-lg max-w-measure ${stepPanel}`}>
+              <div className="-mx-md">
+                <label className={blockRow(draft.moistureGuard)}>
+                  <input
+                    type="checkbox"
+                    className="sr-only"
+                    checked={draft.moistureGuard}
+                    onChange={() =>
+                      setDraft((current) => ({ ...current, moistureGuard: !current.moistureGuard }))
+                    }
+                  />
+                  <span className="min-w-0">
+                    <span className="block">{materialsAsk.moistureOption}</span>
+                    <span className={`mt-xs block ${hintText}`}>{materialsAsk.moistureHint}</span>
+                  </span>
+                  <span aria-hidden="true" className={choiceBox(draft.moistureGuard)}>
+                    {draft.moistureGuard && <CheckMark />}
+                  </span>
+                </label>
+              </div>
+            </div>
+          </fieldset>
 
           {/* Своими словами, что не входит, цена и срок — одна группа: это
               и есть ответ, который уедет заказчице. Состав выше собран

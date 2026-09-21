@@ -57,6 +57,13 @@ async function ответить(
   дней: string,
   состав: string[],
   неВходит: string,
+  /**
+   * Материалы цеховыми подписями — так они названы в форме мебельщика
+   * (заказчица прочитает те же значения простыми словами). Необязательны:
+   * КП без материалов остаётся законным, и один из двух ответов ниже
+   * их не называет нарочно — сравнение обязано это показывать.
+   */
+  материалы: string[] = [],
 ) {
   await page.locator('a[href^="/master/requests/"]', { hasText: РАЗМЕР }).first().click()
   // Строки состава нажимаются по видимой подписи: сам checkbox sr-only, и
@@ -64,6 +71,9 @@ async function ответить(
   // клиента. Чипсами состав был до 18.09, пока не упёрся в длину подписей.
   for (const позиция of состав) {
     await page.locator('label', { hasText: позиция }).first().click()
+  }
+  for (const материал of материалы) {
+    await page.locator('label', { hasText: материал }).first().click()
   }
   await page.locator('#excluded').fill(неВходит)
   // Поля цены адресуются по id: подписи «от» и «до» коротки и встречаются
@@ -161,6 +171,7 @@ test('заявка доходит от формы до вилки на стра�
     // Дешёвая вилка: в цене почти ничего сверх самой мебели.
     ['Мойка и сушилка', 'Доставка'],
     'Замер и подъём на этаж — отдельно. Сборка по счёту после замера.',
+    ['МДФ в плёнке', 'ЛДСП'],
   )
   // ...и ровно теперь он появился
   await expect(page.getByText('+77012468024')).toBeVisible()
@@ -216,6 +227,7 @@ test('заявка доходит от формы до вилки на стра�
       'Сборка и установка',
     ],
     'Ничего сверх вилки: замер, подъём и сборка уже внутри.',
+    ['Крашеный МДФ', 'Искусственный камень', 'Делаем'],
   )
 
   // 8 · Глазами клиента: два предложения, сравнение, контакт.
@@ -273,16 +285,21 @@ test('опубликованная карточка открывается це�
   await page.goto('/masters/aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1')
   await expect(page.getByRole('heading', { name: 'Мастерская на Сайране' })).toBeVisible()
   await expect(page.getByText('Кухни', { exact: true }).first()).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Что обычно входит в цену' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Услуги мастерской' })).toBeVisible()
   await expect(page.getByText('Замер на месте')).toBeVisible()
   await expect(page.getByText('от 25 до 35 дней')).toBeVisible()
   await expect(page.getByText('Шкафы и гардеробные')).toBeVisible()
-  // Связаться можно прямо отсюда (решение PM 20.09): заявка главной кнопкой,
-  // звонок и сообщение — для того, кто уже выбрал.
-  await expect(page.getByRole('heading', { name: 'Связаться с мастерской' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Позвонить' })).toBeVisible()
-  // Безопасная сделка помечена будущей: механизма расчётов нет.
-  await expect(page.getByText('Готовим: деньги замораживаются')).toBeVisible()
+  // Связаться можно прямо отсюда (решение PM 20.09), и с 21.09 это три
+  // действия панели: предложение, звонок, безопасная сделка.
+  await expect(page.getByRole('link', { name: 'Получить предложение' }).first()).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Позвонить' }).first()).toBeVisible()
+  // Безопасная сделка помечена будущей: механизма расчётов нет, и окно
+  // говорит, чем это станет и как происходит сейчас.
+  await page.getByRole('button', { name: 'Безопасная сделка' }).first().click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await expect(page.getByText('Деньги будут замораживаться')).toBeVisible()
+  await page.getByRole('button', { name: 'Понятно' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('img').first()).toBeVisible()
   await снимок(page, 'карточка-мастерской-заполненная')
 })
@@ -328,10 +345,8 @@ test('мебельщик правит карточку — и правка ви�
   await page.getByRole('button', { name: 'Редактировать карточку' }).click()
 
   // Разделы свёрнуты (правка 20.09): открываем те, в которых правим.
-  const отличие = 'Работаем по субботам без наценки'
-  await page.getByRole('button', { name: /Чем отличаетесь/ }).click()
-  await page.getByRole('button', { name: 'Добавить пункт' }).click()
-  await page.getByLabel('Чем отличаетесь, 3').fill(отличие)
+  // Раздела «Чем отличаетесь» с 21.09 нет вовсе: поле снято из контракта,
+  // потому что заказчик его нигде не видел.
 
   // Условие услуги — то, ради чего услуги вообще стали объектами: «в цене»
   // и «отдельно» должны доезжать до каталога по отдельности (контракт §2).
@@ -362,7 +377,9 @@ test('мебельщик правит карточку — и правка ви�
   // «Смотреть работы» в ней нет — человек метит в карточку, а не в строку.
   await page.getByRole('link', { name: /Мастерская на Сайране/ }).first().click()
   await expect(page.getByRole('heading', { name: 'Мастерская на Сайране' })).toBeVisible()
-  await expect(page.getByText(отличие)).toBeVisible()
+  // Отличия своими словами с 21.09 на карточке не показываются (решение PM:
+  // блок «Ещё про эту мастерскую» снят). Правка проверяется по услуге —
+  // она доезжает до каталога вместе с условием.
   await expect(page.getByText('Уберёт старую мебель — за отдельную плату')).toBeVisible()
 
   // Телефон мастерской в каталог не уходит вовсе (контракт §2): он вырезан

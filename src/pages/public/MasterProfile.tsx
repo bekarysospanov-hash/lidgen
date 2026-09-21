@@ -12,13 +12,26 @@
 //
 // Заявка из карточки всё равно веерная (PRD US-03): кнопка ведёт на общую
 // форму, и строка под ней говорит об этом прямо.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
 import { HoursIcon, LeadTimeIcon, WarrantyIcon } from '../../components/icons'
-import { actionBarFixed, actionBarSide, blockRowDivider, buttonFilled, buttonText, chip, hintText, link, panel } from '../../components/ui'
+import {
+  actionBarFixed,
+  actionBarSide,
+  badge,
+  buttonFilled,
+  buttonText,
+  chip,
+  dialogBox,
+  dialogScrim,
+  galleryThumb,
+  hintText,
+  link,
+  tab,
+} from '../../components/ui'
 import type { CategoryId, MasterCardPublic, MasterPhoto } from '../../contract'
 import { z } from 'zod'
 import { cityName } from '../../questions/categories'
@@ -38,27 +51,130 @@ type View =
 const PHOTO_ORDER: readonly CategoryId[] = ['kitchen', 'wardrobe', 'bathroom', 'other']
 
 /**
- * Строка перечня — иконка, название, под ним подсказка. Тот же строй, что
- * у строки блока в форме (§ Components), но без отметки выбора: выбирать
- * здесь нечего, и точка справа обещала бы действие, которого нет.
+ * Окно «скоро» — единственное окно продукта (§ Layout, 21.09). Вынесено
+ * компонентом, чтобы доступность жила в одном месте: `aria-modal` обещает
+ * экранному диктору, что за окном ничего нет, и обещание надо исполнять.
+ *
+ * Три вещи, без которых обещание ложно: Escape закрывает, фокус уходит
+ * на кнопку при открытии и возвращается на то, откуда пришёл, при закрытии.
  */
-function InfoRow({ icon, title, note }: {
-  icon: React.ReactNode
+function SoonDialog({ onClose, title, children }: {
+  onClose: () => void
   title: string
-  note?: string
+  children: React.ReactNode
 }) {
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const cameFrom = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    cameFrom.current = document.activeElement as HTMLElement | null
+    closeRef.current?.focus()
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      cameFrom.current?.focus()
+    }
+  }, [onClose])
+
   return (
-    <div className={blockRowDivider()}>
-      <div className="flex items-start gap-md px-md py-md">
-        <span className="mt-xs text-on-surface-muted">{icon}</span>
-        <span className="min-w-0">
-          <span className="block text-body tracking-body tabular-nums">{title}</span>
-          {note !== undefined && note !== '' && (
-            <span className={`mt-xs block ${hintText}`}>{note}</span>
-          )}
-        </span>
+    <div className={dialogScrim} role="dialog" aria-modal="true" aria-label={title}
+      onClick={onClose}>
+      <div className={dialogBox} onClick={(event) => event.stopPropagation()}>
+        <p className="text-subheading tracking-subheading font-medium">{title}</p>
+        {children}
+        <button ref={closeRef} type="button" className={`mt-xl ${buttonFilled}`} onClick={onClose}>
+          {masterCardPage.dealSoonClose}
+        </button>
       </div>
     </div>
+  )
+}
+
+/**
+ * Галерея (§ Components, 21.09): крупный снимок, полоса миниатюр и счётчик.
+ *
+ * Зачем счётчик. Миниатюр на 375px влезает четыре, а снимков у мастерской
+ * до двенадцати — без «3 из 8» человек не знает ни докуда долистал,
+ * ни сколько осталось.
+ *
+ * Листание идёт по воле человека: снимок не меняется сам и не крутится
+ * по таймеру — движение принадлежит состояниям (§ Layout).
+ */
+function Gallery({ photos }: { photos: readonly MasterPhoto[] }) {
+  const [at, setAt] = useState(0)
+  /**
+   * Индекс подрезается по длине списка, а не берётся как есть: снимков
+   * может стать меньше, чем было выбрано (карточку правят), и тогда
+   * галерея исчезала бы целиком вместо того, чтобы показать первый кадр.
+   */
+  const current = photos[Math.min(at, photos.length - 1)]
+  if (current === undefined) return null
+
+  return (
+    <figure className="mt-lg">
+      <img src={current.url} alt={current.caption ?? ''}
+        className="aspect-[3/2] w-full bg-surface-container object-cover" />
+
+      <figcaption className="mt-xs flex flex-wrap items-baseline gap-x-md">
+        <span className={`tabular-nums ${hintText}`}>
+          {masterCardPage.galleryCounter(at + 1, photos.length)}
+        </span>
+        {current.isRender && <span className={hintText}>{mastersPage.renderMark}</span>}
+        {current.caption !== null && (
+          <span className={`w-full ${hintText}`}>{current.caption}</span>
+        )}
+      </figcaption>
+
+      {/* Полоса миниатюр — только когда есть что листать: одна миниатюра
+          под одним снимком повторяет его и ничего не переключает. */}
+      {photos.length > 1 && (
+        <ul className="mt-md flex gap-sm overflow-x-auto">
+          {photos.map((photo, index) => (
+            <li key={photo.url}>
+              <button type="button" onClick={() => setAt(index)}
+                aria-label={masterCardPage.galleryPick(index + 1)}
+                aria-current={index === at}>
+                <img src={photo.url} alt="" className={galleryThumb(index === at)} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </figure>
+  )
+}
+
+/**
+ * Факт с иконкой и подписью под ней (правка 21.09, решение PM): срок,
+ * гарантия, часы и услуги показываются сеткой, а не списком строк.
+ *
+ * Почему сетка, а не строки. Фактов бывает от двух до десяти, и списком
+ * они занимали экран целиком, оставляя справа пустую колонку. В сетке
+ * глаз охватывает их разом — а именно так по ним и решают, читать ли
+ * карточку дальше.
+ *
+ * Плашки вокруг нет: § Elevation велит сперва проверить, не решается ли
+ * группировка расстоянием. Здесь решается — факты стоят сеткой, между
+ * группами 48.
+ */
+function FactGrid({ items }: {
+  items: readonly { key: string; icon: React.ReactNode; title: string; note?: string }[]
+}) {
+  return (
+    <ul className="mt-md grid grid-cols-2 gap-x-lg gap-y-xl sm:grid-cols-3">
+      {items.map((item) => (
+        <li key={item.key}>
+          <span className="block text-on-surface-muted">{item.icon}</span>
+          <span className="mt-sm block text-body tracking-body tabular-nums">{item.title}</span>
+          {item.note !== undefined && item.note !== '' && (
+            <span className={`mt-xs block ${hintText}`}>{item.note}</span>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -77,21 +193,33 @@ function Works({ photos }: { photos: readonly MasterPhoto[] }) {
     items: photos.filter((photo) => photo.kind === kind),
   })).filter((group) => group.items.length > 0)
 
-  // Один вид работ — подзаголовок не нужен: он повторил бы заголовок раздела.
+  const [shown, setShown] = useState(0)
+
+  // Один вид работ — вкладок не нужно: единственная вкладка ничего
+  // не переключает и читается как заголовок, притворившийся кнопкой.
   const named = groups.length > 1
+  const group = groups[Math.min(shown, groups.length - 1)]
+  if (group === undefined) return null
 
   return (
     <>
-      {groups.map((group) => (
-        <section key={group.kind} className="mt-xl first:mt-lg">
-          {named && (
-            <p className={hintText}>{masterCardPage.worksKind[group.kind]}</p>
-          )}
+      {named && (
+        <div className="mt-md flex flex-wrap gap-x-lg border-b border-outline">
+          {groups.map((item, index) => (
+            <button key={item.kind} type="button" onClick={() => setShown(index)}
+              aria-current={index === shown} className={tab(index === shown)}>
+              {masterCardPage.worksKind[item.kind]}
+            </button>
+          ))}
+        </div>
+      )}
+      {[group].map((group) => (
+        <section key={group.kind} className="mt-lg">
           {/* На телефоне снимок во всю ширину, а не в половину: в группе
               часто один кадр, и рядом с ним оставалась пустая колонка —
               портфолио читалось как обрывки. Две и три колонки появляются
               там, где для них есть ширина. */}
-          <ul className={`grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3 ${named ? 'mt-sm' : ''}`}>
+          <ul className="grid grid-cols-1 gap-md sm:grid-cols-2 lg:grid-cols-3">
             {group.items.map((photo) => (
               <li key={photo.url}>
                 {/* Радиус 0: скруглённый угол отрезает предмет и уводит
@@ -128,6 +256,12 @@ export default function MasterProfile() {
   // Выводится при инициализации, а не в эффекте: иначе первый кадр обещает
   // загрузку, которой не будет.
   const [view, setView] = useState<View>(() => (valid ? { kind: 'loading' } : { kind: 'missing' }))
+  /**
+   * Окно «готовим безопасную сделку» — единственное окно в продукте
+   * (§ Layout, 21.09). Ни формы, ни второго шага: сообщение о том, чего
+   * ещё нет, и кнопка «Понятно».
+   */
+  const [dealShown, setDealShown] = useState(false)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -193,8 +327,6 @@ export default function MasterProfile() {
 
   const { master } = view
   const { card } = master
-  /** Первый снимок — обложка: он открывает экран до имени и текста. */
-  const cover = card.photos[0]
   const terms = [
     card.leadTime !== null
       ? { icon: <LeadTimeIcon />, title: leadTime(card.leadTime), note: masterCardPage.leadLabel }
@@ -213,12 +345,71 @@ export default function MasterProfile() {
    * и в полосе внизу на телефоне — расходиться им нельзя, иначе человек,
    * открывший карточку с ноутбука и с телефона, увидит два разных продукта.
    */
+  /**
+   * Кто эта мастерская: знак, имя, город со стажем и два факта о работе
+   * (правка 21.09, решение PM — по рефам маркетплейсов).
+   *
+   * Блок собран один раз и показывается в двух местах взаимоисключающе:
+   * в боковой колонке на широком экране, в потоке на телефоне, где боковой
+   * колонки нет вовсе (`PageShell`, `lg:block`). Две копии разметки вместо
+   * одной — цена за то, что колонка живёт в другом месте дерева; разойтись
+   * они не могут, потому что собраны из одной переменной.
+   */
+  const sellerHead = (
+    <>
+      {/* Знак мастерской, если он есть. Нет — место под него не занимаем:
+          ни монограммы, ни серого квадрата (контракт §2). */}
+      {card.logo !== null && <img src={card.logo} alt="" className="h-icon-lg w-auto" />}
+
+      {/* Шапка экрана: метка → заголовок (§ Шапка экрана). Метка — город
+          и стаж: место мастерской в мире заказчика. */}
+      <p className={`mt-lg tabular-nums first:mt-0 ${hintText}`}>
+        {cityName(master.city)} · {mastersPage.yearsLabel(card.yearsOnMarket)}
+      </p>
+      <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
+        {master.name}
+      </h1>
+
+      {/* Два факта, за которыми заказчик приходит первым делом (21.09):
+          договор и свой цех. Шильдиками — § Components описывает шильдик
+          как факт, сказанный мастерской о себе. Показываются только
+          отмеченные: «не работаем по договору» о себе не заявляют. */}
+      {(card.worksByContract || card.ownProduction) && (
+        <ul className="mt-sm flex flex-wrap gap-sm">
+          {card.worksByContract && <li className={badge}>{masterCardPage.byContractBadge}</li>}
+          {card.ownProduction && <li className={badge}>{masterCardPage.ownProductionBadge}</li>}
+        </ul>
+      )}
+
+      {/* Куда выезжают — сразу под именем: это ответ на «а ко мне поедут?»,
+          и половина заказчиков живёт не в центре (бенчмарк 18.09). */}
+      {card.serviceArea !== null && (
+        <p className={`mt-sm ${hintText}`}>
+          {mastersPage.areaLabel}: {card.serviceArea}
+        </p>
+      )}
+    </>
+  )
+
   const actionPanel = (
     <>
       <Link to="/request" className={`w-full justify-center ${buttonFilled}`}>
         {masterCardPage.actionRequest}
       </Link>
-      <p className={`mt-sm ${hintText}`}>{masterCardPage.fanNote}</p>
+      {/* Три действия — предел панели (§ Components, 21.09). Звонок вторым:
+          он для того, кто уже выбрал; безопасная сделка третьей и помечена
+          будущей. Оба — кнопки-текстом: главное действие на экране одно. */}
+      <div className="-ml-sm mt-sm flex flex-wrap items-center gap-x-sm">
+        {card.contactPhone !== null && (
+          <a href={`tel:${card.contactPhone}`} className={buttonText}
+            onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+            {masterCardPage.actionCall}
+          </a>
+        )}
+        <button type="button" className={buttonText} onClick={() => setDealShown(true)}>
+          {masterCardPage.actionDeal}
+        </button>
+      </div>
     </>
   )
 
@@ -226,9 +417,12 @@ export default function MasterProfile() {
     <PageShell
       layout="item"
       aside={
-        <section className={actionBarSide} aria-label={masterCardPage.actionsTitle}>
-          {actionPanel}
-        </section>
+        <>
+          {sellerHead}
+          <section className={`mt-xl ${actionBarSide}`} aria-label={masterCardPage.actionsTitle}>
+            {actionPanel}
+          </section>
+        </>
       }>
       <p className={hintText}>
         <Link to="/masters" className={link}>
@@ -240,38 +434,12 @@ export default function MasterProfile() {
           потом кто и где, потом условия, и только затем рассказ о себе.
           На изученных сайтах первым идёт текст «о компании», одинаковый
           у всех, а фотографии работ — за третьим экраном. */}
-      {cover !== undefined && (
-        <figure className="mt-lg">
-          <img src={cover.url} alt={cover.caption ?? ''}
-            className="aspect-[3/2] w-full bg-surface-container object-cover" />
-          {cover.isRender && (
-            <figcaption className={`mt-xs ${hintText}`}>{mastersPage.renderMark}</figcaption>
-          )}
-        </figure>
-      )}
+      <Gallery photos={card.photos} />
 
-      {/* Знак мастерской, если он есть. Нет — место под него не занимаем:
-          ни монограммы, ни серого квадрата (контракт §2). */}
-      {card.logo !== null && (
-        <img src={card.logo} alt="" className="mt-lg h-icon-lg w-auto" />
-      )}
-
-      {/* Шапка экрана: метка → заголовок → лид (§ Шапка экрана). Метка —
-          роль, город и стаж: место мастерской в мире заказчика. */}
-      <p className={`mt-lg tabular-nums ${hintText}`}>
-        {cityName(master.city)} · {mastersPage.yearsLabel(card.yearsOnMarket)}
-      </p>
-      <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
-        {master.name}
-      </h1>
-
-      {/* Куда выезжают — сразу под именем: это ответ на «а ко мне поедут?»,
-          и половина заказчиков живёт не в центре (бенчмарк 18.09). */}
-      {card.serviceArea !== null && (
-        <p className={`mt-sm ${hintText}`}>
-          {mastersPage.areaLabel}: {card.serviceArea}
-        </p>
-      )}
+      {/* На телефоне боковой колонки нет, и шапка мастерской живёт здесь;
+          на широком экране этот блок скрыт, а тот же самый стоит справа
+          над кнопками — как на маркетплейсах, откуда взят порядок. */}
+      <div className="mt-lg lg:hidden">{sellerHead}</div>
 
       {/* Направления — короткие значения, это ровно случай чипса (§ Components).
           Выбирать здесь нечего, поэтому невыбранное состояние и без обработчика. */}
@@ -288,13 +456,7 @@ export default function MasterProfile() {
       {terms.length > 0 && (
         <>
           <SectionTitle>{masterCardPage.termsLabel}</SectionTitle>
-          <div className={`mt-md ${panel}`}>
-            <div className="-mx-md">
-              {terms.map((item) => (
-                <InfoRow key={item.note} icon={item.icon} title={item.title} note={item.note} />
-              ))}
-            </div>
-          </div>
+          <FactGrid items={terms.map((item) => ({ key: item.note, ...item }))} />
         </>
       )}
 
@@ -309,37 +471,14 @@ export default function MasterProfile() {
       {card.services.length > 0 && (
         <>
           <SectionTitle>{masterCardPage.servicesLabel}</SectionTitle>
-          <div className={`mt-md ${panel}`}>
-            <div className="-mx-md">
-              {card.services.map((service) => {
-                const text = serviceText(service.id)
-                return (
-                  <InfoRow key={service.id} icon={<ServiceIcon id={service.id} />}
-                    title={service.paid ? `${text.label} — ${mastersPage.servicePaid}` : text.label}
-                    note={text.hint} />
-                )
-              })}
-            </div>
-          </div>
-          {/* Оговорка стоит сразу под перечнем, а не в конце экрана: тот же
-              замер человек увидит второй раз в предложении, и узнать, какой
-              ответ главнее, он должен здесь, а не когда заметит расхождение. */}
-          <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.servicesNote}</p>
-        </>
-      )}
-
-      {/* Отличия своими словами. После общего перечня: сначала то, что
-          сравнимо между мастерскими, потом то, что есть только у этой. */}
-      {card.extras.length > 0 && (
-        <>
-          <SectionTitle>{masterCardPage.extrasLabel}</SectionTitle>
-          <ul className="mt-md max-w-measure">
-            {card.extras.map((item) => (
-              <li key={item} className="mt-sm text-body tracking-body first:mt-0">
-                {item}
-              </li>
-            ))}
-          </ul>
+          <FactGrid items={card.services.map((service) => {
+            const text = serviceText(service.id)
+            return {
+              key: service.id,
+              icon: <ServiceIcon id={service.id} />,
+              title: service.paid ? `${text.label} — ${mastersPage.servicePaid}` : text.label,
+            }
+          })} />
         </>
       )}
 
@@ -358,12 +497,13 @@ export default function MasterProfile() {
           кнопки, чтобы подпись встала по краю колонки. */}
       {card.contactPhone !== null ? (
         <div className="-ml-sm mt-md flex flex-wrap items-center gap-x-sm gap-y-xs">
-          {/* tel: и wa.me — внешние переходы, и это <a>, а не Link:
-              роутер их не знает, а телефон открывает звонилку системы. */}
-          <a href={`tel:${card.contactPhone}`} className={buttonText}
-            onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-            {masterCardPage.actionCall}
-          </a>
+          {/* Звонок отсюда снят 21.09: он переехал в панель действий,
+              и два «Позвонить» на одном экране человек читает как два
+              разных телефона (чек-лист, п. 3). Здесь остались мессенджеры —
+              в панель они не влезают, три действия там уже предел.
+
+              wa.me и t.me — внешние переходы, и это <a>, а не Link:
+              роутер их не знает. */}
           {card.messengers.includes('whatsapp') && (
             <a href={`https://wa.me/${card.contactPhone.replace(/\D/g, '')}`}
               target="_blank" rel="noreferrer noopener" className={buttonText}
@@ -383,15 +523,12 @@ export default function MasterProfile() {
         <p className={`mt-md max-w-measure ${hintText}`}>{masterCardPage.contactMissing}</p>
       )}
 
-      <p className={`mt-sm max-w-measure ${hintText}`}>{masterCardPage.actionRequestNote}</p>
+      {/* Строки о том, что заявка уйдёт нескольким мастерским, здесь больше
+          нет (решение PM 21.09). Заявка по-прежнему веерная — PRD US-03
+          не менялся, — и человек узнаёт об этом на форме заявки.
 
-      {/* Безопасная сделка помечена будущей и ведёт себя как будущая:
-          механизма расчётов нет, и кнопка, за которой ничего не стоит, —
-          обещание живым людям. Строка говорит, чем это станет и как сейчас. */}
-      <section className={`mt-xl ${panel}`}>
-        <p className="text-body tracking-body font-medium">{masterCardPage.actionDeal}</p>
-        <p className={`mt-xs max-w-measure ${hintText}`}>{masterCardPage.actionDealNote}</p>
-      </section>
+          Блок будущей безопасной сделки тоже снят: он стал третьим
+          действием панели и окном «готовим» (§ Layout, исключение). */}
 
       {/* Место под нижнюю панель: без него последняя строка прячется под
           полосой, и человек не знает, что страница кончилась (§ Layout). */}
@@ -401,6 +538,17 @@ export default function MasterProfile() {
       <section className={actionBarFixed} aria-label={masterCardPage.actionsTitle}>
         {actionPanel}
       </section>
+
+      {/* Единственное окно продукта: сообщение о том, чего ещё нет
+          (§ Layout, 21.09). Ни формы, ни второго шага; закрывается
+          нажатием на «Понятно» и по щелчку мимо. */}
+      {dealShown && (
+        <SoonDialog title={masterCardPage.dealSoonTitle} onClose={() => setDealShown(false)}>
+          <p className="mt-md max-w-measure text-body tracking-body">
+            {masterCardPage.dealSoonBody}
+          </p>
+        </SoonDialog>
+      )}
     </PageShell>
   )
 }

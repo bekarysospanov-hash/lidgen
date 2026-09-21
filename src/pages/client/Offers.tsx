@@ -20,6 +20,10 @@ import type {
 import {
   compositionLabels,
   compositionShown,
+  countertopLabels,
+  facadeLabels,
+  materialsAsk,
+  materialsRows,
   splitComposition,
 } from '../../questions/composition'
 import { buttonFilled, fieldLabel, hintText, link, panel, panelNested } from '../../components/ui'
@@ -68,6 +72,17 @@ function QuoteCard({
   const [contactShown, setContactShown] = useState(false)
   /** Части предмета и работы порознь: разница в цене чаще лежит во вторых. */
   const shown = splitComposition(quote.composition.items)
+  /**
+   * Названные материалы строками. Порядок тот же, что в форме мебельщика:
+   * фасады, столешница, защита от влаги, — чтобы два предложения читались
+   * в одном порядке и сравнивались глазами без поиска.
+   */
+  const { facade, countertop, moistureGuard } = quote.composition.materials
+  const materialLines = [
+    facade === null ? null : facadeLabels[facade].client,
+    countertop === null ? null : countertopLabels[countertop].client,
+    moistureGuard ? materialsRows.moistureGuard : null,
+  ].filter((line): line is string => line !== null)
 
   return (
     <div className={panel}>
@@ -126,6 +141,26 @@ function QuoteCard({
             </ul>
           </div>
         ))}
+
+      {/* Материалы — вторая половина того, из-за чего предложения расходятся
+          в цене (контракт §2, 21.09). Показываются только названные: строка
+          «Столешница: не указано» сообщает об отсутствии ответа, а не
+          о мастерской, и место занимает наравне с ответом.
+
+          Язык здесь её, не цеха: мебельщик отмечал «крашеный МДФ», заказчица
+          читает «крашеные фасады» (§ Content). Значение при этом одно. */}
+      {materialLines.length > 0 && (
+        <>
+          <p className={`mt-lg ${fieldLabel}`}>{materialsAsk.shownTitle}</p>
+          <ul className="mt-xs max-w-measure">
+            {materialLines.map((line) => (
+              <li key={line} className="mt-xs text-body tracking-body first:mt-0">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
 
       {quote.composition.extra !== undefined && (
         <>
@@ -218,6 +253,38 @@ function Compare({ quotes }: { quotes: Quote[] }) {
         (q) => (q.composition.items.includes(item) ? offersPage.compareIncluded : offersPage.compareMissing),
       ],
     ),
+    // Материалы — три строки подряд, языком заказчицы (21.09). Стоят после
+    // перечня позиций и перед «что не входит» — тем же порядком, что в самой
+    // карточке предложения выше: состав, из чего сделано, что не входит.
+    // Два разных порядка заставляли бы сверять таблицу с карточкой глазами.
+    //
+    // Строка показывается, если хоть кто-то назвал материал: у остальных
+    // в ней встанет «не указано» — это честный ответ «мастерская промолчала»,
+    // и он сравнивается с названным материалом соседа.
+    ...(quotes.some((q) => q.composition.materials.facade !== null)
+      ? ([[materialsRows.facade, (q: Quote) =>
+          q.composition.materials.facade === null
+            ? materialsAsk.notChosen
+            : facadeLabels[q.composition.materials.facade].client]] as [
+          string,
+          (quote: Quote) => string,
+        ][])
+      : []),
+    ...(quotes.some((q) => q.composition.materials.countertop !== null)
+      ? ([[materialsRows.countertop, (q: Quote) =>
+          q.composition.materials.countertop === null
+            ? materialsAsk.notChosen
+            : countertopLabels[q.composition.materials.countertop].client]] as [
+          string,
+          (quote: Quote) => string,
+        ][])
+      : []),
+    ...(quotes.some((q) => q.composition.materials.moistureGuard)
+      ? ([[materialsRows.moistureGuard, (q: Quote) =>
+          q.composition.materials.moistureGuard
+            ? offersPage.compareIncluded
+            : offersPage.compareMissing]] as [string, (quote: Quote) => string][])
+      : []),
     // Строка «Дополнительно» показывается, только если её кто-то заполнил:
     // строка, где у всех «не указано», ничего не сравнивает и лишь удлиняет
     // таблицу, которую и так приходится листать вбок (§ Content — коротко

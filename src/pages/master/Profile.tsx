@@ -53,7 +53,7 @@ import {
   type WeekDay,
 } from '../../contract'
 import { categories, cityName } from '../../questions/categories'
-import { doesSuggestions, extrasSuggestions, serviceText } from '../../questions/services'
+import { doesSuggestions, serviceText } from '../../questions/services'
 import { errorText, validationUnmapped } from '../../texts/request'
 import { profilePage } from '../../texts/master'
 import { format as formatPhone } from '../../components/phone'
@@ -101,9 +101,7 @@ const CATEGORY_ROWS = categories.map((category) => ({
  * Пределы берутся из контракта, а не повторяются числами: разойдясь,
  * экран пустил бы шестой пункт, который схема отвергнет уже на отправке.
  */
-const EXTRAS_MAX = CARD_LIMITS.extras
 const PHOTOS_MAX = CARD_LIMITS.photos
-const EXTRA_MAX_CHARS = CARD_LIMITS.extraChars
 const ABOUT_MAX_CHARS = CARD_LIMITS.aboutChars
 const CAPTION_MAX_CHARS = CARD_LIMITS.captionChars
 const AREA_MAX_CHARS = CARD_LIMITS.serviceAreaChars
@@ -115,7 +113,6 @@ type ErrorField =
   | 'does'
   | 'categories'
   | 'services'
-  | 'extras'
   | 'photos'
   | 'warranty'
   | 'lead'
@@ -131,7 +128,6 @@ interface Draft {
   categories: CategoryId[]
   services: ServiceOffer[]
   area: string
-  extras: string[]
   photos: MasterPhoto[]
   logo: string | null
   /** Два факта доверия (контракт §2, 21.09): договор и свой цех. */
@@ -154,7 +150,6 @@ const EMPTY: Draft = {
   categories: [],
   services: [],
   area: '',
-  extras: [],
   photos: [],
   logo: null,
   byContract: false,
@@ -184,7 +179,6 @@ function draftFrom(card: MyCard): Draft {
     categories: [...it.categories],
     services: it.services.map((service) => ({ ...service })),
     area: it.serviceArea ?? '',
-    extras: [...it.extras],
     photos: [...it.photos],
     logo: it.logo,
     byContract: it.worksByContract,
@@ -209,7 +203,7 @@ function draftFrom(card: MyCard): Draft {
  * то есть полоса не дошла бы до конца ни у кого.
  */
 const COUNTED_STEPS = [
-  'about', 'services', 'area', 'extras', 'terms', 'hours', 'contact', 'works',
+  'about', 'services', 'area', 'terms', 'hours', 'contact', 'works',
 ] as const
 type CountedKey = (typeof COUNTED_STEPS)[number]
 
@@ -519,7 +513,6 @@ export default function MasterProfileEdit() {
       else if (field.path.startsWith('does')) found.does = profilePage.errorDoesEmpty
       else if (field.path.startsWith('services')) found.services = profilePage.errorServices
       else if (field.path.startsWith('serviceArea')) found.area = profilePage.errorAreaLong
-      else if (field.path.startsWith('extras')) found.extras = profilePage.errorExtrasLong
       else if (field.path.startsWith('photos')) found.photos = profilePage.errorCaptionLong
       else if (field.path.startsWith('warrantyMonths')) found.warranty = profilePage.errorWarranty
       else if (field.path.startsWith('leadTime')) found.lead = profilePage.errorLead
@@ -549,10 +542,6 @@ export default function MasterProfileEdit() {
 
     // Пустой пункт молча исчезал при сохранении: человек добавил строку,
     // не заполнил, и она пропадала без объяснения.
-    if (draft.extras.some((item) => item.trim() === '')) found.extras = profilePage.errorExtrasEmpty
-    else if (draft.extras.some((item) => item.trim().length > EXTRA_MAX_CHARS)) {
-      found.extras = profilePage.errorExtrasLong
-    }
 
     if (draft.about.trim().length > ABOUT_MAX_CHARS) found.about = profilePage.errorAboutLong
 
@@ -622,7 +611,6 @@ export default function MasterProfileEdit() {
       categories: draft.categories,
       services: draft.services,
       serviceArea: draft.area.trim() === '' ? null : draft.area.trim(),
-      extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
       photos: draft.photos,
       logo: draft.logo,
       worksByContract: draft.byContract,
@@ -657,7 +645,6 @@ export default function MasterProfileEdit() {
     draft.warranty.trim() === '' ? profilePage.gapWarranty : null,
     draft.leadFrom.trim() === '' || draft.leadTo.trim() === '' ? profilePage.gapLead : null,
     draft.days.length === 0 ? profilePage.gapHours : null,
-    draft.extras.length === 0 ? profilePage.gapExtras : null,
     draft.area.trim() === '' ? profilePage.gapArea : null,
   ].filter((item) => item !== null)
 
@@ -673,7 +660,6 @@ export default function MasterProfileEdit() {
     about: draft.about.trim() !== '',
     services: draft.services.length > 0,
     area: draft.area.trim() !== '',
-    extras: draft.extras.filter((item) => item.trim() !== '').length > 0,
     terms: draft.warranty.trim() !== '' && draft.leadFrom.trim() !== '' && draft.leadTo.trim() !== '',
     hours: draft.days.length > 0,
     contact: draft.phone.trim() !== '',
@@ -692,9 +678,6 @@ export default function MasterProfileEdit() {
     about: draft.about.trim() === '' ? profilePage.sumEmpty : profilePage.sumFilled,
     services: profilePage.sumOf(draft.services.length, SERVICE_ROWS.length),
     area: draft.area.trim() === '' ? profilePage.sumEmpty : draft.area.trim(),
-    extras: draft.extras.filter((item) => item.trim() !== '').length === 0
-      ? profilePage.sumEmpty
-      : profilePage.sumCount(draft.extras.filter((item) => item.trim() !== '').length),
     // Тот же расчёт, что у шага: «Заполнено» означает названную гарантию
     // и обе границы срока, а не одно из трёх полей.
     terms: stepDone.terms ? profilePage.sumFilled : profilePage.sumEmpty,
@@ -748,7 +731,6 @@ export default function MasterProfileEdit() {
         categories: draft.categories,
         services: draft.services,
         serviceArea: draft.area.trim() === '' ? null : draft.area.trim(),
-        extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
         photos: draft.photos,
         logo: draft.logo,
         worksByContract: draft.byContract,
@@ -1069,52 +1051,6 @@ export default function MasterProfileEdit() {
           {/* Отличия своими словами. По строке на пункт, а не одним полем
               через запятую: пункты показываются списком, и запятая внутри
               фразы разорвала бы её посередине. */}
-          <Part id="extras" open={openParts.has('extras')} onToggle={() => togglePart('extras')}
-            title={profilePage.extrasLabel} hint={profilePage.extrasHint}
-            summary={partSummary.extras} invalid={touches(['extras'])}>
-            {draft.extras.map((item, index) => (
-              <div key={index} className={`flex items-start gap-sm ${index > 0 ? 'mt-md' : ''}`}>
-                {/* Поле на две строки, а не однострочное: пункт длиной
-                    до 80 знаков в строку не влезает, и мебельщик не видит
-                    конца собственной фразы. */}
-                <textarea value={item} rows={2}
-                  aria-label={`${profilePage.extrasLabel}, ${index + 1}`}
-                  placeholder={profilePage.extrasPlaceholder}
-                  onChange={(event) => {
-                    const next = [...draft.extras]
-                    next[index] = event.target.value
-                    set({ extras: next })
-                  }}
-                  className={`block w-full resize-none ${field(false)}`} />
-                <button type="button" className={buttonText}
-                  aria-label={profilePage.extrasRemove}
-                  onClick={() => set({ extras: draft.extras.filter((_, at) => at !== index) })}>
-                  <CloseIcon />
-                </button>
-              </div>
-            ))}
-            {errors.extras !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.extras}</p>}
-
-            {draft.extras.length < EXTRAS_MAX && (
-              <button type="button" className={`${draft.extras.length > 0 ? 'mt-md' : ''} ${buttonText}`}
-                onClick={() => set({ extras: [...draft.extras, ''] })}>
-                {profilePage.extrasAdd}
-              </button>
-            )}
-
-            {/* Примеры — текстом, а не чипсами. Чипс в системе держит
-                значение не длиннее 22 знаков (§ Components), а «Подгоняем
-                по месту после ремонта» — 32: группа развалилась бы в столбик
-                с рваным краем. И это не выбор из списка: мебельщик пишет
-                своё, а примеры показывают, какого рода фраза сюда годится. */}
-            <p className={`mt-lg ${hintText}`}>{profilePage.extrasExamples}</p>
-            <ul className={`mt-sm max-w-measure ${hintText}`}>
-              {extrasSuggestions.map((item) => (
-                <li key={item} className="mt-xs first:mt-0">{item}</li>
-              ))}
-            </ul>
-          </Part>
-
           {/* Гарантия и срок — один раздел: это одно обещание, названное
               двумя числами, и порознь они читались бы как два требования. */}
           <Part id="terms" open={openParts.has('terms')} onToggle={() => togglePart('terms')}
@@ -1157,6 +1093,38 @@ export default function MasterProfileEdit() {
               </span>
             </div>
             {errors.lead !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.lead}</p>}
+
+            {/* Договор и свой цех — здесь же, а не отдельным разделом:
+                это тот же разговор об условиях работы, что гарантия и срок,
+                а десятый раздел удлинил бы анкету ради двух отметок.
+
+                Строками с квадратом, не чипсами: подписи по 25 знаков
+                при пределе чипса в 22 (§ Components). */}
+            <p className={`mt-xl ${fieldLabel}`}>{profilePage.trustLabel}</p>
+            <div className="-mx-md mt-sm">
+              <div className={blockRowDivider(draft.byContract && draft.ownProduction)}>
+                <label className={blockRow(draft.byContract, { beforeSelected: draft.ownProduction })}>
+                  <input type="checkbox" className="sr-only" checked={draft.byContract}
+                    onChange={() => set({ byContract: !draft.byContract })} />
+                  <span className="min-w-0">
+                    <span className="block">{profilePage.byContractOption}</span>
+                    <span className={`mt-xs block ${hintText}`}>{profilePage.byContractHint}</span>
+                  </span>
+                  <Box on={draft.byContract} />
+                </label>
+              </div>
+              <div className={blockRowDivider()}>
+                <label className={blockRow(draft.ownProduction, { afterSelected: draft.byContract })}>
+                  <input type="checkbox" className="sr-only" checked={draft.ownProduction}
+                    onChange={() => set({ ownProduction: !draft.ownProduction })} />
+                  <span className="min-w-0">
+                    <span className="block">{profilePage.ownProductionOption}</span>
+                    <span className={`mt-xs block ${hintText}`}>{profilePage.ownProductionHint}</span>
+                  </span>
+                  <Box on={draft.ownProduction} />
+                </label>
+              </div>
+            </div>
           </Part>
 
           <Part id="hours" open={openParts.has('hours')} onToggle={() => togglePart('hours')}

@@ -22,8 +22,6 @@ export const ROUTING_MAX_MASTERS = 3
  * указания, что именно чинить.
  */
 export const CARD_LIMITS = {
-  extras: 5,
-  extraChars: 80,
   photos: 12,
   aboutChars: 600,
   captionChars: 80,
@@ -39,7 +37,8 @@ export const CARD_LIMITS = {
  * знак, а произвольную строку рисовать нечем: набор иконок в системе
  * рисуется вручную и одним стилем (DESIGN.md § Иконки). И по закрытому
  * списку можно будет отбирать мастерские в каталоге — по свободному тексту
- * нельзя. Всё, что в восьмёрку не влезло, живёт в `extras` словами.
+ * нельзя. Всё, что в восьмёрку не влезло, мастерская расскажет словами
+ * в описании.
  */
 export const MASTER_SERVICES = [
   'measure',
@@ -187,8 +186,6 @@ export const MasterCard = z.object({
    * ответы семи мастерских; выдумывать её за них рано.
    */
   serviceArea: z.string().trim().min(1).max(CARD_LIMITS.serviceAreaChars).nullable().default(null),
-  /** Чем отличается — своими словами, по строке на пункт. */
-  extras: z.array(z.string().trim().min(1).max(CARD_LIMITS.extraChars)).max(CARD_LIMITS.extras).default([]),
   /** Свои работы, снятые у своих заказчиков. Ни одной чужой. */
   photos: z.array(MasterPhoto).min(1).max(CARD_LIMITS.photos),
   /** Знак мастерской. null — место под него на карточке просто пустует. */
@@ -339,7 +336,6 @@ export const UpdateMyCard = MasterCard.pick({
   categories: true,
   services: true,
   serviceArea: true,
-  extras: true,
   photos: true,
   logo: true,
   warrantyMonths: true,

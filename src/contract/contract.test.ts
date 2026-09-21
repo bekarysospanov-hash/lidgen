@@ -535,7 +535,6 @@ describe('своя карточка мебельщика — US-20', () => {
       { id: 'assembly', paid: true },
     ],
     serviceArea: 'Алматы и пригород до 30 км',
-    extras: ['Свой цех, без подрядчиков'],
     photos: [
       { url: '/work-1.jpg', kind: 'kitchen', caption: 'Кухня 3,4 м', isRender: false },
       { url: '/work-2.jpg', kind: 'wardrobe', caption: null, isRender: true },
@@ -604,7 +603,6 @@ describe('своя карточка мебельщика — US-20', () => {
       categories: ['kitchen'],
         services: [{ id: 'measure', paid: false }],
       serviceArea: null,
-      extras: [],
       photos: [{ url: '/work-1.jpg', kind: 'kitchen', caption: null, isRender: false }],
       logo: null,
       warrantyMonths: null,

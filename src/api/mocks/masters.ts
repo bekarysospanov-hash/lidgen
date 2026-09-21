@@ -76,7 +76,6 @@ const PROBE_CARD: MasterCard = {
     { id: 'nonstandard', paid: false },
   ],
   serviceArea: 'Алматы и пригород до 30 км',
-  extras: ['Свой цех, без подрядчиков', 'Подгоняем по месту после ремонта'],
   photos: [
     { url: kitchen, kind: 'kitchen', caption: 'Кухня 3,4 м, Алматы', isRender: false },
     { url: cabinet, kind: 'wardrobe', caption: 'Шкаф в нишу, двери купе', isRender: false },
@@ -116,7 +115,6 @@ const PROBE_CARD_SECOND: MasterCard = {
     { id: 'installments', paid: false },
   ],
   serviceArea: null,
-  extras: [],
   photos: [
     { url: cabinet, kind: 'wardrobe', caption: null, isRender: false },
     { url: kitchen, kind: 'kitchen', caption: null, isRender: false },
@@ -155,7 +153,6 @@ const PROBE_CARD_THIRD: MasterCard = {
     { id: 'nonstandard', paid: false },
   ],
   serviceArea: 'Астана, выезд в Косшы и Талапкер',
-  extras: ['Выезжаем за город'],
   photos: [
     // PROBE: третий снимок помечен рендером — иначе состояние «это рисунок,
     // а не снятая работа» не посмотреть ни на одном экране.

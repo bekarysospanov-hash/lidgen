@@ -230,6 +230,39 @@ export const badge =
 export const stepBar = 'h-xs w-full bg-surface-container-high'
 export const stepBarDone = 'h-full bg-primary'
 
+/**
+ * Галерея (§ Components, 21.09). Миниатюра 64 на 64, радиус 0 — как всякая
+ * самостоятельная фотография. Выбранная обводится линией `primary` в 2px:
+ * цвет один канал из трёх, контур — второй (§ Состояния).
+ *
+ * Обводка у невыбранной прозрачная, а не отсутствующая: иначе выбор сдвигал
+ * бы полосу миниатюр на два пикселя — то же основание, что у строк выбора.
+ */
+export const galleryThumb = (selected: boolean) =>
+  'size-4xl shrink-0 border-2 bg-surface-container object-cover ' +
+  (selected ? 'border-primary' : 'border-transparent')
+
+/**
+ * Вкладки (§ Components, 21.09) — переключение между наборами одного рода.
+ * Заливки нет: залитая вкладка спорит с кнопкой, а выбирают здесь не
+ * действие, а что смотреть. Выбранная — цвет и линия снизу, два канала.
+ */
+export const tab = (selected: boolean) =>
+  'min-h-target border-b-2 px-sm text-label tracking-label font-medium ' +
+  (selected ? 'border-primary text-on-surface' : 'border-transparent text-on-surface-muted')
+
+/**
+ * Окно (§ Layout, 21.09) — единственное исключение из «шаг показывается
+ * стадией страницы»: короткое сообщение о том, чего ещё нет. Формы внутри
+ * не бывает, второго шага не бывает.
+ *
+ * Подложка — графит с прозрачностью: своего цвета для неё в системе нет
+ * и заводить его незачем, это не смысл, а способ погасить фон.
+ */
+export const dialogScrim =
+  'fixed inset-0 z-20 flex items-end justify-center bg-on-surface/40 p-lg sm:items-center'
+export const dialogBox = 'w-full max-w-measure rounded-md bg-surface p-xl'
+
 /** link — синяя, с подчёркиванием. Подчёркивание не убирать (§ Components). */
 export const link = 'text-link underline underline-offset-4'
 
