@@ -88,6 +88,10 @@ const PROBE_CARD: MasterCard = {
   hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], from: '10:00', to: '19:00' },
   contactPhone: '+77010000001',
   messengers: ['whatsapp'],
+  // PROBE: договор и свой цех — демонстрационные значения, как и всё
+  // в этой карточке. Настоящие придут с согласия мастерской (A2).
+  worksByContract: true,
+  ownProduction: true,
   publishedAt: '2026-09-18T06:00:00.000Z',
 }
 
@@ -123,6 +127,10 @@ const PROBE_CARD_SECOND: MasterCard = {
   hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '09:00', to: '18:00' },
   contactPhone: '+77010000002',
   messengers: ['whatsapp', 'telegram'],
+  // Вторая заполнена скупо и здесь тоже: карточка, где отмечено не всё,
+  // нужна, чтобы экран не проверялся только на полных данных.
+  worksByContract: true,
+  ownProduction: false,
   publishedAt: '2026-09-18T07:00:00.000Z',
 }
 
@@ -160,6 +168,8 @@ const PROBE_CARD_THIRD: MasterCard = {
   hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sun'], from: '10:00', to: '20:00' },
   contactPhone: '+77010000004',
   messengers: ['telegram'],
+  worksByContract: false,
+  ownProduction: true,
   publishedAt: '2026-09-18T08:00:00.000Z',
 }
 

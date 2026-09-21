@@ -426,7 +426,7 @@ function validQuote(overrides: Record<string, unknown> = {}) {
     requestId: '11111111-1111-4111-8111-111111111111',
     master: { id: '44444444-4444-4444-8444-444444444444', name: 'Мастерская «Дуб»', phone: '+77010000001' },
     composition: {
-      items: ['countertop', 'appliances', 'measure'],
+      items: ['sink', 'softClose', 'measure'],
       excluded: 'Техника покупается отдельно',
     },
     price: { minKzt: 500000, maxKzt: 700000 },
@@ -634,6 +634,24 @@ describe('своя карточка мебельщика — US-20', () => {
 
     it('карточка без единого снимка не проходит', () => {
       expect(UpdateMyCard.safeParse({ ...valid, photos: [] }).success).toBe(false)
+    })
+
+    /**
+     * Договор и свой цех заведены 21.09. Карточка, сохранённая до этого дня,
+     * их не содержит — и обязана разбираться: иначе семь мастерских пришлось
+     * бы заводить заново из-за двух галочек.
+     */
+    it('без признаков доверия карточка разбирается, оба — false', () => {
+      const parsed = UpdateMyCard.safeParse(valid)
+      expect(parsed.success && parsed.data.worksByContract).toBe(false)
+      expect(parsed.success && parsed.data.ownProduction).toBe(false)
+    })
+
+    it('признаки принимаются отмеченными', () => {
+      const marked = { ...valid, worksByContract: true, ownProduction: true }
+      const parsed = UpdateMyCard.safeParse(marked)
+      expect(parsed.success && parsed.data.worksByContract).toBe(true)
+      expect(parsed.success && parsed.data.ownProduction).toBe(true)
     })
 
     it('услуга из списка — только своя; выдуманную не принимаем', () => {
@@ -971,7 +989,7 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
   describe('CreateQuote', () => {
     const valid = {
       composition: {
-        items: ['countertop', 'sink', 'delivery'],
+        items: ['sink', 'lighting', 'delivery'],
         extra: 'Столешница с фрезеровкой под сушку',
         excluded: 'Замер и подъём на этаж без лифта оплачиваются отдельно',
       },
@@ -1004,12 +1022,42 @@ describe('кабинет мебельщика — схемы US-14, US-17, US-19
     })
 
     it('позиция, отмеченная дважды, отклоняется — дубль дал бы две строки в матрице', () => {
-      const composition = { ...valid.composition, items: ['countertop', 'countertop'] }
+      const composition = { ...valid.composition, items: ['sink', 'sink'] }
       expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
     })
 
     it('позиции вне перечня контракта не существует', () => {
       const composition = { ...valid.composition, items: ['ldsp'] }
+      expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
+    })
+
+    it('снятые 21.09 позиции больше не разбираются', () => {
+      for (const gone of ['appliances', 'basin', 'removal', 'cleanup', 'countertop']) {
+        const composition = { ...valid.composition, items: [gone] }
+        expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
+      }
+    })
+
+    it('материалов может не быть: КП без них — законное КП', () => {
+      const parsed = CreateQuote.safeParse(valid)
+      expect(parsed.success).toBe(true)
+      expect(parsed.success && parsed.data.composition.materials).toEqual({
+        facade: null,
+        countertop: null,
+        moistureGuard: false,
+      })
+    })
+
+    it('материалы принимаются видами из перечня', () => {
+      const composition = {
+        ...valid.composition,
+        materials: { facade: 'paintedMdf', countertop: 'stone', moistureGuard: true },
+      }
+      expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(true)
+    })
+
+    it('вида вне перечня не существует — иначе сравнивать нечего', () => {
+      const composition = { ...valid.composition, materials: { facade: 'ldsp' } }
       expect(CreateQuote.safeParse({ ...valid, composition }).success).toBe(false)
     })
 

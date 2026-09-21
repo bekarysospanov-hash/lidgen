@@ -134,6 +134,9 @@ interface Draft {
   extras: string[]
   photos: MasterPhoto[]
   logo: string | null
+  /** Два факта доверия (контракт §2, 21.09): договор и свой цех. */
+  byContract: boolean
+  ownProduction: boolean
   warranty: string
   leadFrom: string
   leadTo: string
@@ -154,6 +157,8 @@ const EMPTY: Draft = {
   extras: [],
   photos: [],
   logo: null,
+  byContract: false,
+  ownProduction: false,
   warranty: '',
   leadFrom: '',
   leadTo: '',
@@ -182,6 +187,8 @@ function draftFrom(card: MyCard): Draft {
     extras: [...it.extras],
     photos: [...it.photos],
     logo: it.logo,
+    byContract: it.worksByContract,
+    ownProduction: it.ownProduction,
     warranty: it.warrantyMonths === null ? '' : String(it.warrantyMonths),
     leadFrom: it.leadTime === null ? '' : String(it.leadTime.min),
     leadTo: it.leadTime === null ? '' : String(it.leadTime.max),
@@ -618,6 +625,8 @@ export default function MasterProfileEdit() {
       extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
       photos: draft.photos,
       logo: draft.logo,
+      worksByContract: draft.byContract,
+      ownProduction: draft.ownProduction,
       warrantyMonths: draft.warranty.trim() === '' ? null : Number(draft.warranty),
       leadTime:
         draft.leadFrom.trim() !== '' && draft.leadTo.trim() !== ''
@@ -742,6 +751,8 @@ export default function MasterProfileEdit() {
         extras: draft.extras.map((item) => item.trim()).filter((item) => item !== ''),
         photos: draft.photos,
         logo: draft.logo,
+        worksByContract: draft.byContract,
+        ownProduction: draft.ownProduction,
         warrantyMonths: draft.warranty.trim() === '' ? null : Number(draft.warranty),
         leadTime: leadFilled ? { min: Number(draft.leadFrom), max: Number(draft.leadTo) } : null,
         hours: hoursFilled

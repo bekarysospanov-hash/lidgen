@@ -7,10 +7,15 @@
 // заказчица. Значит язык её, а не цеха — мебельщик поймёт в любом случае,
 // она нет.
 //
+// Исключение одно, заведено 21.09: материалы. Там у значения две подписи —
+// цеховая мебельщику и простая заказчице, — потому что «плёнка» и «акрил»
+// это ответ на вопрос «из чего», и мебельщик обязан узнать в списке свой
+// вариант. Значение при этом одно, то есть сравнение не рассыпается.
+//
 // Идентификаторы живут в контракте (`QuoteItem`), подписи здесь: сравнение
 // матрицей (US-23) требует общего словаря, а формулировки правятся по итогам
 // дозвонов и контракт при этом не трогают.
-import type { QuoteItem } from '../contract'
+import type { QuoteCountertop, QuoteFacade, QuoteItem } from '../contract'
 import type { CategoryId } from './categories'
 
 /**
@@ -24,20 +29,56 @@ import type { CategoryId } from './categories'
  * Осталось то, что у одного в цене, а у другого нет.
  */
 export const compositionLabels: Record<QuoteItem, string> = {
-  countertop: 'Столешница',
-  sink: 'Мойка и смеситель',
-  appliances: 'Встроенная техника',
+  sink: 'Мойка и сушилка',
   softClose: 'Доводчики на дверцах',
   lighting: 'Подсветка',
   mirror: 'Зеркало',
-  basin: 'Раковина',
   measure: 'Замер',
   delivery: 'Доставка',
   lift: 'Подъём на этаж',
   assembly: 'Сборка и установка',
-  removal: 'Вывоз старой мебели',
-  cleanup: 'Уборка и вывоз упаковки',
 }
+
+/**
+ * Материалы: две подписи на одно значение (решение PM 21.09).
+ *
+ * `shop` читает мебельщик, отмечая в форме, — там слова его цеха, иначе
+ * он не найдёт свой вариант и отметит не то. `client` читает заказчица
+ * в предложении и в таблице сравнения — там слов цеха нет (§ Content).
+ *
+ * Пара подписей на одно значение — не дубль, а перевод: значение одно,
+ * и в сравнении обе стороны говорят об одном и том же.
+ */
+export const facadeLabels: Record<QuoteFacade, { shop: string; client: string }> = {
+  film: { shop: 'МДФ в плёнке', client: 'Фасады с плёнкой' },
+  paintedMdf: { shop: 'Крашеный МДФ', client: 'Крашеные фасады' },
+  acrylic: { shop: 'Акрил', client: 'Глянцевые фасады' },
+  wood: { shop: 'Шпон или массив', client: 'Фасады под дерево' },
+}
+
+export const countertopLabels: Record<QuoteCountertop, { shop: string; client: string }> = {
+  chipboard: { shop: 'ЛДСП', client: 'Обычная столешница' },
+  hpl: { shop: 'HPL', client: 'Столешница повышенной прочности' },
+  stone: { shop: 'Искусственный камень', client: 'Столешница из камня' },
+}
+
+/** Подписи блока материалов: вопросы в форме, названия строк в сравнении. */
+export const materialsAsk = {
+  facadeQuestion: 'Из чего фасады?',
+  facadeHint: 'Отвечать не обязательно, но именно об этом спрашивают вторым вопросом после цены.',
+  countertopQuestion: 'Какая столешница?',
+  countertopHint: 'Если её в заказе нет — пропустите.',
+  moistureLabel: 'Защита от влаги под мойкой',
+  moistureHint: 'Плотная фольга или накладка на дно тумбы.',
+  notChosen: 'не указано',
+} as const
+
+/** Названия строк материалов в таблице сравнения — языком заказчицы. */
+export const materialsRows = {
+  facade: 'Фасады',
+  countertop: 'Столешница',
+  moistureGuard: 'Защита от влаги под мойкой',
+} as const
 
 /**
  * Работы, а не части предмета. Добавляются к любой категории и стоят в конце
@@ -47,14 +88,7 @@ export const compositionLabels: Record<QuoteItem, string> = {
  * в фасадах, а в том, что у одного замер и вывоз внутри вилки, а у другого
  * сверху. Пока состав был свободным текстом, про них просто не писали.
  */
-export const compositionServices: QuoteItem[] = [
-  'measure',
-  'delivery',
-  'lift',
-  'assembly',
-  'removal',
-  'cleanup',
-]
+export const compositionServices: QuoteItem[] = ['measure', 'delivery', 'lift', 'assembly']
 
 /**
  * Части предмета по категориям. Порядок — как человек собирает предмет
@@ -65,10 +99,10 @@ export const compositionServices: QuoteItem[] = [
  * на шкаф, ошибки не совершает.
  */
 const partsByCategory: Record<CategoryId, QuoteItem[]> = {
-  kitchen: ['countertop', 'sink', 'appliances', 'softClose', 'lighting'],
+  kitchen: ['sink', 'softClose', 'lighting'],
   wardrobe: ['mirror', 'lighting', 'softClose'],
-  bathroom: ['countertop', 'basin', 'mirror', 'lighting'],
-  other: ['countertop', 'lighting', 'softClose'],
+  bathroom: ['mirror', 'lighting'],
+  other: ['lighting', 'softClose'],
 }
 
 /** Позиции, предлагаемые в форме: части предмета, затем работы. */
@@ -82,10 +116,9 @@ export function compositionFor(category: CategoryId): { parts: QuoteItem[]; serv
  * как отмечал мебельщик: иначе один и тот же состав читался бы по-разному
  * в двух предложениях, и сравнить их глазами стало бы труднее.
  *
- * Группы нужны не для красоты: позиций до девятнадцати, а список длиннее
- * восьми строк DESIGN.md запрещает — линии сливаются в штриховку, и глазу
- * не за что зацепиться. Обе группы в пределе: частей не больше восьми,
- * работ четыре.
+ * Группы нужны не для красоты: список длиннее восьми строк DESIGN.md
+ * запрещает — линии сливаются в штриховку, и глазу не за что зацепиться.
+ * Обе группы в пределе: частей не больше четырёх, работ четыре.
  */
 export function splitComposition(items: readonly QuoteItem[]): {
   parts: QuoteItem[]
@@ -116,8 +149,9 @@ export const compositionShown = {
 export const compositionAsk = {
   partsQuestion: 'Что из этого в цене?',
   partsHint:
-    'Корпуса, фасады и сборку каркаса не спрашиваем — без них мебели не бывает. ' +
-    'Здесь только то, что у одного в цене, а у другого нет.',
+    'Корпуса и сборку каркаса не спрашиваем — без них мебели не бывает, ' +
+    'а из чего фасады и столешница, спросим ниже. Здесь только то, ' +
+    'что у одного в цене, а у другого нет.',
   servicesQuestion: 'Какие работы в той же цене?',
   servicesHint: 'Не отмечено — значит оплачивается отдельно. Так и прочитает заказчик.',
   extraLabel: 'Что-то ещё своими словами',
@@ -127,7 +161,7 @@ export const compositionAsk = {
   excludedHint:
     'Обязательно. Здесь чаще всего и прячется разница между предложениями — ' +
     'лучше сказать сейчас, чем на звонке.',
-  excludedPlaceholder: 'например, техника и мойка покупаются отдельно, подъём на этаж без лифта оплачивается отдельно',
+  excludedPlaceholder: 'например, технику и мойку покупает заказчик, подъём на этаж без лифта оплачивается отдельно',
   errorItemsEmpty: 'Отметьте хотя бы одну позицию: иначе в предложении есть цена, но не сказано, за что.',
   errorExcludedEmpty: 'Напишите, что не входит. Если входит всё — так и напишите.',
 } as const

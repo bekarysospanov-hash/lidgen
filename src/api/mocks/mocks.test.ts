@@ -526,7 +526,7 @@ describe('кабинет мебельщика — US-14, US-17, US-18, US-19a', 
 
   const quotePayload = (overrides: Record<string, unknown> = {}) => ({
     composition: {
-      items: ['countertop', 'sink', 'measure'],
+      items: ['sink', 'lighting', 'measure'],
       excluded: 'Замер оплачивается отдельно',
     },
     price: { minKzt: 900_000, maxKzt: 1_400_000 },
