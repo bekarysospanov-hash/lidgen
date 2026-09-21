@@ -289,13 +289,19 @@ test('опубликованная карточка открывается це�
   await expect(page.getByText('Замер на месте')).toBeVisible()
   await expect(page.getByText('от 25 до 35 дней')).toBeVisible()
   await expect(page.getByText('Шкафы и гардеробные')).toBeVisible()
-  // Связаться можно прямо отсюда (решение PM 20.09), и с 21.09 это три
-  // действия панели: предложение, звонок, безопасная сделка.
-  await expect(page.getByRole('link', { name: 'Получить предложение' }).first()).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Позвонить' }).first()).toBeVisible()
-  // Безопасная сделка помечена будущей: механизма расчётов нет, и окно
+  // Два пути дальше (решение PM 21.09): расчёт по заявке и связь.
+  // Телефон раскрывается по нажатию, а не лежит открытым.
+  await expect(page.getByRole('link', { name: 'Получить расчёт' }).first()).toBeVisible()
+  await expect(page.getByText('+77010000001')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Телефон' }).first().click()
+  // Показывается группами, а в tel: уходит формат контракта.
+  await expect(page.getByRole('link', { name: '+7 (701) 000-00-01' }).first()).toBeVisible()
+  await expect(page.locator('a[href="tel:+77010000001"]').first()).toBeVisible()
+  // Отзывов в пробе не будет, и раздел говорит это словами.
+  await expect(page.getByRole('heading', { name: 'Отзывы' })).toBeVisible()
+  // Безопасная покупка помечена будущей: механизма расчётов нет, и окно
   // говорит, чем это станет и как происходит сейчас.
-  await page.getByRole('button', { name: 'Безопасная сделка' }).first().click()
+  await page.getByRole('button', { name: 'Как это будет' }).first().click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByText('Деньги будут замораживаться')).toBeVisible()
   await page.getByRole('button', { name: 'Понятно' }).click()

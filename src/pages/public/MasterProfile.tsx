@@ -17,19 +17,20 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
-import { HoursIcon, LeadTimeIcon, WarrantyIcon } from '../../components/icons'
+import { format as formatPhone } from '../../components/phone'
+import { HoursIcon, LeadTimeIcon, QuoteIcon, SafeDealIcon, WarrantyIcon } from '../../components/icons'
 import {
   actionBarFixed,
   actionBarSide,
   badge,
   buttonFilled,
   buttonText,
-  chip,
   dialogBox,
   dialogScrim,
   galleryThumb,
   hintText,
   link,
+  panel,
   tab,
 } from '../../components/ui'
 import type { CategoryId, MasterCardPublic, MasterPhoto } from '../../contract'
@@ -262,6 +263,8 @@ export default function MasterProfile() {
    * ещё нет, и кнопка «Понятно».
    */
   const [dealShown, setDealShown] = useState(false)
+  /** Телефон раскрывается по нажатию, а не лежит открытым (решение PM 21.09). */
+  const [phoneShown, setPhoneShown] = useState(false)
   const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
@@ -391,25 +394,91 @@ export default function MasterProfile() {
     </>
   )
 
+  /**
+   * Связь: кнопка раскрывает телефон на месте (правка 21.09, решение PM).
+   * Уводить некуда — звонок с телефона начинается с того же номера,
+   * а на мониторе его переписывают в трубку.
+   */
+  const contactBlock = (
+    <>
+      {card.contactPhone === null ? (
+        <p className={`max-w-measure ${hintText}`}>{masterCardPage.contactMissing}</p>
+      ) : phoneShown ? (
+        <>
+          <p className="text-subheading tracking-subheading font-medium tabular-nums">
+            {/* Показывается группами, а не сырыми цифрами: «+77010000001»
+                человек читает по одной цифре, а номер с карточки переписывают
+                в трубку. В `href` уходит то, что в контракте (§2). */}
+            <a href={`tel:${card.contactPhone}`} className={link}
+              onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+              {formatPhone(card.contactPhone.replace(/\D/g, '').replace(/^7/, ''))}
+            </a>
+          </p>
+          <div className="-ml-sm mt-xs flex flex-wrap items-center gap-x-sm">
+            {card.messengers.includes('whatsapp') && (
+              <a href={`https://wa.me/${card.contactPhone.replace(/\D/g, '')}`}
+                target="_blank" rel="noreferrer noopener" className={buttonText}
+                onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+                {masterCardPage.actionWrite}
+              </a>
+            )}
+            {card.messengers.includes('telegram') && (
+              <a href={`https://t.me/+${card.contactPhone.replace(/\D/g, '')}`}
+                target="_blank" rel="noreferrer noopener" className={buttonText}
+                onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
+                {masterCardPage.actionWriteTelegram}
+              </a>
+            )}
+          </div>
+        </>
+      ) : (
+        <button type="button" className={`w-full justify-center ${buttonFilled}`}
+          onClick={() => setPhoneShown(true)}>
+          {masterCardPage.contactShow}
+        </button>
+      )}
+    </>
+  )
+
+  /**
+   * Два пути дальше, каждый отдельным блоком (решение PM 21.09): расчёт
+   * по заявке и будущая безопасная покупка. Иконка с подписью, строка
+   * о том, что человек получит, и действие.
+   */
+  const quoteBlock = (
+    <section className={`mt-xl ${panel}`}>
+      <span className="block text-on-surface-muted"><QuoteIcon /></span>
+      <p className="mt-sm text-body tracking-body font-medium">{masterCardPage.quoteBlockTitle}</p>
+      <p className={`mt-xs max-w-measure ${hintText}`}>{masterCardPage.quoteBlockBody}</p>
+      <Link to="/request" className={`mt-md w-full justify-center ${buttonFilled}`}>
+        {masterCardPage.quoteBlockAction}
+      </Link>
+    </section>
+  )
+
+  const safeBlock = (
+      <section className={`mt-lg ${panel}`}>
+        <span className="block text-on-surface-muted"><SafeDealIcon /></span>
+        <p className="mt-sm text-body tracking-body font-medium">{masterCardPage.safeBlockTitle}</p>
+        <p className={`mt-xs max-w-measure ${hintText}`}>{masterCardPage.safeBlockBody}</p>
+        <button type="button" className={`-ml-sm mt-md ${buttonText}`}
+          onClick={() => setDealShown(true)}>
+          {masterCardPage.safeBlockAction}
+        </button>
+      </section>
+  )
+
+  /**
+   * Полоса внизу телефона: два пути, ради которых карточку открывают
+   * (решение PM 21.09). Безопасная покупка сюда не идёт — она живёт
+   * блоком в потоке, и обещать её кнопкой наравне с действующими нельзя.
+   */
   const actionPanel = (
     <>
       <Link to="/request" className={`w-full justify-center ${buttonFilled}`}>
-        {masterCardPage.actionRequest}
+        {masterCardPage.quoteBlockAction}
       </Link>
-      {/* Три действия — предел панели (§ Components, 21.09). Звонок вторым:
-          он для того, кто уже выбрал; безопасная сделка третьей и помечена
-          будущей. Оба — кнопки-текстом: главное действие на экране одно. */}
-      <div className="-ml-sm mt-sm flex flex-wrap items-center gap-x-sm">
-        {card.contactPhone !== null && (
-          <a href={`tel:${card.contactPhone}`} className={buttonText}
-            onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-            {masterCardPage.actionCall}
-          </a>
-        )}
-        <button type="button" className={buttonText} onClick={() => setDealShown(true)}>
-          {masterCardPage.actionDeal}
-        </button>
-      </div>
+      <div className="mt-sm">{contactBlock}</div>
     </>
   )
 
@@ -420,8 +489,10 @@ export default function MasterProfile() {
         <>
           {sellerHead}
           <section className={`mt-xl ${actionBarSide}`} aria-label={masterCardPage.actionsTitle}>
-            {actionPanel}
+            {contactBlock}
           </section>
+          {quoteBlock}
+          {safeBlock}
         </>
       }>
       <p className={hintText}>
@@ -441,15 +512,17 @@ export default function MasterProfile() {
           над кнопками — как на маркетплейсах, откуда взят порядок. */}
       <div className="mt-lg lg:hidden">{sellerHead}</div>
 
-      {/* Направления — короткие значения, это ровно случай чипса (§ Components).
-          Выбирать здесь нечего, поэтому невыбранное состояние и без обработчика. */}
-      <ul className="mt-lg flex flex-wrap gap-sm">
-        {card.does.map((item) => (
-          <li key={item} className={chip(false)}>
-            {item}
-          </li>
-        ))}
-      </ul>
+      {/* Описание — сразу под шапкой (решение PM 21.09, по рефам): человек
+          прочитал, кто это, и первым делом хочет понять, чем они занимаются.
+          Раньше рассказ стоял предпоследним, после работ и условий. */}
+      <SectionTitle>{masterCardPage.aboutLabel}</SectionTitle>
+      <p className="mt-md max-w-measure text-body tracking-body">{card.about}</p>
+
+      {/* Направления своими словами (`does`) с карточки сняты 21.09, решение
+          PM: чипсами они читались как фильтры, по которым нечего нажать,
+          а то же самое человек узнаёт из «Услуг мастерской» и вкладок
+          выполненных заказов. В каталоге отбор по ним остаётся — там они
+          работают, а не украшают. */}
 
       {/* Краткие условия сразу за шапкой: по ним человек решает, читать ли
           дальше — срок, гарантия, часы и куда выезжают. */}
@@ -482,53 +555,19 @@ export default function MasterProfile() {
         </>
       )}
 
-      <SectionTitle>{masterCardPage.aboutLabel}</SectionTitle>
-      <p className="mt-md max-w-measure text-body tracking-body">{card.about}</p>
 
-      {/* Действия переехали в панель — боковую на широком экране, нижнюю
-          на телефоне (§ Layout, правка 20.09). Здесь остаётся раздел
-          со вторыми способами связи и объяснением: панель несёт одно
-          главное действие, а не меню. */}
-      <SectionTitle>{masterCardPage.actionsTitle}</SectionTitle>
+      {/* Отзывы. Их в пробе не будет — цикл мебели 3–8 недель, и до первой
+          принятой работы проба не доживёт. Раздел стоит пустым по решению
+          PM 21.09: место под будущее обозначено, а пустое состояние говорит
+          словами, а не прячется (§ Presence). */}
+      <SectionTitle>{masterCardPage.reviewsLabel}</SectionTitle>
+      <p className="mt-md max-w-measure text-body tracking-body">{masterCardPage.reviewsEmpty}</p>
 
-      {/* Ряд с переносом, а не столбик: кнопка-текст растягивалась на всю
-          ширину и вставала по центру колонки — читалось как случайное
-          выравнивание. Отрицательный отступ слева гасит внутреннее поле
-          кнопки, чтобы подпись встала по краю колонки. */}
-      {card.contactPhone !== null ? (
-        <div className="-ml-sm mt-md flex flex-wrap items-center gap-x-sm gap-y-xs">
-          {/* Звонок отсюда снят 21.09: он переехал в панель действий,
-              и два «Позвонить» на одном экране человек читает как два
-              разных телефона (чек-лист, п. 3). Здесь остались мессенджеры —
-              в панель они не влезают, три действия там уже предел.
-
-              wa.me и t.me — внешние переходы, и это <a>, а не Link:
-              роутер их не знает. */}
-          {card.messengers.includes('whatsapp') && (
-            <a href={`https://wa.me/${card.contactPhone.replace(/\D/g, '')}`}
-              target="_blank" rel="noreferrer noopener" className={buttonText}
-              onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-              {masterCardPage.actionWrite}
-            </a>
-          )}
-          {card.messengers.includes('telegram') && (
-            <a href={`https://t.me/+${card.contactPhone.replace(/\D/g, '')}`}
-              target="_blank" rel="noreferrer noopener" className={buttonText}
-              onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-              {masterCardPage.actionWriteTelegram}
-            </a>
-          )}
-        </div>
-      ) : (
-        <p className={`mt-md max-w-measure ${hintText}`}>{masterCardPage.contactMissing}</p>
-      )}
-
-      {/* Строки о том, что заявка уйдёт нескольким мастерским, здесь больше
-          нет (решение PM 21.09). Заявка по-прежнему веерная — PRD US-03
-          не менялся, — и человек узнаёт об этом на форме заявки.
-
-          Блок будущей безопасной сделки тоже снят: он стал третьим
-          действием панели и окном «готовим» (§ Layout, исключение). */}
+      {/* На телефоне боковой колонки нет, и будущая покупка стоит здесь,
+          под всем рассказом о мастерской. Блока расчёта тут нет намеренно:
+          его кнопка уже закреплена внизу экрана, и два одинаковых действия
+          человек читает как два разных (чек-лист, п. 3). */}
+      <div className="lg:hidden">{safeBlock}</div>
 
       {/* Место под нижнюю панель: без него последняя строка прячется под
           полосой, и человек не знает, что страница кончилась (§ Layout). */}
