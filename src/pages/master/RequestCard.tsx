@@ -9,6 +9,7 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { MasterShell } from '../../components/MasterShell'
+import { show as showPhone } from '../../components/phone'
 import { CategoryIcon } from '../../components/CategoryIcon'
 import { CheckMark } from '../../components/icons'
 import {
@@ -621,7 +622,7 @@ export default function RequestCard() {
             <p className="mt-xs text-subheading tracking-subheading font-medium">
               {request.clientPhone && (
                 <a href={`tel:${request.clientPhone}`} className={link}>
-                  {request.clientPhone}
+                  {showPhone(request.clientPhone)}
                 </a>
               )}
             </p>

@@ -10,6 +10,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
+import { show as showPhone } from '../../components/phone'
 import { Token } from '../../contract'
 import type {
   Quote,
@@ -177,8 +178,10 @@ function QuoteCard({
           <>
             <p className={fieldLabel}>{offersPage.contactTitle}</p>
             <p className="mt-xs text-subheading tracking-subheading font-medium">
+              {/* Показывается группами, а в tel: уходит формат контракта:
+                  по этому номеру звонят и его диктуют вслух. */}
               <a href={`tel:${quote.master.phone}`} className={link}>
-                {quote.master.phone}
+                {showPhone(quote.master.phone)}
               </a>
             </p>
             <p className={`mt-sm max-w-measure ${hintText}`}>{offersPage.contactNote}</p>

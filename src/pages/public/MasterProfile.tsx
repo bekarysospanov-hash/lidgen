@@ -17,7 +17,7 @@ import { Link, useParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { isApiError } from '../../api/errors'
 import { PageShell } from '../../components/PageShell'
-import { format as formatPhone } from '../../components/phone'
+import { show as showPhone } from '../../components/phone'
 import { HoursIcon, LeadTimeIcon, QuoteIcon, SafeDealIcon, WarrantyIcon } from '../../components/icons'
 import {
   actionBarFixed,
@@ -411,7 +411,7 @@ export default function MasterProfile() {
                 в трубку. В `href` уходит то, что в контракте (§2). */}
             <a href={`tel:${card.contactPhone}`} className={link}
               onClick={() => track('contact_made', { from: 'catalogue', masterId: master.id })}>
-              {formatPhone(card.contactPhone.replace(/\D/g, '').replace(/^7/, ''))}
+              {showPhone(card.contactPhone)}
             </a>
           </p>
           <div className="-ml-sm mt-xs flex flex-wrap items-center gap-x-sm">
