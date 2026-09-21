@@ -32,3 +32,8 @@ dist-ssr
 /test-results/
 /playwright-report/
 /e2e/shots/
+
+# Журнал hallmark: он хранит выбранную ИМ тему и правило разнообразия,
+# которые уводят каждую следующую страницу в сторону от DESIGN.md.
+# От hallmark берём только `audit` (CLAUDE.md), журнал ему не нужен.
+/.hallmark/
