@@ -12,7 +12,7 @@ import { POLICY_VERSION, privacyPage } from '../../texts/privacy'
 export default function Privacy() {
   return (
     <PageShell>
-      <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">
+      <h1 className="max-w-measure-title font-display text-heading tracking-heading font-bold">
         {privacyPage.title}
       </h1>
       <p className={`mt-sm ${hintText}`}>{privacyPage.version(POLICY_VERSION)}</p>

@@ -54,7 +54,7 @@ export default function RequestSent() {
   if (!state) {
     return (
       <PageShell>
-        <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">{sentPage.fallbackTitle}</h1>
+        <h1 className="max-w-measure-title font-display text-heading tracking-heading font-bold">{sentPage.fallbackTitle}</h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{sentPage.fallbackBody}</p>
       </PageShell>
     )
@@ -85,7 +85,7 @@ export default function RequestSent() {
 
   return (
     <PageShell>
-      <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">{sentPage.title}</h1>
+      <h1 className="max-w-measure-title font-display text-heading tracking-heading font-bold">{sentPage.title}</h1>
 
       {/* Первым — что теперь будет. Номер заявки стоял здесь крупнее всего
           на экране, хотя в эту секунду человек спрашивает не «как меня

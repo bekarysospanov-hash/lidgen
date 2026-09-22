@@ -20,13 +20,23 @@
 // одни `utm_*` (`analytics.ts:31`). Остаётся история браузера на телефоне
 // самого человека — обычная цена поиска, который переживает возврат.
 // Запись идёт с `replace`, так что историю запрос не копит.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../api/client'
 import { MasterTile } from '../../components/MasterTile'
 import { PageShell } from '../../components/PageShell'
 import { FiltersIcon } from '../../components/icons'
-import { buttonFilled, buttonText, chip, field, hintText, shelf } from '../../components/ui'
+import {
+  actionBarShelf,
+  buttonFilled,
+  buttonText,
+  callout,
+  calloutButton,
+  chip,
+  field,
+  hintText,
+  shelf,
+} from '../../components/ui'
 import { CategoryId, CityCode, type MasterCardPublic } from '../../contract'
 import { cityName } from '../../questions/categories'
 import { mastersPage } from '../../texts/masters'
@@ -101,6 +111,24 @@ export default function Masters() {
   const kind = kindParam.success ? kindParam.data : null
   const query = params.get('q') ?? ''
 
+  /**
+   * Полоса действия внизу экрана появляется, только когда блок-призыв ушёл
+   * за верхний край (§ Layout, правка 22.09). Одновременно они не видны
+   * никогда: иначе на странице две главные кнопки — ошибку уже ловили
+   * на карточке мастерской 21.09.
+   */
+  const calloutRef = useRef<HTMLDivElement | null>(null)
+  const [calloutSeen, setCalloutSeen] = useState(true)
+  useEffect(() => {
+    const node = calloutRef.current
+    if (node === null) return
+    const observer = new IntersectionObserver(
+      (entries) => setCalloutSeen(entries[0]?.isIntersecting ?? true),
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  })
+
   function pick(key: 'city' | 'kind' | 'q', value: string | null) {
     const next = new URLSearchParams(params)
     if (value === null || value === '') next.delete(key)
@@ -121,7 +149,7 @@ export default function Masters() {
   if (view.kind === 'failed') {
     return (
       <PageShell layout="shelf">
-        <h1 className="text-heading tracking-heading font-semibold">{mastersPage.failedTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{mastersPage.failedTitle}</h1>
         <button type="button" onClick={() => { setView({ kind: 'loading' }); setAttempt((n) => n + 1) }}
           className={`mt-xl ${buttonFilled}`}>
           {mastersPage.retry}
@@ -136,7 +164,7 @@ export default function Masters() {
   if (view.masters.length === 0) {
     return (
       <PageShell layout="shelf">
-        <h1 className="text-heading tracking-heading font-semibold">{mastersPage.emptyTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{mastersPage.emptyTitle}</h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{mastersPage.emptyBody}</p>
         <Link to="/request" className={`mt-xl inline-flex ${buttonFilled}`}>
           {mastersPage.toRequest}
@@ -169,10 +197,17 @@ export default function Masters() {
 
   return (
     <PageShell layout="shelf">
+      {/* Заголовок вернулся на витрину 22.09. На телефоне он идёт ступенью
+          heading: display в 44 пикселя на ширине 390 даёт три строки
+          во всю высоту первого экрана. */}
+      <h1 className="font-display text-heading tracking-heading font-bold sm:text-display sm:tracking-display">
+        {mastersPage.title}
+      </h1>
+
       {/* Строка поиска и кнопка отбора — один ряд, как на любой витрине.
           Поле во всю ширину, кнопка прижата к правому краю: под большой
           палец (§ Layout). */}
-      <div className="flex items-center gap-sm">
+      <div className="mt-xl flex items-center gap-sm">
         <input
           value={query}
           onChange={(event) => pick('q', event.target.value)}
@@ -229,23 +264,33 @@ export default function Masters() {
         </section>
       ) : (
         <>
-          {/* Одна строка на весь верх витрины: слева вход в лидген, справа
-              счётчик. Пояснение «опишите задачу один раз…» отсюда снято
-              (решение PM 20.09) — витрина обязана начинаться списком,
-              а не абзацем о сервисе; тот же смысл человек читает на форме.
-              Главное действие стоит не в конце экрана, и это названное
-              отступление от § Порядок: ниже кнопки — сетка на сотню плиток,
-              и «в конце» означало бы «нигде». */}
-          <div className="mt-lg flex flex-wrap items-center gap-sm">
-            <Link to="/request" className={`whitespace-nowrap ${buttonFilled}`}>
+          {/* Блок-призыв: обещание, условие и одно действие (§ Components,
+              22.09). Стоит до списка, а не в конце — ниже него сетка
+              на сотню плиток, и «в конце» означало бы «нигде». Конец
+              экрана держит полоса внизу, которая появляется, когда блок
+              уходит за край. */}
+          <div ref={calloutRef} className={`mt-2xl ${callout}`}>
+            <p className="max-w-measure text-subheading tracking-subheading font-medium">
+              {mastersPage.promise}
+            </p>
+            <p className="mt-sm max-w-measure text-body-sm tracking-body-sm opacity-80">
+              {mastersPage.promiseNote}
+            </p>
+            <Link to="/request" className={`mt-xl ${calloutButton}`}>
               {mastersPage.fanAction}
             </Link>
-            {/* Число названо всегда: молчаливо укороченный список человек
-                принимает за весь каталог. */}
-            <p className={`ml-auto ${hintText}`} role="status">
-              {mastersPage.found(shown.length)}
-            </p>
           </div>
+
+          {/* Вместо счётчика — что за список перед человеком. Число
+              на старте работает против нас, а эта строка честна
+              при любом размере каталога. */}
+          <p className={`mt-2xl ${hintText}`}>{mastersPage.catalogueNote}</p>
+          {/* Число найденных — только для экранного диктора. Глазами счётчик
+              снят (22.09): на старте каталога он работает против нас. Но без
+              объявления отбор беззвучен — человек включает фильтр и не знает,
+              нашлось ли что-нибудь. role="status" произносит новое значение
+              при каждой смене отбора, не перебивая чтение. */}
+          <p className="sr-only" role="status">{mastersPage.found(shown.length)}</p>
 
           <ul className={`mt-lg ${shelf}`}>
             {shown.map((master) => (
@@ -254,6 +299,22 @@ export default function Masters() {
               </li>
             ))}
           </ul>
+
+          {/* Полоса действия. Под содержимым остаётся её высота пустого
+              места, иначе последняя строка прячется под панелью и человек
+              не знает, что список кончился (§ Layout). */}
+          {!calloutSeen && (
+            <>
+              <div aria-hidden className="h-4xl" />
+              <div className={actionBarShelf}>
+                <div className="mx-auto flex w-full max-w-shelf">
+                  <Link to="/request" className={`w-full sm:w-auto ${buttonFilled}`}>
+                    {mastersPage.fanAction}
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </PageShell>

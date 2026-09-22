@@ -43,7 +43,7 @@ export function PhoneInput({
       aria-invalid={invalid}
       aria-describedby={describedBy}
       onChange={(event) => onChange(nextValue(value, event.target.value))}
-      // Поле системы: рамка 1px, радиус 4, ошибка красит границу — и вместе
+      // Поле системы: рамка 1px, радиус 10, ошибка красит границу — и вместе
       // с ней красный текст под полем, его ставит вызывающий экран
       // (DESIGN.md § Components, § Состояния).
       className={`w-full max-w-[10rem] tabular-nums ${field(invalid)}`}

@@ -90,3 +90,13 @@ export function warranty(months: number): string {
   if (ones >= 2 && ones <= 4) return `${months} месяца`
   return `${months} месяцев`
 }
+
+/**
+ * Счётчик символов у поля с пределом (DESIGN.md § Content, 22.09):
+ * ограничение, о котором человек узнаёт только из сообщения об ошибке, —
+ * дефект, он уже написал текст. Формат один на весь продукт: заявка,
+ * профиль мастерской, свободные строки предложения.
+ */
+export function charCounter(used: number, max: number): string {
+  return `${used} / ${max}`
+}

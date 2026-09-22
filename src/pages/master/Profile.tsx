@@ -20,7 +20,7 @@ import { Box, CheckRows, ChoiceRows } from '../../components/Choice'
 import { MasterTile } from '../../components/MasterTile'
 import { MasterShell } from '../../components/MasterShell'
 import { ServiceIcon } from '../../components/ServiceIcon'
-import { CameraIcon, ChevronIcon, CloseIcon } from '../../components/icons'
+import { CameraIcon, ChevronIcon, CloseIcon, SavedIcon, SpinnerIcon } from '../../components/icons'
 import {
   blockRow,
   blockRowDivider,
@@ -32,6 +32,8 @@ import {
   fieldLabel,
   hintText,
   link,
+  mediaLoading,
+  notice,
   panel,
   shelf,
   stepBar,
@@ -56,6 +58,7 @@ import { categories, cityName } from '../../questions/categories'
 import { doesSuggestions, serviceText } from '../../questions/services'
 import { errorText, validationUnmapped } from '../../texts/request'
 import { profilePage } from '../../texts/master'
+import { charCounter } from '../../texts/format'
 import { format as formatPhone } from '../../components/phone'
 import { hasRole, readSession } from '../../session'
 
@@ -372,6 +375,8 @@ export default function MasterProfileEdit() {
   const [saved, setSaved] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(0)
+  const [logoBusy, setLogoBusy] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const photoPicker = useRef<HTMLInputElement>(null)
   const logoPicker = useRef<HTMLInputElement>(null)
@@ -425,7 +430,7 @@ export default function MasterProfileEdit() {
   if (view.kind === 'failed') {
     return (
       <MasterShell masterName={session.master?.name}>
-        <h1 className="text-heading tracking-heading font-semibold">{profilePage.failedTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{profilePage.failedTitle}</h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{view.message}</p>
         <button
           type="button"
@@ -459,6 +464,10 @@ export default function MasterProfileEdit() {
   async function addPhotos(files: FileList | null) {
     if (files === null || files.length === 0) return
     setPhotoError(null)
+    // Сколько снимков сейчас в пути: каждый занимает своё место в сетке
+    // кольцом прогресса (§ Состояния, 22.09), иначе мебельщик не видит,
+    // что файл уже взяли, и выбирает его второй раз.
+    setPhotoBusy((n) => n + [...files].length)
     const room = PHOTOS_MAX - draft.photos.length
     const taken = [...files].slice(0, room)
     if (files.length > room) setPhotoError(profilePage.errorPhotosMany)
@@ -477,6 +486,8 @@ export default function MasterProfileEdit() {
         setSaved(false)
       } catch (caught: unknown) {
         setPhotoError(isApiError(caught) ? errorText[caught.code] : errorText.NETWORK)
+      } finally {
+        setPhotoBusy((n) => Math.max(0, n - 1))
       }
     }
   }
@@ -484,11 +495,14 @@ export default function MasterProfileEdit() {
   async function addLogo(files: FileList | null) {
     if (files === null || files[0] === undefined) return
     setPhotoError(null)
+    setLogoBusy(true)
     try {
       const photo = await api.uploadPhoto(files[0])
       set({ logo: photo.url })
     } catch (caught: unknown) {
       setPhotoError(isApiError(caught) ? errorText[caught.code] : errorText.NETWORK)
+    } finally {
+      setLogoBusy(false)
     }
   }
 
@@ -690,7 +704,9 @@ export default function MasterProfileEdit() {
     works: draft.photos.length === 0
       ? profilePage.sumEmpty
       : profilePage.sumPhotos(draft.photos.length),
-    logo: draft.logo === null ? profilePage.sumEmpty : profilePage.sumFilled,
+    // Логотип необязателен и в счёт шагов не идёт — последствием
+    // не пугаем (§ Content, 22.09).
+    logo: draft.logo === null ? profilePage.sumEmptyOptional : profilePage.sumFilled,
   }
 
   /** Открыть раздел и подвести к нему: одно действие кнопки шага. */
@@ -778,7 +794,7 @@ export default function MasterProfileEdit() {
     return (
       <MasterShell masterName={session.master?.name}>
         <p className={hintText}>{profilePage.label}</p>
-        <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
+        <h1 className="mt-xs max-w-measure-title font-display text-heading tracking-heading font-bold">
           {profilePage.title}
         </h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{profilePage.lede}</p>
@@ -876,7 +892,7 @@ export default function MasterProfileEdit() {
   return (
     <MasterShell masterName={session.master?.name}>
       <p className={hintText}>{profilePage.label}</p>
-      <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
+      <h1 className="mt-xs max-w-measure-title font-display text-heading tracking-heading font-bold">
         {profilePage.editTitle}
       </h1>
       <p className="mt-lg max-w-measure text-body tracking-body">{profilePage.lede}</p>
@@ -908,6 +924,11 @@ export default function MasterProfileEdit() {
               placeholder={profilePage.aboutPlaceholder}
               aria-invalid={errors.about !== undefined}
               className={`block w-full ${field(errors.about !== undefined)}`} />
+            {/* Предел виден заранее (§ Content, 22.09), а не в ошибке
+                после того, как текст написан. */}
+            <p className={`mt-xs text-right tabular-nums ${hintText}`}>
+              {charCounter(draft.about.length, ABOUT_MAX_CHARS)}
+            </p>
             {errors.about !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.about}</p>}
 
             <label className="mt-xl block" htmlFor="years">
@@ -1045,6 +1066,9 @@ export default function MasterProfileEdit() {
               onChange={(event) => set({ area: event.target.value })}
               aria-invalid={errors.area !== undefined}
               className={`block w-full max-w-measure ${field(errors.area !== undefined)}`} />
+            <p className={`mt-xs max-w-measure text-right tabular-nums ${hintText}`}>
+              {charCounter(draft.area.length, AREA_MAX_CHARS)}
+            </p>
             {errors.area !== undefined && <p className={`mt-xs ${errorTextClass}`}>{errors.area}</p>}
           </Part>
 
@@ -1228,6 +1252,9 @@ export default function MasterProfileEdit() {
                           set({ photos: next })
                         }}
                         className={`mt-sm block w-full ${field(false)}`} />
+                      <span className={`mt-xs block text-right tabular-nums ${hintText}`}>
+                        {charCounter((photo.caption ?? '').length, CAPTION_MAX_CHARS)}
+                      </span>
                     </label>
 
                     {/* Рисунок отмечается здесь, а не угадывается нами:
@@ -1254,6 +1281,20 @@ export default function MasterProfileEdit() {
                 ))}
               </ul>
             )}
+            {/* Снимки в пути занимают своё место сразу (§ Состояния, 22.09):
+                иначе мебельщик, выбравший пять файлов, не видит ничего
+                и жмёт «Добавить» второй раз. */}
+            {photoBusy > 0 && (
+              <ul aria-hidden className="-mx-md">
+                {Array.from({ length: photoBusy }, (_, index) => (
+                  <li key={index} className="border-t border-outline px-md py-lg">
+                    <span className={`flex size-shape-w items-center justify-center ${mediaLoading}`}>
+                      <SpinnerIcon />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             {errors.photos !== undefined && <p className={`mt-md ${errorTextClass}`}>{errors.photos}</p>}
 
             <input ref={photoPicker} type="file" multiple className="sr-only"
@@ -1271,8 +1312,13 @@ export default function MasterProfileEdit() {
           <Part id="logo" open={openParts.has('logo')} onToggle={() => togglePart('logo')}
             title={profilePage.logoLabel} hint={profilePage.logoHint}
             summary={partSummary.logo}>
-            {draft.logo !== null && (
+            {draft.logo !== null && !logoBusy && (
               <img src={draft.logo} alt="" className="h-icon-lg w-auto" />
+            )}
+            {logoBusy && (
+              <span aria-hidden className={`flex size-shape-w items-center justify-center ${mediaLoading}`}>
+                <SpinnerIcon />
+              </span>
             )}
             <input ref={logoPicker} type="file" className="sr-only"
               aria-label={profilePage.logoAdd} accept={PHOTO_MIME.join(',')}
@@ -1299,6 +1345,14 @@ export default function MasterProfileEdit() {
           {/* Главное действие в конце экрана (§ Порядок важнее полноты).
               Рядом отказ: без него из правки нет выхода, кроме как сохранить
               то, что начал менять. */}
+          {/* Плашка-уведомление: последствие до нажатия (§ Components, 22.09).
+              Сохранение здесь не черновик — карточка сразу меняется в каталоге,
+              и человек должен знать это до кнопки, а не после. */}
+          <p className={`mt-xl max-w-measure ${notice}`}>
+            <span aria-hidden className="shrink-0"><SavedIcon /></span>
+            <span>{profilePage.saveNotice}</span>
+          </p>
+
           <div className="mt-3xl flex flex-wrap items-center gap-lg">
             <button type="button" onClick={save} disabled={saving} className={buttonFilled}>
               {saving ? profilePage.saving : profilePage.save}

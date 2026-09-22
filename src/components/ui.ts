@@ -9,14 +9,11 @@
 // chip · choice-dot · choice-box · button-filled · button-text · panel ·
 // panel-nested · link из раздела Components.
 //
-// И ничего сверх ПРИМЕНЁННОГО: `badge` описан в системе, но ни на одном
-// экране пока не стоит, поэтому строки под него здесь нет. Заводить впрок
-// нельзя — неприменённая строка классов не проверяется ничем и тихо
-// расходится с файлом. Появится шильдик на карточке мебельщика — появится
-// и строка.
+// И ничего сверх ПРИМЕНЁННОГО: заводить строку классов впрок нельзя —
+// неприменённая, она не проверяется ничем и тихо расходится с файлом.
 
 /**
- * input — белый фон, граница 1px `outline`, радиус 4. Одно из двух мест
+ * input — белый фон, граница 1px `outline`, радиус 10. Одно из двух мест
  * системы, где обводка законна: она обозначает, куда можно писать.
  * Состояния меняют цвет границы, но не её толщину (§ Components).
  */
@@ -26,7 +23,7 @@ export const field = (invalid = false) =>
   'disabled:cursor-not-allowed disabled:opacity-40 ' +
   (invalid ? 'border-error' : 'border-outline hover:border-on-surface-muted')
 
-/** panel — первый уровень, радиус 8, внутренний отступ 24. */
+/** panel — первый уровень, радиус 16, внутренний отступ 24. */
 export const panel = 'rounded-md bg-surface-container p-xl'
 
 /**
@@ -42,7 +39,7 @@ export const stepPanel = 'rounded-md bg-surface-container p-lg'
  * подсказка снизу, справа точка выбора (§ Components).
  *
  * Собственного фона у невыбранной строки нет — она лежит на плашке блока.
- * Выбранная поднимается на второй уровень, получает радиус 4 и зелёную
+ * Выбранная поднимается на второй уровень, получает радиус 10 и зелёную
  * обводку. Обводка прозрачная у невыбранной, а не отсутствующая: иначе
  * появление рамки сдвигало бы строку на пиксель.
  */
@@ -130,47 +127,50 @@ export const chip = (selected: boolean) =>
     : 'border-outline bg-surface-container-high text-on-surface hover:brightness-97')
 
 /**
- * button-filled — зелёная заливка, белая надпись, радиус 4. Одна главная
- * кнопка на экран. Наведение и нажатие затемняют заливку на 8 и 12 процентов
- * (§ Состояния), поэтому brightness, а не прозрачность: снижение
+ * button-filled — заливка графитом, надпись цветом холста, радиус 10
+ * (§ Components, правка 22.09: зелёной кнопка была до того, как бренд занял
+ * площадь). Одна главная кнопка на экран. Наведение и нажатие затемняют
+ * заливку на 8 и 12 процентов (§ Состояния), поэтому brightness, а не
+ * прозрачность: снижение
  * непрозрачности на светлом холсте осветляет, а не затемняет.
  */
 export const buttonFilled =
-  'inline-flex min-h-target items-center justify-center rounded-sm bg-primary px-xl py-md ' +
-  'text-label tracking-label font-medium text-on-primary ' +
+  'inline-flex min-h-target items-center justify-center rounded-sm bg-on-surface px-xl py-md ' +
+  'text-label tracking-label font-medium text-surface ' +
   'transition-[filter,opacity] duration-100 hover:brightness-92 active:brightness-88 ' +
   'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100'
 
 /**
- * button-text — зелёная надпись без заливки, второстепенное действие рядом
+ * button-text — надпись графитом без заливки, второстепенное действие рядом
  * с главным. `gap-sm` — расстояние до иконки действия, когда она есть
  * («Добавить фото»); у кнопки с одной подписью он ничего не двигает.
  */
 export const buttonText =
   'inline-flex min-h-target items-center justify-center gap-sm rounded-sm px-sm py-sm ' +
-  'text-label tracking-label font-medium text-primary underline-offset-4 ' +
+  'text-label tracking-label font-medium text-on-surface underline-offset-4 ' +
   'transition-opacity duration-100 hover:underline ' +
   'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:no-underline'
 
 /**
  * tile — плитка витрины: карточка мастерской в сетке каталога (§ Components,
- * заведена 20.09). Радиус 12, приподнята тенью, внутренний отступ живёт
+ * заведена 20.09, пересобрана 22.09). Снимок скруглён по md, подложки
+ * и тени нет, расстояние до подписей живёт
  * на содержимом, а не на самой плитке: фото-крышка идёт во всю ширину
  * и отступа иметь не должна.
  *
- * Тень здесь — единственная в системе, и она означает «это отдельный
- * предмет, его можно взять» (§ Elevation). Наведение её не усиливает:
- * поднимать предмет выше на hover — движение ради движения; вместо этого
- * плитка слегка темнеет, как все нажимаемые поверхности.
+ * Тени и подложки у плитки нет (§ Elevation, правка 22.09): снимок держит
+ * себя сам, а серый прямоугольник вокруг делал из витрины сетку одинаковых
+ * карточек. Наведение — лёгкое затемнение, как у всех нажимаемых
+ * поверхностей.
  */
 export const tile =
-  'group flex h-full flex-col overflow-hidden rounded-lg bg-surface shadow-tile ' +
+  'group flex h-full flex-col ' +
   'transition-[filter] duration-100 hover:brightness-97 active:brightness-94 ' +
   'focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary ' +
   'focus-visible:outline-offset-2'
 
-/** tile-photo — крышка плитки: фон на время загрузки снимка. */
-export const tilePhoto = 'bg-surface-container'
+/** tile-photo — снимок плитки: скруглён по md, фон на время загрузки. */
+export const tilePhoto = 'overflow-hidden rounded-md bg-surface-container'
 
 /**
  * shelf — сетка витрины. Колонок столько, сколько поместится при заданном
@@ -188,7 +188,7 @@ export const shelf =
   '[grid-template-columns:repeat(auto-fill,minmax(var(--spacing-tile-min),1fr))] ' +
   'md:[grid-template-columns:repeat(auto-fill,minmax(var(--spacing-tile-min-wide),1fr))]'
 
-/** panel-nested — второй уровень, радиус 4, отступ 12. Глубже не вкладывать. */
+/** panel-nested — второй уровень, радиус 10, отступ 12. Глубже не вкладывать. */
 export const panelNested = 'rounded-sm bg-surface-container-high p-md'
 
 /**
@@ -206,16 +206,80 @@ export const actionBarFixed =
 /** Та же панель в боковой колонке: без фиксации, с хайрлайном сверху. */
 export const actionBarSide = 'border-t border-outline pt-lg'
 
+/**
+ * Панель витрины (§ Layout, 22.09). От `actionBarFixed` отличается одним:
+ * на широком экране она не прячется. У карточки предмета там есть боковая
+ * колонка, у витрины её нет — сетка занимает всю раму, и уводить действие
+ * некуда.
+ */
+export const actionBarShelf =
+  'fixed inset-x-0 bottom-0 z-10 border-t border-outline bg-surface px-lg py-md'
+
 
 /**
- * badge — шильдик: сливовая заливка, белая надпись, радиус 4, короткое слово
- * (§ Components). Появился здесь, когда появилось применение: отметка
- * «отвечено» в списке заявок кабинета. Слива — место акцента и никогда
- * не выбор и не действие, а отметка о прошедшем событии — ровно акцент.
+ * badge — бейдж поверх снимка: графит при 82% непрозрачности, надпись цветом
+ * холста, радиус 10 (§ Components, правка 22.09). Сливовым он был до того,
+ * как слива ушла из системы. Непрозрачность, а не сплошная заливка: под
+ * бейджем лежит фотография, и полностью гасить её кусок незачем — снимок
+ * здесь главное доказательство, что мастерская настоящая.
  */
 export const badge =
-  'inline-flex items-center rounded-sm bg-accent px-sm py-xs ' +
-  'text-label tracking-label font-medium text-on-accent'
+  'inline-flex items-center rounded-sm bg-on-surface px-sm py-xs ' +
+  'text-label tracking-label font-medium text-surface'
+
+/** Тот же бейдж поверх снимка: 82% непрозрачности, чтобы фотография читалась. */
+export const badgeOnPhoto =
+  'inline-flex items-center rounded-sm bg-on-surface/82 px-sm py-xs ' +
+  'text-label tracking-label font-medium text-surface'
+
+/**
+ * notice — плашка-уведомление (§ Components, 22.09). Последствие действия,
+ * показанное ДО нажатия: стоит перед главной кнопкой, не после неё.
+ * Говорит о том, что произойдёт, а не о том, как устроен продукт.
+ * Красным не красится: это не ошибка.
+ */
+export const notice =
+  'flex items-start gap-md rounded-md bg-surface-container p-lg ' +
+  'text-body-sm tracking-body-sm text-on-surface'
+
+/**
+ * choice-card — карточка выбора: вариант, который объясняется рисунком
+ * (§ Components, 22.09). Границы применимости — три условия сразу: вариантов
+ * не больше четырёх, у каждого свой чертёж, подпись не длиннее двух слов.
+ * Не проходит хотя бы одно — это строки, а не карточки.
+ */
+export const choiceCard = (selected: boolean) =>
+  'flex min-h-target cursor-pointer flex-col items-center gap-sm rounded-md border p-md ' +
+  'text-label tracking-label font-medium transition-colors duration-100 ' +
+  'has-[:focus-visible]:outline has-[:focus-visible]:outline-2 ' +
+  'has-[:focus-visible]:outline-primary has-[:focus-visible]:outline-offset-2 ' +
+  (selected
+    ? 'border-primary bg-surface-container-high text-on-surface'
+    : 'border-outline bg-surface text-on-surface hover:brightness-97')
+
+/**
+ * media-loading — предмет, который ждёт сети, занимает своё место сразу
+ * (§ Состояния, 22.09). Не выключенная кнопка рядом и не строка под блоком:
+ * человек должен видеть, что вещь уже в списке, иначе добавит её дважды.
+ */
+export const mediaLoading =
+  'flex items-center justify-center rounded-md bg-surface-container text-on-surface-muted'
+
+/**
+ * callout — блок-призыв (§ Components, 22.09). Тёмный прямоугольник во всю
+ * ширину: обещание, условие и одно действие. Один на экран — второе такое же
+ * пятно гасит первое (§ «Выделяется то, что одно»).
+ */
+export const callout = 'rounded-lg bg-on-surface p-2xl text-surface'
+
+/**
+ * callout-button — единственное место, где кнопка красится брендом: внутри
+ * тёмного блока графит слился бы с фоном.
+ */
+export const calloutButton =
+  'inline-flex min-h-target items-center justify-center rounded-sm bg-brand px-xl py-md ' +
+  'text-label tracking-label font-medium text-on-brand ' +
+  'transition-[filter] duration-100 hover:brightness-92 active:brightness-88'
 
 /**
  * Полоса шагов — дорожка и её пройденная часть (§ Components, 21.09).

@@ -11,7 +11,7 @@
 // подсказка на 15px, отметка справа. Круг означает «одно из», квадрат
 // с галочкой — «сколько нужно».
 import { CheckMark } from './icons'
-import { blockRow, blockRowDivider, choiceBox, choiceDot, hintText } from './ui'
+import { blockRow, blockRowDivider, choiceBox, choiceCard, choiceDot, hintText } from './ui'
 
 export interface ChoiceRow<T extends string> {
   id: T
@@ -113,5 +113,41 @@ export function ChoiceRows<T extends string>({ name, options, value, onPick, ico
         </div>
       ))}
     </Rows>
+  )
+}
+
+/**
+ * Карточки выбора — вариант, который объясняется рисунком (§ Components,
+ * 22.09). Три условия применимости проверяются глазами при сборке экрана:
+ * вариантов не больше четырёх, у каждого свой чертёж, подпись не длиннее
+ * двух слов. Не проходит хотя бы одно — берутся `ChoiceRows`.
+ *
+ * Подсказка варианта здесь не показывается: в карточке её негде поставить,
+ * не разорвав ряд, а объясняет вариант сам чертёж. Диктору она остаётся —
+ * уходит в описание метки.
+ */
+export function ChoiceCards<T extends string>({ name, options, value, onPick, drawing }: {
+  name: string
+  options: readonly ChoiceRow<T>[]
+  value: T | null
+  onPick: (id: T) => void
+  drawing: (id: T) => React.ReactNode
+}) {
+  return (
+    /* Четыре варианта встают по два в ряд, три — по три: ряд из четырёх
+       на 375 даёт 74 пикселя на карточку, и чертёж в ней перестаёт читаться. */
+    <div className={`grid gap-sm ${options.length === 4 ? 'grid-cols-2' : 'grid-cols-3'}`}>
+      {options.map((option) => (
+        <label key={option.id} className={choiceCard(value === option.id)}>
+          <input type="radio" name={name} value={option.id} className="sr-only"
+            aria-label={option.hint !== undefined && option.hint !== ''
+              ? `${option.label}. ${option.hint}`
+              : option.label}
+            checked={value === option.id} onChange={() => onPick(option.id)} />
+          {drawing(option.id)}
+          <span className="text-center">{option.label}</span>
+        </label>
+      ))}
+    </div>
   )
 }

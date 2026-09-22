@@ -74,7 +74,7 @@ export default function LostLink() {
     return (
       <PageShell>
         <p className={hintText}>{lostLinkPage.label}</p>
-        <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
+        <h1 className="mt-xs max-w-measure-title font-display text-heading tracking-heading font-bold">
           {lostLinkPage.sentTitle}
         </h1>
         <p className="mt-lg max-w-measure text-body tracking-body">
@@ -119,7 +119,7 @@ export default function LostLink() {
   return (
     <PageShell>
       <p className={hintText}>{lostLinkPage.label}</p>
-      <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
+      <h1 className="mt-xs max-w-measure-title font-display text-heading tracking-heading font-bold">
         {lostLinkPage.title}
       </h1>
       <p className="mt-lg max-w-measure text-body tracking-body">{lostLinkPage.lede}</p>

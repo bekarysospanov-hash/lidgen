@@ -334,3 +334,55 @@ export function FiltersIcon() {
     </svg>
   )
 }
+
+/**
+ * Веер — знак плашки-уведомления о том, что заявка уходит нескольким
+ * мастерским (§ Components, 22.09). Три расходящиеся линии от одной точки:
+ * рисунок повторяет то, о чём говорит текст, и без подписи не живёт —
+ * стоит рядом с ней всегда.
+ */
+export function FanIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5" cy="12" r="2" />
+      <path d="M7 12h3.5M10.5 12l5-5M10.5 12l5 5" />
+      <circle cx="18" cy="6" r="2" />
+      <circle cx="18" cy="12" r="2" />
+      <circle cx="18" cy="18" r="2" />
+    </svg>
+  )
+}
+
+/**
+ * Кольцо прогресса — предмет ждёт сети (§ Состояния, 22.09). Вращение
+ * разрешено: это движение состояния, а не украшение, и идёт оно ровно
+ * столько, сколько длится загрузка. Крутится `transform`, как требует
+ * § Layout, — раскладка не пересчитывается.
+ */
+export function SpinnerIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true"
+      className="size-icon shrink-0 motion-safe:animate-spin"
+      fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <circle cx="12" cy="12" r="9" opacity="0.3" />
+      <path d="M12 3a9 9 0 0 1 9 9" />
+    </svg>
+  )
+}
+
+/**
+ * Замок — знак плашки о том, что заявка уже сохранена (§ Components, 22.09).
+ * Без подписи не живёт: стоит рядом с ней всегда.
+ */
+export function SavedIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="size-icon-sm shrink-0"
+      fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="10" width="16" height="10" rx="2" />
+      <path d="M8 10V7.5a4 4 0 0 1 8 0V10" />
+    </svg>
+  )
+}

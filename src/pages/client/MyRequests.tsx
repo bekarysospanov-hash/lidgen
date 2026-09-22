@@ -107,7 +107,7 @@ export default function MyRequests() {
   if (view.kind === 'failed') {
     return (
       <PageShell>
-        <h1 className="text-heading tracking-heading font-semibold">{myRequestsPage.failedTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{myRequestsPage.failedTitle}</h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{view.message}</p>
         <button type="button" className={`mt-xl ${buttonFilled}`}
           onClick={() => {
@@ -125,7 +125,7 @@ export default function MyRequests() {
       <div className="flex flex-wrap items-baseline justify-between gap-x-lg gap-y-sm">
         <span>
           <span className={`block ${hintText}`}>{myRequestsPage.label}</span>
-          <h1 className="mt-xs text-heading tracking-heading font-semibold">
+          <h1 className="mt-xs font-display text-heading tracking-heading font-bold">
             {myRequestsPage.title}
           </h1>
         </span>

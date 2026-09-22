@@ -2,13 +2,14 @@
 // роутом и не модальным окном: модальных окон в системе нет (DESIGN.md §
 // Layout). Наружу отдаёт готовый RequestConfirmed — что с ним делать,
 // решает экран. Ходит только через api.* (CLAUDE.md).
+import { SavedIcon } from './icons'
 import { useEffect, useState } from 'react'
 import { api } from '../api/client'
 import { isApiError } from '../api/errors'
 import type { OtpSent, RequestConfirmed } from '../contract'
 import { probeText } from '../texts/probe'
 import { errorText, otpDeadEnd, otpStep } from '../texts/request'
-import { buttonFilled, buttonText, errorTextClass, field, fieldLabel, hintText } from './ui'
+import { buttonFilled, buttonText, errorTextClass, field, fieldLabel, hintText, notice } from './ui'
 
 /** Номер показываем, но не целиком: он уже подтверждается, а не вводится. */
 function maskPhone(phone: string): string {
@@ -132,6 +133,15 @@ export function OtpConfirm({ requestId, phone, otp, onConfirmed, onRestart }: Ot
       <h2 className="text-subheading tracking-subheading font-medium">{otpStep.title}</h2>
       <p className={`mt-sm max-w-measure ${hintText}`}>
         {otpStep.lede} {maskPhone(phone)}
+      </p>
+
+      {/* Плашка-уведомление (§ Components, 22.09). Отвал на коде считается
+          отдельно, и страх у него один — «сейчас всё потеряется». Заявка
+          к этому моменту создана: сказать об этом дешевле, чем потерять
+          человека на последнем шаге. */}
+      <p className={`mt-lg max-w-measure ${notice}`}>
+        <span aria-hidden className="shrink-0"><SavedIcon /></span>
+        <span>{otpStep.savedNotice}</span>
       </p>
 
       <form onSubmit={submit} className="mt-lg">

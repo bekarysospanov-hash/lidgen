@@ -2,9 +2,10 @@
 // (DESIGN.md § Layout, § Components). Вынесена из экрана заявки, чтобы
 // страницы сквозного прохода не расходились вёрсткой.
 //
-// Липкой шапки нет и цвет здесь площади не занимает: в системе
-// «Мастерская — присутствие» высота передаётся тоном поверхности, а оболочка
-// остаётся холстом — выделяться должно содержимое, а не рама вокруг него.
+// Шапка залита брендом (§ Components, правка 22.09): продукт узнаётся
+// полосой цвета сверху, как узнаются площадки, которыми наш человек
+// пользуется каждый день. Липкой она при этом не становится — прилипнув,
+// отняла бы у телефона треть экрана.
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { readSession } from '../session'
@@ -20,7 +21,7 @@ import { link } from './ui'
  */
 const brandLink =
   'flex min-h-target items-center gap-sm whitespace-nowrap text-subheading tracking-subheading ' +
-  'font-medium text-on-surface underline-offset-4 hover:underline'
+  'font-medium text-on-brand underline-offset-4 hover:underline'
 
 /**
  * Пункты навигации — переходы, то есть ссылки: синие, подчёркнуты всегда.
@@ -32,13 +33,19 @@ const brandLink =
  * Третий пункт шапки — со словом, а не иконкой. Ступень label, как у кнопки:
  * это вход, а не переход по разделу.
  */
+/**
+ * В залитой брендом шапке пункты белые, а не синие: синяя ссылка на
+ * коричневом не читается вовсе. Правило «ссылка синяя с подчёркиванием»
+ * работает на холсте; здесь его держит подчёркивание, а цвет задан полосой
+ * (§ Components, «шапка бренда»).
+ */
 const navWord =
   'flex min-h-target items-center rounded-sm px-sm text-label tracking-label font-medium ' +
-  'text-link underline underline-offset-4 transition-colors duration-100 hover:bg-surface-container'
+  'text-on-brand underline underline-offset-4 transition-[filter] duration-100 hover:brightness-92'
 
 const navLink =
-  'flex size-target items-center justify-center rounded-sm text-link ' +
-  'transition-colors duration-100 hover:bg-surface-container'
+  'flex size-target items-center justify-center rounded-sm text-on-brand ' +
+  'transition-[filter] duration-100 hover:brightness-92'
 
 /**
  * Оболочка знает три раскладки (§ Layout, правка 20.09).
@@ -70,7 +77,8 @@ export function PageShell({ children, layout = 'document', aside }: {
       {/* Link, а не <a>: полная перезагрузка страницы обнулила бы заявку. */}
       {/* Знак слева, переходы прижаты вправо: посередине шапки им делать
           нечего, а у правого края они попадают под большой палец. */}
-      <header className="mx-auto flex w-full max-w-shelf flex-wrap items-baseline justify-between gap-x-xl gap-y-sm px-lg pt-lg pb-xl">
+      <header className="bg-brand">
+      <div className="mx-auto flex w-full max-w-shelf flex-wrap items-center justify-between gap-x-xl gap-y-sm px-lg py-md">
         {/* Знак ведёт на главную, а главная с 20.09 — каталог мастерских.
             «Заявка» по-прежнему ведёт на саму форму: со скелета до формы
             надо доходить руками (US-03). */}
@@ -101,6 +109,7 @@ export function PageShell({ children, layout = 'document', aside }: {
             {session === null ? shell.nav.signIn : shell.nav.cabinet}
           </Link>
         </nav>
+      </div>
       </header>
 
       {/* Страница — до 1440 (рама, шапка и подвал), содержимое — колонка 720
@@ -111,7 +120,7 @@ export function PageShell({ children, layout = 'document', aside }: {
         /* Колонка содержимого и боковая колонка действий. На телефоне
            колонка одна, панель уходит вниз экрана (§ Layout). Рама здесь
            шире 720: в неё помещаются обе колонки и зазор между ними. */
-        <main className="mx-auto w-full max-w-shelf flex-1 px-lg">
+        <main className="mx-auto w-full max-w-shelf flex-1 px-lg pt-xl">
           <div className="flex flex-col gap-2xl lg:flex-row lg:items-start lg:justify-center">
             <div className="w-full min-w-0 max-w-column">{children}</div>
             {aside !== undefined && (
@@ -125,7 +134,7 @@ export function PageShell({ children, layout = 'document', aside }: {
           </div>
         </main>
       ) : (
-        <main className={`mx-auto w-full flex-1 px-lg ${layout === 'shelf' ? 'max-w-shelf' : 'max-w-column'}`}>
+        <main className={`mx-auto w-full flex-1 px-lg pt-xl ${layout === 'shelf' ? 'max-w-shelf' : 'max-w-column'}`}>
           {children}
         </main>
       )}
@@ -141,10 +150,20 @@ export function PageShell({ children, layout = 'document', aside }: {
           {/* min-h-target: ссылка подвала стоит сама по себе, а не внутри
               абзаца, и исключение § Размера цели на неё не распространяется
               — 23 пикселя высоты мимо правила о 44. */}
-          <Link to="/promo"
-            className={`ml-auto inline-flex min-h-target items-center text-body-sm tracking-body-sm ${link}`}>
-            {shell.howItWorks}
-          </Link>
+          <span className="ml-auto flex flex-wrap items-center gap-x-lg">
+            <Link to="/promo"
+              className={`inline-flex min-h-target items-center text-body-sm tracking-body-sm ${link}`}>
+              {shell.howItWorks}
+            </Link>
+            {/* Вход мебельщика стоит в подвале, а не в шапке: шапка
+                принадлежит заказчице, и выбирать «кто вы» ей не из чего.
+                Дверь одна — ссылка ведёт на тот же /login, роль решает
+                сервер по номеру (контракт §5в). */}
+            <Link to="/login"
+              className={`inline-flex min-h-target items-center text-body-sm tracking-body-sm ${link}`}>
+              {shell.masterEntry}
+            </Link>
+          </span>
         </div>
       </footer>
     </div>

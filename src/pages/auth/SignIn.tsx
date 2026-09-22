@@ -181,7 +181,7 @@ export default function SignIn() {
   if (stage.kind === 'notMaster' || (session !== null && asMaster)) {
     return (
       <PageShell>
-        <h1 className="text-heading tracking-heading font-semibold">{loginPage.notMasterTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{loginPage.notMasterTitle}</h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{loginPage.notMasterBody}</p>
         {/* Тупик обязан говорить, что подходит: без этого на пробе человек
             упирается в «нет в списке» и не знает, каким номером войти. */}
@@ -201,7 +201,7 @@ export default function SignIn() {
   if (stage.kind === 'code') {
     return (
       <PageShell>
-        <h1 className="text-heading tracking-heading font-semibold">{loginPage.codeTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{loginPage.codeTitle}</h1>
         <p className={`mt-sm ${hintText}`}>{loginPage.codeSent(format(digits))}</p>
 
         <label className="mt-xl block" htmlFor="code">
@@ -250,7 +250,7 @@ export default function SignIn() {
 
   return (
     <PageShell>
-      <h1 className="text-heading tracking-heading font-semibold">{loginPage.title}</h1>
+      <h1 className="font-display text-heading tracking-heading font-bold">{loginPage.title}</h1>
       <p className="mt-lg max-w-measure text-body tracking-body">{loginPage.body}</p>
 
       <label className="mt-xl block" htmlFor="phone">

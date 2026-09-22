@@ -11,7 +11,7 @@ import { isApiError } from '../../api/errors'
 import { MasterShell } from '../../components/MasterShell'
 import { show as showPhone } from '../../components/phone'
 import { CategoryIcon } from '../../components/CategoryIcon'
-import { CheckMark } from '../../components/icons'
+import { CheckMark, SavedIcon } from '../../components/icons'
 import {
   badge,
   blockRow,
@@ -25,6 +25,7 @@ import {
   fieldLabel,
   hintText,
   link,
+  notice,
   panel,
   panelNested,
   stepPanel,
@@ -64,8 +65,12 @@ import {
   metersUnit,
 } from '../../questions/categories'
 import { errorText } from '../../texts/request'
+import { charCounter } from '../../texts/format'
 import { quotePage, requestsPage, routedAtLabel } from '../../texts/master'
 import { clearSession, hasRole, readSession } from '../../session'
+
+/** Предел свободных строк предложения — то же число, что в контракте (`QuoteText`). */
+const QUOTE_TEXT_MAX = 2000
 
 type View =
   | { kind: 'loading' }
@@ -124,7 +129,7 @@ const digits = (value: string, max = MAX_PRICE_DIGITS): string =>
 const grouped = (value: string): string => (value === '' ? '' : Number(value).toLocaleString('ru-RU').replace(/ /g, ' '))
 
 function Title({ children }: { children: React.ReactNode }) {
-  return <h1 className="text-heading tracking-heading font-semibold">{children}</h1>
+  return <h1 className="font-display text-heading tracking-heading font-bold">{children}</h1>
 }
 
 /**
@@ -538,6 +543,19 @@ export default function RequestCard() {
       )
   }
 
+  /**
+   * Разброс вилки в процентах от нижней границы — то же число, что увидит
+   * заказчица, только названное словом. Считается на месте: в контракт
+   * оно не идёт, это подсказка автору, а не часть предложения.
+   */
+  const spread = (() => {
+    const from = Number(draft.priceFrom)
+    const to = Number(draft.priceTo)
+    if (draft.priceFrom === '' || draft.priceTo === '') return null
+    if (!Number.isFinite(from) || !Number.isFinite(to) || from <= 0 || to < from) return null
+    return Math.round(((to - from) / from) * 100)
+  })()
+
   return (
     <MasterShell masterName={session.master?.name}>
       <p>
@@ -559,9 +577,9 @@ export default function RequestCard() {
             лежит ниже и в первый экран не попадает. */}
         {request.myQuote && <span className={badge}>{requestsPage.answeredBadge}</span>}
       </div>
-      {/* Этап — приглушённой строкой, а не шильдиком: слива уже занята
-          отметкой «Отвечено», и второй акцент погасил бы первый
-          (DESIGN.md § Выделяется то, что одно). */}
+      {/* Этап — приглушённой строкой, а не вторым бейджем: бейдж на этой
+          строке уже занят отметкой «Отвечено», а второй акцент погасил бы
+          первый (DESIGN.md § Выделяется то, что одно). */}
       {request.readiness && (
         <p className={`mt-xs ${hintText}`}>
           {request.readiness === 'ready' ? quotePage.readinessReady : quotePage.readinessPlanning}
@@ -815,6 +833,10 @@ export default function RequestCard() {
                 className={`mt-sm block w-full ${field(false)}`}
               />
             </label>
+            {/* Предел виден заранее (§ Content, 22.09). */}
+            <p className={`mt-xs text-right tabular-nums ${hintText}`}>
+              {charCounter(draft.extra.length, QUOTE_TEXT_MAX)}
+            </p>
             <p className={`mt-xs ${hintText}`}>{compositionAsk.extraHint}</p>
 
             {/* Обязательное поле, и это главное в затее: замер, доставка
@@ -834,6 +856,9 @@ export default function RequestCard() {
                 className={`mt-sm block w-full ${field(errors.excluded !== undefined)}`}
               />
             </label>
+            <p className={`mt-xs text-right tabular-nums ${hintText}`}>
+              {charCounter(draft.excluded.length, QUOTE_TEXT_MAX)}
+            </p>
             {errors.excluded ? (
               <p className={`mt-xs ${errorTextClass}`}>{errors.excluded}</p>
             ) : (
@@ -875,6 +900,15 @@ export default function RequestCard() {
               ) : (
                 <p className={`mt-xs ${hintText}`}>{quotePage.priceHint}</p>
               )}
+              {/* Ввод, который прочитает другая сторона, показывается автору
+                  её глазами (§ Presence, 22.09). Строка появляется, только
+                  когда обе границы названы: считать разброс по половине
+                  вилки нечего. */}
+              {spread !== null && (
+                <p className={`mt-xs tabular-nums ${hintText}`} role="status">
+                  {spread === 0 ? quotePage.priceSpreadFlat : quotePage.priceSpread(spread)}
+                </p>
+              )}
             </fieldset>
 
             <label className="mt-xl block" htmlFor="leadTime">
@@ -898,7 +932,15 @@ export default function RequestCard() {
             )}
           </div>
 
-          <div className="mt-xl flex flex-wrap items-center gap-md">
+          {/* Плашка-уведомление: последствие до нажатия (§ Components, 22.09).
+              Отправленное КП заказчица видит сразу, и одна заявка — один
+              ответ; сказать об этом надо перед кнопкой, а не после. */}
+          <p className={`mt-xl max-w-measure ${notice}`}>
+            <span aria-hidden className="shrink-0"><SavedIcon /></span>
+            <span>{revising ? quotePage.reviseNotice : quotePage.sendNotice}</span>
+          </p>
+
+          <div className="mt-lg flex flex-wrap items-center gap-md">
             <button type="button" onClick={send} disabled={sending} className={buttonFilled}>
               {sending
                 ? quotePage.submitting

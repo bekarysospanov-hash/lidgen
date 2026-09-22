@@ -4,8 +4,8 @@ import { api } from '../../api/client'
 import { requestSource, track } from '../../analytics'
 import { isApiError } from '../../api/errors'
 import { CategoryIcon } from '../../components/CategoryIcon'
-import { CheckRows, ChoiceRows, Dot, Rows } from '../../components/Choice'
-import { CameraIcon, CloseIcon } from '../../components/icons'
+import { CheckRows, ChoiceCards, ChoiceRows, Dot, Rows } from '../../components/Choice'
+import { CameraIcon, CloseIcon, FanIcon, SpinnerIcon } from '../../components/icons'
 import { KitchenShape } from '../../components/KitchenShape'
 import { WardrobeDoors } from '../../components/WardrobeDoors'
 import { OtpConfirm } from '../../components/OtpConfirm'
@@ -21,6 +21,8 @@ import {
   fieldLabel,
   hintText,
   link,
+  mediaLoading,
+  notice,
   panel,
   stepPanel,
 } from '../../components/ui'
@@ -53,6 +55,7 @@ import type {
   WardrobePlacement,
 } from '../../contract'
 import {
+  DESCRIPTION_MAX,
   applianceList as applianceAsk,
   bathroomBasin as basinAsk,
   bathroomMount as mountAsk,
@@ -697,16 +700,15 @@ export default function RequestForm() {
       {/* Шапка экрана: надстрочник, заголовок, лид. Надстрочник называет
           место — человек приходит по ссылке из рекламы и должен за секунду
           понять, куда попал; заголовок отвечает «что от меня хотят», лид
-          снимает главный страх «я не разбираюсь в мебели». Три ступени
-          кегля вместо двух дают шапке вес, которого не было у голого текста. */}
-      {/* Шапка экрана: надстрочник, заголовок, лид. Плашки здесь нет — она
-          обязана нести смысл «это одно целое», а заголовок с лидом и так
-          читаются как целое (DESIGN.md § Elevation). Нижний отступ равен
-          расстоянию между блоками формы: шапка встаёт в общий ритм, а не
-          отделяется от него провалом. */}
+          снимает главный страх «я не разбираюсь в мебели».
+
+          Плашки здесь нет — она обязана нести смысл «это одно целое»,
+          а заголовок с лидом и так читаются как целое (§ Elevation). Нижний
+          отступ равен расстоянию между блоками формы: шапка встаёт в общий
+          ритм, а не отделяется от него провалом. */}
       <header className="pt-sm pb-2xl">
         <p className={hintText}>{screen.eyebrow}</p>
-        <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold text-balance">
+        <h1 className="mt-xs max-w-measure-title font-display text-heading tracking-heading font-bold text-balance">
           {screen.title}
         </h1>
         {stage === 'form' && (
@@ -829,11 +831,13 @@ export default function RequestForm() {
               <>
                 <Section>
                   <Ask title={kitchenShape.question} hint={kitchenShape.hint}>
-                    {/* Чертёж занимает место иконки и встаёт в ту же колонку,
-                        что иконки категорий: одна вертикаль на всю форму
-                        (§ Do — колонка иконок и есть каркас блока). */}
-                    <ChoiceRows name="shape" options={kitchenShape.options} value={shape}
-                      icon={(id) => <KitchenShape id={id} />}
+                    {/* Карточки, а не строки (§ Components, 22.09): планировки
+                        сравнивают между собой, и в столбик сравнение идёт
+                        по памяти. Три условия применимости выполнены:
+                        вариантов четыре, у каждого свой чертёж, подписи
+                        не длиннее двух слов. */}
+                    <ChoiceCards name="shape" options={kitchenShape.options} value={shape}
+                      drawing={(id) => <KitchenShape id={id} />}
                       onPick={(id) => { setShape(id); touched() }} />
                   </Ask>
                 </Section>
@@ -922,8 +926,12 @@ export default function RequestForm() {
               <>
                 <Section>
                   <Ask title={wardrobeDoors.question} hint={wardrobeDoors.hint}>
-                    <ChoiceRows name="doors" options={wardrobeDoors.options} value={doors}
-                      icon={(id) => <WardrobeDoors id={id} />}
+                    {/* Карточки, как у форм кухни (§ Components, 22.09):
+                        двери тоже выбирают, сравнивая рисунки между собой.
+                        Условия применимости выполнены — три варианта,
+                        у каждого свой чертёж, подписи в одно-два слова. */}
+                    <ChoiceCards name="doors" options={wardrobeDoors.options} value={doors}
+                      drawing={(id) => <WardrobeDoors id={id} />}
                       onPick={(id) => { setDoors(id); touched() }} />
                   </Ask>
                 </Section>
@@ -1029,6 +1037,13 @@ export default function RequestForm() {
                   aria-describedby="description-note"
                   onChange={(e) => { setText(e.target.value); setErrors({ ...errors, description: undefined }); touched() }}
                   className={`block w-full max-w-measure resize-y ${field(Boolean(errors.description))}`} />
+                {/* Предел виден заранее (§ Content, 22.09): узнать о нём
+                    из сообщения об ошибке — значит узнать постфактум, когда
+                    текст уже написан. Число справа, у правого края поля,
+                    а не под ним: так оно принадлежит полю, а не подсказке. */}
+                <p className={`mt-xs max-w-measure text-right tabular-nums ${hintText}`}>
+                  {descriptionAsk.counter(text.length, DESCRIPTION_MAX)}
+                </p>
                 <Note id="description-note" error={errors.description} />
               </Ask>
             </Section>
@@ -1049,7 +1064,7 @@ export default function RequestForm() {
                 просим настойчиво, но отправку оно не держит. */}
             <Section>
               <Ask title={photosAsk.question} hint={photosAsk.hint}>
-                {photoList.length > 0 && (
+                {(photoList.length > 0 || photoBusy) && (
                   <ul className="mb-lg grid grid-cols-3 gap-sm sm:grid-cols-5">
                     {photoList.map((photo) => (
                       <li key={photo.id} className="relative">
@@ -1067,6 +1082,14 @@ export default function RequestForm() {
                         </button>
                       </li>
                     ))}
+                    {/* Предмет, который ждёт сети, занимает место сразу
+                        (§ Состояния, 22.09): иначе человек не видит, что
+                        снимок уже в списке, и добавляет его второй раз. */}
+                    {photoBusy && (
+                      <li aria-hidden className={`aspect-square ${mediaLoading}`}>
+                        <SpinnerIcon />
+                      </li>
+                    )}
                   </ul>
                 )}
 
@@ -1182,9 +1205,18 @@ export default function RequestForm() {
                 <Note id="consent-note" error={errors.consent} />
               </div>
 
+              {/* Плашка-уведомление: последствие действия, показанное до
+                  нажатия (§ Components, 22.09). Место назначено § Порядком —
+                  предупреждение о том, что заявка уйдёт нескольким, стоит
+                  перед кнопкой, а не после. */}
+              <p className={`mt-xl max-w-measure ${notice}`}>
+                <span aria-hidden className="shrink-0"><FanIcon /></span>
+                <span>{screen.fanNotice}</span>
+              </p>
+
               {/* Кнопка стоит на холсте, а не внутри плашки: главное действие
                   экрана не принадлежит сводке, оно принадлежит странице. */}
-              <div className="mt-xl">
+              <div className="mt-lg">
                 <button type="submit" disabled={busy || cooldown > 0}
                   className={`whitespace-nowrap ${buttonFilled}`}>
                   {busy

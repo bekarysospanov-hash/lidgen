@@ -13,7 +13,7 @@ import { cityName } from '../questions/categories'
 import { serviceText } from '../questions/services'
 import { leadTime } from '../texts/format'
 import { mastersPage } from '../texts/masters'
-import { badge, hintText, tile, tilePhoto } from './ui'
+import { badgeOnPhoto, hintText, tile, tilePhoto } from './ui'
 
 /**
  * Метка на плитке одна, а не две. На 163 пикселях вторая уходит на свою
@@ -32,22 +32,22 @@ export function MasterTile({ master }: { master: MasterCardPublic }) {
 
   return (
     <Link to={`/masters/${master.id}`} className={tile}>
-      {/* Фото-крышка: скруглена не она, а плитка — снимок обрезан по её
-          границе сверху (§ Shapes). Квадрат, а не 4:3: в двух колонках
+      {/* Снимок сам и есть плитка (§ Shapes, правка 22.09): подложки под
+          ним нет, скругление по md. Квадрат, а не 4:3: в двух колонках
           он даёт больше предмета на той же высоте столбца. */}
-      <span className={`relative block aspect-square w-full overflow-hidden rounded-t-lg ${tilePhoto}`}>
+      <span className={`relative block aspect-square w-full ${tilePhoto}`}>
         {cover !== undefined && (
           <img src={cover.url} alt={cover.caption ?? ''}
             className="h-full w-full object-cover" />
         )}
         {showBadge && (
-          <span className={`absolute top-sm left-sm ${badge}`}>
+          <span className={`absolute top-sm left-sm ${badgeOnPhoto}`}>
             {serviceText(BADGE_SERVICE).label}
           </span>
         )}
       </span>
 
-      <span className="flex flex-1 flex-col p-md">
+      <span className="mt-md flex flex-1 flex-col">
         {/* Имя — ступень body с весом, а не subheading: в двух колонках
             22 пикселя ломают название на три строки. */}
         <span className="block text-body tracking-body font-medium">{master.name}</span>

@@ -7,13 +7,22 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { shell } from '../texts/shell'
 import { masterShell } from '../texts/master'
 import { BrandMark } from './icons'
-import { buttonText, hintText, link } from './ui'
+import { hintText, link } from './ui'
 import { api } from '../api/client'
 import { clearSession, readSession } from '../session'
 
 const brandLink =
   'flex min-h-target items-center gap-sm whitespace-nowrap text-subheading tracking-subheading ' +
-  'font-medium text-on-surface underline-offset-4 hover:underline'
+  'font-medium text-on-brand underline-offset-4 hover:underline'
+
+/**
+ * Выход стоит в залитой брендом полосе, и надпись там белая: графит
+ * на коричневом не читается (§ Components, «шапка бренда», 22.09).
+ */
+const signOutOnBrand =
+  'inline-flex min-h-target items-center justify-center rounded-sm px-sm ' +
+  'text-label tracking-label font-medium text-on-brand underline underline-offset-4 ' +
+  'transition-[filter] duration-100 hover:brightness-92'
 
 /**
  * Пункт кабинета. Тот, на котором стоим, — не ссылка, а приглушённая
@@ -59,8 +68,12 @@ export function MasterShell({
           ломались каждое на две строки, и шапка превращалась в четыре
           обрывка, стоящих по базовой линии кто где. Верхняя полка — кто
           и откуда вышел, нижняя — куда идти. */}
-      <header className="mx-auto w-full max-w-shelf px-lg pt-lg pb-xl">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-lg gap-y-sm">
+      <header>
+      {/* Верхняя полка залита брендом — та же, что в публичной зоне
+          (§ Components, 22.09): мебельщик и заказчица ходят по одному
+          продукту, и полоса цвета у них общая. */}
+      <div className="bg-brand">
+        <div className="mx-auto flex w-full max-w-shelf flex-wrap items-center justify-between gap-x-lg gap-y-sm px-lg py-md">
           {/* Знак ведёт на главную проекта, как и в публичной зоне: из кабинета
               иначе нет выхода вовсе. */}
           <Link to="/" className={brandLink}>
@@ -72,7 +85,7 @@ export function MasterShell({
           {signedIn && (
             <button
               type="button"
-              className={buttonText}
+              className={signOutOnBrand}
               onClick={() => {
                 // Отзыв на сервере, а не только очистка вкладки (§5в):
                 // иначе токен остаётся действующим ключом до конца срока,
@@ -87,12 +100,13 @@ export function MasterShell({
             </button>
           )}
         </div>
+      </div>
 
         {/* Нижняя полка: два места кабинета и имя мастерской справа.
             Имя — не украшение: у одного телефона бывает две мастерские,
             и Марат должен видеть, под какой он отвечает. */}
         {signedIn && (
-          <div className="mt-sm flex flex-wrap items-center justify-between gap-x-xl gap-y-xs border-t border-outline">
+          <div className="mx-auto mt-sm flex w-full max-w-shelf flex-wrap items-center justify-between gap-x-xl gap-y-xs border-b border-outline px-lg pb-xs">
             <nav className="flex items-center gap-xl">
               <AreaLink to="/master/requests" current={pathname.startsWith('/master/requests')}>
                 {masterShell.requests}

@@ -18,6 +18,18 @@ import { newId } from './store'
 import bedroom from '../../assets/probe/bedroom.jpg'
 import cabinet from '../../assets/probe/cabinet.jpg'
 import kitchen from '../../assets/probe/kitchen.jpg'
+// PROBE: восемь снимков заведены 22.09 под проверку витрины на полном
+// каталоге — до этого карточек было три, и сетка проверялась на трёх
+// плитках. Свободная лицензия Unsplash, происхождение в README папки.
+// Снимаются вместе с остальной оболочкой по грепу PROBE:.
+import probeKitchen1 from '../../assets/probe/probe-kitchen-1.jpg'
+import probeKitchen2 from '../../assets/probe/probe-kitchen-2.jpg'
+import probeKitchen3 from '../../assets/probe/probe-kitchen-3.jpg'
+import probeKitchen4 from '../../assets/probe/probe-kitchen-4.jpg'
+import probeKitchen5 from '../../assets/probe/probe-kitchen-5.jpg'
+import probeShelves1 from '../../assets/probe/probe-shelves-1.jpg'
+import probeWardrobe1 from '../../assets/probe/probe-wardrobe-1.jpg'
+import probeWardrobe2 from '../../assets/probe/probe-wardrobe-2.jpg'
 
 /**
  * Семь мастерских — столько же, сколько в каталоге US-02. Имена и номера
@@ -170,6 +182,162 @@ const PROBE_CARD_THIRD: MasterCard = {
   publishedAt: '2026-09-18T08:00:00.000Z',
 }
 
+/**
+ * PROBE: карточки 4–8 заведены 22.09 под проверку витрины на полном каталоге.
+ * Три карточки выше проверяли состояния данных — полная, скупая, с разрывом
+ * недели. Эти пять проверяют другое: как читается сетка, когда плиток восемь
+ * и все снимки разные. Тексты написаны нами, снимки свободной лицензии;
+ * настоящие придут треком A2.
+ */
+const PROBE_CARD_4: MasterCard = {
+  about:
+    'Красим фасады сами, в своей камере: поэтому цвет подбираем по вееру, ' +
+    'а не по каталогу поставщика. Кухни делаем от трёх метров, ' +
+    'меньше берём редко.',
+  yearsOnMarket: 9,
+  does: ['Кухни', 'Мебель для ванной'],
+  categories: ['kitchen', 'bathroom'],
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'design', paid: false },
+    { id: 'assembly', paid: false },
+    { id: 'appliances', paid: false },
+  ],
+  serviceArea: 'Алматы, все районы',
+  photos: [
+    { url: probeKitchen1, kind: 'kitchen', caption: 'Кухня 4,2 м, крашеные фасады', isRender: false },
+    { url: probeKitchen2, kind: 'kitchen', caption: 'Остров с варочной', isRender: false },
+  ],
+  logo: null,
+  warrantyMonths: 36,
+  leadTime: { min: 30, max: 40 },
+  hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], from: '09:00', to: '18:00' },
+  contactPhone: '+77010000009',
+  messengers: ['whatsapp'],
+  worksByContract: true,
+  ownProduction: true,
+  publishedAt: '2026-09-19T06:00:00.000Z',
+}
+
+const PROBE_CARD_5: MasterCard = {
+  about:
+    'Пятнадцать лет в Астане, работаем с новостройками на Сарыарке ' +
+    'и Есиле. Знаем планировки домов вокруг: часто привозим готовое ' +
+    'без второго замера.',
+  yearsOnMarket: 15,
+  does: ['Кухни', 'Шкафы-купе', 'Гардеробные'],
+  categories: ['kitchen', 'wardrobe'],
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'design', paid: false },
+    { id: 'delivery', paid: false },
+    { id: 'assembly', paid: false },
+    { id: 'dismantle', paid: true },
+    { id: 'installments', paid: false },
+  ],
+  serviceArea: 'Астана и Косшы',
+  photos: [
+    { url: probeKitchen3, kind: 'kitchen', caption: 'Кухня в две линии, Есиль', isRender: false },
+    { url: probeWardrobe1, kind: 'wardrobe', caption: 'Гардеробная 3 м', isRender: false },
+    { url: probeKitchen4, kind: 'kitchen', caption: null, isRender: false },
+  ],
+  logo: null,
+  warrantyMonths: 24,
+  leadTime: { min: 21, max: 30 },
+  hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], from: '10:00', to: '19:00' },
+  contactPhone: '+77010000005',
+  messengers: ['whatsapp', 'telegram'],
+  worksByContract: true,
+  ownProduction: true,
+  publishedAt: '2026-09-19T07:00:00.000Z',
+}
+
+const PROBE_CARD_6: MasterCard = {
+  about:
+    'Цех на выезде из Шымкента. Делаем просто и крепко: кухни, ' +
+    'шкафы в спальню, прихожие. Без проектов в трёх видах — ' +
+    'показываем на месте, как встанет.',
+  yearsOnMarket: 6,
+  does: ['Кухни', 'Шкафы-купе', 'Прихожие'],
+  categories: ['kitchen', 'wardrobe', 'other'],
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'delivery', paid: false },
+    { id: 'assembly', paid: false },
+  ],
+  serviceArea: null,
+  photos: [
+    { url: probeKitchen5, kind: 'kitchen', caption: null, isRender: false },
+    { url: probeWardrobe2, kind: 'wardrobe', caption: 'Шкаф в спальню', isRender: false },
+  ],
+  logo: null,
+  warrantyMonths: 12,
+  leadTime: { min: 20, max: 35 },
+  hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], from: '09:00', to: '20:00' },
+  contactPhone: '+77010000006',
+  messengers: ['whatsapp'],
+  worksByContract: false,
+  ownProduction: true,
+  publishedAt: '2026-09-19T08:00:00.000Z',
+}
+
+const PROBE_CARD_7: MasterCard = {
+  about:
+    'Втроём: отец и два сына. Беремся за гардеробные и встроенные шкафы ' +
+    'в ниши — там, где готовое не встаёт. Один заказ ведём от замера ' +
+    'до сборки, подрядчиков не зовём.',
+  yearsOnMarket: 21,
+  does: ['Шкафы-купе', 'Гардеробные', 'Столы и стеллажи'],
+  categories: ['wardrobe', 'other'],
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'design', paid: false },
+    { id: 'assembly', paid: false },
+    { id: 'nonstandard', paid: false },
+  ],
+  serviceArea: 'Шымкент и область',
+  photos: [
+    { url: probeShelves1, kind: 'other', caption: 'Стеллаж под лестницей', isRender: false },
+    { url: probeWardrobe1, kind: 'wardrobe', caption: 'Шкаф в нишу, 2,7 м', isRender: false },
+  ],
+  logo: null,
+  warrantyMonths: 24,
+  leadTime: { min: 25, max: 45 },
+  hours: { days: ['mon', 'tue', 'wed', 'thu', 'fri'], from: '09:00', to: '18:00' },
+  contactPhone: '+77010000007',
+  messengers: ['telegram'],
+  worksByContract: true,
+  ownProduction: true,
+  publishedAt: '2026-09-19T09:00:00.000Z',
+}
+
+const PROBE_CARD_8: MasterCard = {
+  about:
+    'Маленькая мастерская на Розыбакиева. Работаем с ванными и прихожими: ' +
+    'тумбы под раковину, пеналы, зеркальные шкафчики. Влагостойкие ' +
+    'материалы берём всегда, даже если не просят.',
+  yearsOnMarket: 5,
+  does: ['Мебель для ванной', 'Прихожие'],
+  categories: ['bathroom', 'other'],
+  services: [
+    { id: 'measure', paid: false },
+    { id: 'delivery', paid: true },
+    { id: 'assembly', paid: false },
+    { id: 'installments', paid: false },
+  ],
+  serviceArea: 'Алматы, Бостандыкский и Ауэзовский районы',
+  photos: [{ url: bedroom, kind: 'bathroom', caption: 'Тумба и пенал, влагостойкий корпус', isRender: false }],
+  logo: null,
+  warrantyMonths: 18,
+  leadTime: { min: 14, max: 21 },
+  hours: { days: ['tue', 'wed', 'thu', 'fri', 'sat'], from: '10:00', to: '19:00' },
+  contactPhone: '+77010000008',
+  messengers: ['whatsapp', 'telegram'],
+  worksByContract: false,
+  ownProduction: false,
+  publishedAt: '2026-09-19T10:00:00.000Z',
+}
+
 const MASTERS: Master[] = [
   {
     id: 'aaaaaaa1-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
@@ -195,6 +363,8 @@ const MASTERS: Master[] = [
     city: city('almaty'),
     phone: '+77010000003',
     acceptingFrom: ACCEPTING_FROM,
+    // Карточки нет намеренно: это состояние мебельщика, которого завели,
+    // но чью карточку ещё не собрали (A2). На нём стоят три теста моков.
     card: null,
   },
   {
@@ -212,7 +382,7 @@ const MASTERS: Master[] = [
     city: city('astana'),
     phone: '+77010000005',
     acceptingFrom: ACCEPTING_FROM,
-    card: null,
+    card: PROBE_CARD_5,
   },
   {
     id: 'aaaaaaa6-aaaa-4aaa-8aaa-aaaaaaaaaaa6',
@@ -220,7 +390,7 @@ const MASTERS: Master[] = [
     city: city('shymkent'),
     phone: '+77010000006',
     acceptingFrom: ACCEPTING_FROM,
-    card: null,
+    card: PROBE_CARD_6,
   },
   {
     id: 'aaaaaaa7-aaaa-4aaa-8aaa-aaaaaaaaaaa7',
@@ -228,7 +398,27 @@ const MASTERS: Master[] = [
     city: city('shymkent'),
     phone: '+77010000007',
     acceptingFrom: ACCEPTING_FROM,
-    card: null,
+    card: PROBE_CARD_7,
+  },
+  {
+    // PROBE: восьмая заведена 22.09 вместе с карточками 4–8.
+    id: 'aaaaaaa8-aaaa-4aaa-8aaa-aaaaaaaaaaa8',
+    name: 'Ванная и прихожая',
+    city: city('almaty'),
+    phone: '+77010000008',
+    acceptingFrom: ACCEPTING_FROM,
+    card: PROBE_CARD_8,
+  },
+  {
+    // PROBE: девятая — носитель PROBE_CARD_4. Заведена, чтобы «Дом фасадов»
+    // остался без карточки: витрине нужны восемь плиток, а мокам — состояние
+    // мебельщика без карточки.
+    id: 'aaaaaaa9-aaaa-4aaa-8aaa-aaaaaaaaaaa9',
+    name: 'Кухни на Абая',
+    city: city('almaty'),
+    phone: '+77010000009',
+    acceptingFrom: ACCEPTING_FROM,
+    card: PROBE_CARD_4,
   },
 ]
 

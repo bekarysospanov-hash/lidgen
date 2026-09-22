@@ -49,7 +49,7 @@ function toView(caught: unknown): View {
 
 /** Заголовок экрана: крупно, обычным регистром, вес 600 (§ Typography). */
 function Title({ children }: { children: React.ReactNode }) {
-  return <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">{children}</h1>
+  return <h1 className="max-w-measure-title font-display text-heading tracking-heading font-bold">{children}</h1>
 }
 
 /**
@@ -427,7 +427,7 @@ export default function Offers() {
       {/* Заголовком стоит то, зачем человек открыл страницу. Номер заявки
           был здесь и крупнее всего на экране — служебное число вместо
           ответа на вопрос «что мне пришло» (разбор текстов, 18.09). */}
-      <h1 className="max-w-measure-title text-heading tracking-heading font-semibold">
+      <h1 className="max-w-measure-title font-display text-heading tracking-heading font-bold">
         {offersPage.pageTitle}
       </h1>
       <p className={`mt-xs tabular-nums ${hintText}`}>
@@ -476,6 +476,13 @@ export default function Offers() {
           </>
         )}
       </section>
+
+      {/* Строка о неполноте стоит сразу под предложениями, а не в конце
+          страницы (§ Presence, 22.09): молчание рядом со списком читается
+          как «это всё». */}
+      {request.quotes.length > 0 && (
+        <p className={`mt-xl max-w-measure ${hintText}`}>{offersPage.moreComing}</p>
+      )}
 
       {request.quotes.length >= 2 && (
         <section className="mt-3xl">

@@ -40,7 +40,7 @@ const cityLabel = (code: string, name: string | null): string =>
 
 /** Заголовок экрана: 30/600, обычным регистром (§ Typography). */
 function Title({ children }: { children: React.ReactNode }) {
-  return <h1 className="text-heading tracking-heading font-semibold">{children}</h1>
+  return <h1 className="font-display text-heading tracking-heading font-bold">{children}</h1>
 }
 
 /**

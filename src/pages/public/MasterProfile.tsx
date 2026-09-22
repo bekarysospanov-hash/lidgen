@@ -296,7 +296,7 @@ export default function MasterProfile() {
   if (view.kind === 'missing') {
     return (
       <PageShell>
-        <h1 className="text-heading tracking-heading font-semibold">{masterCardPage.missingTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{masterCardPage.missingTitle}</h1>
         <p className="mt-lg max-w-measure text-body tracking-body">{masterCardPage.missingBody}</p>
         <Link to="/request" className={`mt-xl inline-flex ${buttonFilled}`}>
           {masterCardPage.toRequest}
@@ -313,7 +313,7 @@ export default function MasterProfile() {
   if (view.kind === 'failed') {
     return (
       <PageShell>
-        <h1 className="text-heading tracking-heading font-semibold">{masterCardPage.failedTitle}</h1>
+        <h1 className="font-display text-heading tracking-heading font-bold">{masterCardPage.failedTitle}</h1>
         <button
           type="button"
           onClick={() => {
@@ -369,7 +369,7 @@ export default function MasterProfile() {
       <p className={`mt-lg tabular-nums first:mt-0 ${hintText}`}>
         {cityName(master.city)} · {mastersPage.yearsLabel(card.yearsOnMarket)}
       </p>
-      <h1 className="mt-xs max-w-measure-title text-heading tracking-heading font-semibold">
+      <h1 className="mt-xs max-w-measure-title font-display text-heading tracking-heading font-bold">
         {master.name}
       </h1>
 

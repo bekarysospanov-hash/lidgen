@@ -1,5 +1,5 @@
 /* Hallmark · design-system: DESIGN.md · theme: «Мастерская — присутствие»
- * axes: light / neo-grotesque-weight-scale / graphite + green action, plum accent
+ * axes: light / slab-display over grotesque body / brand fill + graphite action
  * Страница подчиняется DESIGN.md: тема, шрифт, радиусы и состояния берутся
  * оттуда, а не выбираются здесь. Диверсификация НЕ применяется —
  * на проекте с системой страницы обязаны быть одинаковыми, а не разными.
@@ -20,19 +20,10 @@
 @import "./design-tokens.css";
 
 /*
- * Тень витрины — единственная величина системы, которую генератор выдать
- * не может: формат design.md теней не описывает (см. docs/reference,
- * Component Property Tokens). Правда о ней — в DESIGN.md § Elevation:
- * тень одна, принадлежит плитке каталога и означает «это отдельный предмет,
- * его можно взять». Число здесь, смысл там; менять — сначала там.
- *
- * Два слоя, оба слабые: лист над столом, а не всплывающее окно.
+ * Теней в системе нет (DESIGN.md § Elevation, правка 22.09). Токена
+ * --shadow-tile здесь больше нет: плитка витрины перестала быть
+ * карточкой-подложкой, и поднимать над холстом стало нечего.
  */
-@theme {
-  --shadow-tile:
-    0 1px 2px color-mix(in oklab, var(--color-on-surface) 4%, transparent),
-    0 2px 8px color-mix(in oklab, var(--color-on-surface) 6%, transparent);
-}
 
 /*
  * Корневой кегль не задаётся: 1rem = то, что человек выставил в браузере

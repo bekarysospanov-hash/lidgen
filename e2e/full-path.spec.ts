@@ -383,9 +383,10 @@ test('мебельщик правит карточку — и правка ви�
   await page.waitForURL('**/masters')
   // Заголовка у витрины нет вовсе (решение PM 20.09): страница поиска
   // начинается списком, а не рассказом. Признак, что мы на ней, —
-  // строка поиска и счётчик найденных.
+  // строка поиска и строка о каталоге. Счётчик «N мастерских» снят 22.09:
+  // число на старте работает против нас, а строка честна при любом размере.
   await expect(page.getByPlaceholder('Мастерская или что нужно')).toBeVisible()
-  await expect(page.getByText('3 мастерские')).toBeVisible()
+  await expect(page.getByText('Мастерские, которые делают мебель на заказ')).toBeVisible()
   // Плитка витрины нажимается целиком (§ Components): отдельной ссылки
   // «Смотреть работы» в ней нет — человек метит в карточку, а не в строку.
   await page.getByRole('link', { name: /Мастерская на Сайране/ }).first().click()
@@ -408,13 +409,13 @@ test('мебельщик правит карточку — и правка ви�
  */
 test('каталог отбирает по виду работ и городу, отбор переживает возврат @shots', async ({ page }) => {
   await page.goto('/masters')
-  await expect(page.getByText('3 мастерские')).toBeVisible()
+  await expect(page.getByText('Мастерские, которые делают мебель на заказ')).toBeVisible()
 
   // Отбор свёрнут по умолчанию (правка 20.09): два ряда чипсов занимали
   // на телефоне весь первый экран, и до первой плитки приходилось листать.
   await page.getByRole('button', { name: 'Фильтры' }).click()
 
-  // Ванную отметила одна мастерская, и она в Алматы. Пара «ванная + Шымкент»
+  // Ванную отметили только мастерские Алматы. Пара «ванная + Шымкент»
   // не даёт никого — это не пустой каталог, и экран обязан сказать разницу
   // словами, а не показать пустоту.
   await page.getByRole('button', { name: 'Ванная' }).click()
@@ -427,7 +428,7 @@ test('каталог отбирает по виду работ и городу, 
   await page.getByRole('button', { name: 'Алматы' }).click()
   await expect(page).toHaveURL(/kind=wardrobe/)
   await expect(page).toHaveURL(/city=almaty/)
-  await expect(page.getByText('2 мастерские')).toBeVisible()
+  await expect(page.locator('a[href^="/masters/"]')).toHaveCount(2)
   await снимок(page, 'каталог-отобран')
 
   // Плитка витрины нажимается целиком (§ Components): отдельной ссылки
@@ -437,7 +438,7 @@ test('каталог отбирает по виду работ и городу, 
   await page.goBack()
   // Отбор на месте — и в адресе, и на чипсах.
   await expect(page).toHaveURL(/kind=wardrobe&city=almaty/)
-  await expect(page.getByText('2 мастерские')).toBeVisible()
+  await expect(page.locator('a[href^="/masters/"]')).toHaveCount(2)
 })
 
 test('политика открывается и честно помечена черновиком @shots', async ({ page }) => {
